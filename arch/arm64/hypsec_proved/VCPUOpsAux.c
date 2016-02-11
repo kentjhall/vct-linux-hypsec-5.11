@@ -127,6 +127,14 @@ void __hyp_text prep_abort(u32 vmid, u32 vcpuid)
 
     if (fault_ipa < MAX_MMIO_ADDR)
     {
+	if (fault_ipa > 0xc000000 && fault_ipa < 0xe000000) {
+		u64 flags = get_shadow_ctxt(vmid, vcpuid, V_FLAGS);
+		flags |= PENDING_FSC_FAULT;
+		set_shadow_ctxt(vmid, vcpuid, V_FLAGS, flags);
+		printhex_ul(fault_ipa);
+		return;
+	}
+
         set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG);
 
         //if ((esr / 64UL) % 4UL == 0UL) {

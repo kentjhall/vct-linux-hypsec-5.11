@@ -65,9 +65,15 @@ u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 apfn, u32 pgnum)
 		u64 agfn = gfn + (apfn - pfn);
 		set_pfn_to_vm(vmid, agfn, apfn, 1);
 	/* if pfn is mapped, we neither assign nor map it */
-	} else if (ret != 2) {
-		print_string("\rpanic in assign_pfn_to_vm\n");
-		v_panic();
+	} else if (ret != 2) { 
+		if (gfn > 0xc000 && gfn < 0xe000) {
+			u64 agfn = gfn + (apfn - pfn);
+			//set_pfn_to_vm(vmid, agfn, apfn, 1);
+			ret = 0;
+		} else {
+			print_string("\rpanic in assign_pfn_to_vm\n");
+			v_panic();
+		}
 	}
 	release_lock_s2page();
 	return ret;
