@@ -29,6 +29,80 @@
 	.text
 	.pushsection	.hyp.text, "ax"
 
+#ifdef CONFIG_STAGE2_KERNEL
+.macro save_callee_saved_regs
+	stp	x0, x1,   [sp, #-16]!
+	stp	x2, x3,   [sp, #-16]!
+	stp	x4, x5,   [sp, #-16]!
+	stp	x6, x7,   [sp, #-16]!
+	stp	x8, x9,   [sp, #-16]!
+	stp	x10, x11, [sp, #-16]!
+	stp	x12, x13, [sp, #-16]!
+	stp	x14, x15, [sp, #-16]!
+	stp	x16, x17, [sp, #-16]!
+	stp	x18, x19, [sp, #-16]!
+	stp	x20, x21, [sp, #-16]!
+	stp	x22, x23, [sp, #-16]!
+	stp	x24, x25, [sp, #-16]!
+	stp	x26, x27, [sp, #-16]!
+	stp	x28, x29, [sp, #-16]!
+	stp	lr, x0,   [sp, #-16]!
+.endm
+
+.macro restore_callee_saved_regs
+	ldp	lr, x0,   [sp], #16
+	ldp	x28, x29, [sp], #16
+	ldp	x26, x27, [sp], #16
+	ldp	x24, x25, [sp], #16
+	ldp	x22, x23, [sp], #16
+	ldp	x20, x21, [sp], #16
+	ldp	x18, x19, [sp], #16
+	ldp	x16, x17, [sp], #16
+	ldp	x14, x15, [sp], #16
+	ldp	x12, x13, [sp], #16
+	ldp	x10, x11, [sp], #16
+	ldp	x8, x9,   [sp], #16
+	ldp	x6, x7,   [sp], #16
+	ldp	x4, x5,   [sp], #16
+	ldp	x2, x3,   [sp], #16
+	ldp	x0, x1,   [sp], #16
+.endm
+
+.macro  handle_dabt
+	save_callee_saved_regs
+	bl      handle_host_stage2_fault
+	restore_callee_saved_regs
+	eret
+.endm
+
+	.align 11
+
+.macro enable_stage2_trans t0, t1, t2
+	mrs	\t2, mair_el1
+	msr	mair_el2, \t2
+
+	ldr	\t0, =VTCR_EL2_FLAGS
+	/* Set parange to 40 bits  */
+	orr	\t0, \t0, #24
+	mrs	\t2, ID_AA64MMFR0_EL1
+	and	\t2, \t2, #7
+	orr	\t0, \t0, \t2, lsl #16
+	msr	vtcr_el2, \t0
+	msr	vttbr_el2, \t1
+	mrs	\t0, hcr_el2
+
+	/* Enable stage2 translation */
+	orr	\t0, \t0, HCR_VM
+	orr	\t0, \t0, HCR_AMO
+	isb
+	msr	hcr_el2, \t0
+	isb
+	tlbi	vmalle1is
+	dsb	sy
+	ic	ialluis
+.endm
+#endif
+
 .macro do_el2_call
 	/*
 	 * Shuffle the parameters before calling the function
