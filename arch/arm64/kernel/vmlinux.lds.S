@@ -215,6 +215,11 @@ SECTIONS
 
 	BSS_SECTION(0, 0, 0)
 
+#ifndef CONFIG_STAGE2_KERNEL
+	. = ALIGN(PAGE_SIZE);
+#else
+	. = ALIGN(SEGMENT_ALIGN);
+#endif
 	. = ALIGN(PAGE_SIZE);
 	idmap_pg_dir = .;
 	. += IDMAP_DIR_SIZE;
@@ -231,6 +236,22 @@ SECTIONS
 	swapper_pg_dir = .;
 	. += SWAPPER_DIR_SIZE;
 	swapper_pg_end = .;
+#ifdef CONFIG_STAGE2_KERNEL
+	. = ALIGN(SEGMENT_ALIGN);
+	stage2_pgs_start = .;
+	. += STAGE2_PAGES_SIZE;
+	stage2_pgs_end = .;
+
+	stage2_tmp_pgs_start = .;
+	. += STAGE2_TMP_PAGES_SIZE;
+	stage2_tmp_pgs_end = .;
+
+	. = ALIGN(PAGE_SIZE);
+	stage2_data_start = .;
+
+	. += PAGE_SIZE * (PAGE_SIZE * 12);
+	stage2_data_end = .;
+#endif
 
 	__pecoff_data_size = ABSOLUTE(. - __initdata_begin);
 	_end = .;
