@@ -1406,7 +1406,9 @@ static int init_subsystems(void)
 	kvm_coproc_table_init();
 
 out:
+#ifndef CONFIG_STAGE2_KERNEL
 	on_each_cpu(_kvm_arch_hardware_disable, NULL, 1);
+#endif
 
 	return err;
 }
