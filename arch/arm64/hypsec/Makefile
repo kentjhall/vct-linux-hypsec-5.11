@@ -3,7 +3,7 @@
 #
 obj-y += stage2_host.o
 #obj-y += stage2_mmu.o
-#obj-y += stage2_helper.o
+obj-y += stage2_helper.o
 #obj-y += stage2_vcpu.o
 #obj-y += stage2_boot.o
 #obj-y += stage2_mmio.o
