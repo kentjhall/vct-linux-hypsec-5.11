@@ -31,6 +31,9 @@
 #include <asm/kvm_emulate.h>
 #include <asm/virt.h>
 #include <asm/system_misc.h>
+#ifdef CONFIG_STAGE2_KERNEL
+#include <asm/stage2_mmu.h>
+#endif
 
 #include "trace.h"
 
@@ -689,6 +692,10 @@ out:
 
 static phys_addr_t kvm_kaddr_to_phys(void *kaddr)
 {
+#ifdef CONFIG_STAGE2_KERNEL
+	if ((u64)kaddr < PAGE_OFFSET)
+		kaddr = __va(kaddr);
+#endif
 	if (!is_vmalloc_addr(kaddr)) {
 		BUG_ON(!virt_addr_valid(kaddr));
 		return __pa(kaddr);
@@ -712,8 +719,17 @@ int create_hyp_mappings(void *from, void *to, pgprot_t prot)
 {
 	phys_addr_t phys_addr;
 	unsigned long virt_addr;
+#ifndef CONFIG_STAGE2_KERNEL
 	unsigned long start = kern_hyp_va((unsigned long)from);
 	unsigned long end = kern_hyp_va((unsigned long)to);
+#else
+	unsigned long start = ((unsigned long)from >= PAGE_OFFSET) ?
+				kern_hyp_va((unsigned long)from) :
+				(unsigned long)from | EL2_PAGE_OFFSET;
+	unsigned long end = ((unsigned long)to >= PAGE_OFFSET) ?
+				kern_hyp_va((unsigned long)to) :
+				(unsigned long)to | EL2_PAGE_OFFSET;
+#endif
 
 	if (is_kernel_in_hyp_mode())
 		return 0;
