@@ -49,6 +49,32 @@ bool __hyp_text stage2_is_map_memory(phys_addr_t addr)
 	return true;
 }
 
+void* __hyp_text alloc_stage2_page(unsigned int num)
+{
+	u64 p_addr, start;
+	struct stage2_data *stage2_data;
+
+	if (!num)
+		return NULL;
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	stage2_spin_lock(&stage2_data->page_pool_lock);
+
+	/* Check if we're out of memory in the reserved area */
+	if (stage2_data->used_pages >= STAGE2_NUM_NORM_PAGES) {
+		print_string("stage2: out of pages\r\n");
+		__hyp_panic();
+	}
+
+	/* Start allocating memory from the normal page pool */
+	start = stage2_data->page_pool_start + STAGE2_PGD_PAGES_SIZE;
+	p_addr = (u64)start + (PAGE_SIZE * stage2_data->used_pages);
+	stage2_data->used_pages += num;
+
+	stage2_spin_unlock(&stage2_data->page_pool_lock);
+	return (void *)p_addr;
+}
+
 #if CONFIG_PGTABLE_LEVELS > 3
 static pud_t __hyp_text *pud_offset_el2(pgd_t *pgd, u64 addr)
 {
