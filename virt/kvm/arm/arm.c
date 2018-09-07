@@ -1253,8 +1253,10 @@ static void cpu_init_hyp_mode(void *dummy)
 
 static void cpu_hyp_reset(void)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	if (!is_kernel_in_hyp_mode())
 		__hyp_reset_vectors();
+#endif
 }
 
 static void cpu_hyp_reinit(void)
