@@ -51,7 +51,7 @@
 #include <asm/kvm_coproc.h>
 #include <asm/sections.h>
 #ifdef CONFIG_STAGE2_KERNEL
-#include <asm/stage2_mmu.h>
+#include <asm/stage2_host.h>
 #endif
 
 #ifdef REQUIRES_VIRT
@@ -1500,8 +1500,7 @@ static int init_hyp_mode(void)
 		goto out_err;
 	}
 
-	//TODO: We need to initialize stage2 data page here
-	//init_stage2_data_page();
+	init_stage2_data_page();
 
 	err = create_hyp_mappings((void *)kvm_ksym_ref(stage2_data_start),
 			(void *)kvm_ksym_ref(stage2_data_end),
