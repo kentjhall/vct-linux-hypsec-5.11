@@ -127,3 +127,13 @@ ENTRY(__hyp_reset_vectors)
 	hvc	#0
 	ret
 ENDPROC(__hyp_reset_vectors)
+#ifdef CONFIG_STAGE2_KERNEL
+ENTRY(enable_stage2_translation)
+	str	lr, [sp, #-16]!
+	mov	x1, x0
+	mov	x0, #HVC_ENABLE_S2_TRANS
+	hvc	#0
+	ldr	lr, [sp], #16
+	ret
+ENDPROC(enable_stage2_translation)
+#endif

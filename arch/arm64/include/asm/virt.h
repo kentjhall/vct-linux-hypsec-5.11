@@ -49,6 +49,10 @@
 /* Max number of HYP stub hypercalls */
 #define HVC_STUB_HCALL_NR 3
 
+#ifdef CONFIG_STAGE2_KERNEL
+#define HVC_ENABLE_S2_TRANS 4
+#endif
+
 /* Error returned when an invalid stub number is passed into x0 */
 #define HVC_STUB_ERR	0xbadca11
 
@@ -75,6 +79,9 @@ extern u32 __boot_cpu_mode[2];
 
 void __hyp_set_vectors(phys_addr_t phys_vector_base);
 void __hyp_reset_vectors(void);
+#ifdef CONFIG_STAGE2_KERNEL
+void enable_stage2_translation(phys_addr_t vttbr_base);
+#endif
 
 /* Reports the availability of HYP mode */
 static inline bool is_hyp_mode_available(void)

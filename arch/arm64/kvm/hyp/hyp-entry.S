@@ -77,21 +77,10 @@
 
 	.align 11
 
-.macro enable_stage2_trans t0, t1, t2
-	mrs	\t2, mair_el1
-	msr	mair_el2, \t2
-
-	ldr	\t0, =VTCR_EL2_FLAGS
-	/* Set parange to 40 bits  */
-	orr	\t0, \t0, #24
-	mrs	\t2, ID_AA64MMFR0_EL1
-	and	\t2, \t2, #7
-	orr	\t0, \t0, \t2, lsl #16
-	msr	vtcr_el2, \t0
+.macro enable_stage2_trans t0, t1
 	msr	vttbr_el2, \t1
-	mrs	\t0, hcr_el2
-
 	/* Enable stage2 translation */
+	mrs	\t0, hcr_el2
 	orr	\t0, \t0, HCR_VM
 	orr	\t0, \t0, HCR_AMO
 	isb
@@ -182,6 +171,16 @@ el1_sync:				// Guest trapped into EL2
 	br	x5
 
 1:
+#ifdef CONFIG_STAGE2_KERNEL
+	cmp	x0, #HVC_ENABLE_S2_TRANS
+	b.ne	3f
+	save_callee_saved_regs
+	enable_stage2_trans x0, x1
+	bl	protect_el2_pgtable_mem
+	restore_callee_saved_regs
+	eret
+3:
+#endif
 	/*
 	 * Perform the EL2 call
 	 */

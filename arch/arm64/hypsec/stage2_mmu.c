@@ -190,3 +190,18 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 out:
 	return;
 }
+
+/*
+ * Since EL2 page tables were allocated in EL2, here we need to protect
+ * them by setting the ownership of the pages to HYPSEC_VMID. This allows
+ * the core to reject any following accesses from the host.
+ */
+void __hyp_text protect_el2_pgtable_mem(void)
+{
+	//TODO: Fill in this
+}
+
+void el2_protect_stack_page(phys_addr_t addr)
+{
+	/* TODO: Have to protect the stack page from the host */
+}

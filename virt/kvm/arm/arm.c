@@ -103,8 +103,25 @@ int kvm_arch_vcpu_should_kick(struct kvm_vcpu *vcpu)
 	return kvm_vcpu_exiting_guest_mode(vcpu) == IN_GUEST_MODE;
 }
 
+#ifdef CONFIG_STAGE2_KERNEL
+static void install_el2_runtime(void *discard)
+{
+	struct stage2_data *stage2_data;
+	unsigned long stack_page;
+
+	stage2_data = (void *)kvm_ksym_ref(stage2_data_start);
+	enable_stage2_translation(stage2_data->host_vttbr);
+
+	stack_page = __this_cpu_read(kvm_arm_hyp_stack_page);
+	el2_protect_stack_page(__pa(stack_page));
+}
+#endif
+
 int kvm_arch_hardware_setup(void)
 {
+#ifdef CONFIG_STAGE2_KERNEL
+	on_each_cpu(install_el2_runtime, NULL, 1);
+#endif
 	return 0;
 }
 
