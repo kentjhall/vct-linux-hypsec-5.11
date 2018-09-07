@@ -1483,6 +1483,29 @@ static int init_hyp_mode(void)
 		goto out_err;
 	}
 
+#ifdef CONFIG_STAGE2_KERNEL
+	err = create_hyp_mappings((void *)kvm_ksym_ref(stage2_pgs_start),
+			(void *)kvm_ksym_ref(stage2_pgs_end),
+			PAGE_HYP);
+	if (err) {
+		kvm_err("Cannot map pages for stage 2 tables\n");
+		goto out_err;
+	}
+
+	//TODO: We need to initialize stage2 data page here
+	//init_stage2_data_page();
+
+	err = create_hyp_mappings((void *)kvm_ksym_ref(stage2_data_start),
+			(void *)kvm_ksym_ref(stage2_data_end),
+			PAGE_HYP);
+	if (err) {
+		kvm_err("Cannot map stage 2 data pages\n");
+		goto out_err;
+	}
+
+	kvm_info("stage2: finish setting up EL2 runtime memory\n");
+#endif
+
 	/*
 	 * Map the Hyp stack pages
 	 */
