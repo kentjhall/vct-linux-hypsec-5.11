@@ -135,10 +135,29 @@ el1_sync:				// Guest trapped into EL2
 	lsr	x0, x0, #ESR_ELx_EC_SHIFT
 	cmp	x0, #ESR_ELx_EC_HVC64
 	ccmp	x0, #ESR_ELx_EC_HVC32, #4, ne
+#ifndef CONFIG_STAGE2_KERNEL
 	b.ne	el1_trap
 
 	mrs	x1, vttbr_el2		// If vttbr is valid, the guest
 	cbnz	x1, el1_hvc_guest	// called HVC
+#else
+	b.eq	4f
+	cmp	x0, #ESR_ELx_EC_DABT_LOW
+	b.eq	5f
+	cmp	x0, #ESR_ELx_EC_IABT_LOW
+	b.ne	el1_trap
+
+5:
+	/* if tpidr_el2 = 0, we know if traps from host kernel! */
+	mrs     x1, tpidr_el2
+	cbnz    x1, el1_trap
+
+	ldp	x0, x1,   [sp], #16
+	#handle_dabt
+4:
+	mrs	x1, tpidr_el2
+	cbnz	x1, el1_hvc_guest	// called HVC
+#endif
 
 	/* Here, we're pretty sure the host called HVC. */
 	ldp	x0, x1, [sp], #16
