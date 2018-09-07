@@ -105,5 +105,7 @@ pte_t *pte_offset_el2(pmd_t *pmd, u64 addr);
 
 extern void el2_encrypt_buf(void *buf, uint32_t len);
 extern void el2_decrypt_buf(void *buf, uint32_t len);
+
+extern void map_mem_el2(void);
 #endif /* __ARM_STAGE2_MMU__ */
 

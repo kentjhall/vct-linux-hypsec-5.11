@@ -567,6 +567,38 @@ void free_hyp_pgds(void)
 	mutex_unlock(&kvm_hyp_pgd_mutex);
 }
 
+#ifdef CONFIG_STAGE2_KERNEL
+/* Map physical memory to EL2's address space */
+void map_mem_el2(void)
+{
+	struct memblock_region *reg;
+	int err = 0;
+	void *from, *to;
+
+	for_each_memblock(memory, reg) {
+		phys_addr_t start = reg->base;
+		phys_addr_t end = start + reg->size;
+
+		if (start >= end)
+			break;
+		if (memblock_is_nomap(reg))
+			continue;
+
+		kvm_info("mapping mem start %llx end %llx to EL2\n", start, end);
+		from = (void *)start;
+		to = (void *)end;
+		err = create_hyp_mappings(from, to, PAGE_HYP);
+		if (err) {
+			kvm_err("Cannot map rodata section\n");
+			goto out_err;
+		}
+	}
+
+out_err:
+	return;
+}
+#endif
+
 static void create_hyp_pte_mappings(pmd_t *pmd, unsigned long start,
 				    unsigned long end, unsigned long pfn,
 				    pgprot_t prot)

@@ -50,6 +50,9 @@
 #include <asm/kvm_emulate.h>
 #include <asm/kvm_coproc.h>
 #include <asm/sections.h>
+#ifdef CONFIG_STAGE2_KERNEL
+#include <asm/stage2_mmu.h>
+#endif
 
 #ifdef REQUIRES_VIRT
 __asm__(".arch_extension	virt");
@@ -1452,6 +1455,11 @@ static int init_hyp_mode(void)
 
 		per_cpu(kvm_arm_hyp_stack_page, cpu) = stack_page;
 	}
+
+#ifdef CONFIG_STAGE2_KERNEL
+	/* Map the entire memblocks to EL2's address space */
+	map_mem_el2();
+#endif
 
 	/*
 	 * Map the Hyp-code called directly from the host
