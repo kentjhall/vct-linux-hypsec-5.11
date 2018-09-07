@@ -16,6 +16,39 @@
 #include <asm/stage2_host.h>
 #include <asm/stage2_mmio.h>
 
+int __hyp_text stage2_mem_regions_search(phys_addr_t addr,
+		struct memblock_region *regions, unsigned long cnt)
+{
+	unsigned long left = 0, right = cnt;
+
+	do {
+		unsigned long mid = (right + left) / 2;
+
+		if (addr < regions[mid].base)
+			right = mid;
+		else if (addr >= regions[mid].base + regions[mid].size)
+			left = mid + 1;
+		else
+			return mid;
+	} while (left < right);
+	return -1;
+}
+
+bool __hyp_text stage2_is_map_memory(phys_addr_t addr)
+{
+	struct stage2_data *stage2_data;
+	int i;
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	i = stage2_mem_regions_search(addr, stage2_data->regions,
+		stage2_data->regions_cnt);
+
+	if (i == -1)
+		return false;
+
+	return true;
+}
+
 #if CONFIG_PGTABLE_LEVELS > 3
 static pud_t __hyp_text *pud_offset_el2(pgd_t *pgd, u64 addr)
 {

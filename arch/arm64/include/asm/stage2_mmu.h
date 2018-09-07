@@ -90,7 +90,7 @@ extern void load_image_to_shadow_s2pt(struct kvm *kvm, struct stage2_data *stage
 				unsigned long target_addr, unsigned long el2_remap_addr,
 				unsigned long pgnum);
 
-int stage2_is_map_memory(phys_addr_t addr);
+bool stage2_is_map_memory(phys_addr_t addr);
 extern bool el2_is_image_range(struct kvm *kvm, unsigned long addr, struct s2_trans *result);
 extern void handle_from_vm_info(struct kvm *kvm, struct stage2_data *stage2_data, unsigned long el2_va,
 					unsigned long addr, struct s2_trans *result_in);
