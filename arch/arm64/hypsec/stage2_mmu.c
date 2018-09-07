@@ -1,0 +1,133 @@
+#include <linux/types.h>
+#include <asm/kvm_asm.h>
+#include <asm/kvm_hyp.h>
+#include <linux/mman.h>
+#include <linux/kvm_host.h>
+#include <linux/io.h>
+#include <trace/events/kvm.h>
+#include <asm/pgalloc.h>
+#include <asm/cacheflush.h>
+#include <asm/kvm_arm.h>
+#include <asm/kvm_mmu.h>
+#include <asm/kvm_mmio.h>
+#include <asm/kvm_emulate.h>
+#include <asm/virt.h>
+#include <asm/kernel-pgtable.h>
+#include <asm/stage2_host.h>
+#include <asm/stage2_mmio.h>
+
+#if CONFIG_PGTABLE_LEVELS > 3
+static pud_t __hyp_text *pud_offset_el2(pgd_t *pgd, u64 addr)
+{
+	pud_t *pud;
+	u64 pgd_pa;
+
+	pgd_pa = pgd_val(*pgd) & PHYS_MASK & (s32)PAGE_MASK;
+	pud = (pud_t *)((u64)pgd_pa + (pud_index(addr) * sizeof(pud_t)));
+	return __el2_va(pud);
+}
+#else
+static pud_t __hyp_text *pud_offset_el2(pgd_t *pgd, u64 addr)
+{
+	return (pud_t *)pgd;
+}
+#endif
+
+pmd_t __hyp_text *pmd_offset_el2(pud_t *pud, u64 addr)
+{
+	pmd_t *pmd;
+	u64 pud_pa;
+
+	pud_pa = pud_val(*pud) & PHYS_MASK & (s32)PAGE_MASK;
+	pmd = (pmd_t *)((u64)pud_pa + (pmd_index(addr) * sizeof(pmd_t)));
+	return __el2_va(pmd);
+}
+
+pte_t __hyp_text *pte_offset_el2(pmd_t *pmd, u64 addr)
+{
+	pte_t *pte;
+	u64 pmd_pa;
+
+	pmd_pa = pmd_val(*pmd) & PHYS_MASK & (s32)PAGE_MASK;
+	pte = (pte_t *)((u64)pmd_pa + (pte_index(addr) * sizeof(pte_t)));
+	return __el2_va(pte);
+}
+
+static void __hyp_text handle_host_stage2_trans_fault(unsigned host_lr,
+					phys_addr_t addr,
+					struct stage2_data *stage2_data,
+					pte_t new_pte)
+{
+	pgd_t *pgd;
+	pgd_t *vttbr;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+
+	/* We assume paging is enabled in EL2 at the point we call this
+	 * function.
+	 */
+	vttbr = (pgd_t *)stage2_data->host_vttbr;
+	BUG_ON(addr >= KVM_PHYS_SIZE);
+
+	stage2_spin_lock(&stage2_data->fault_lock);
+
+	vttbr = __el2_va(vttbr);
+	pgd = vttbr + stage2_pgd_index(addr);
+	if (stage2_pgd_none(*pgd)) {
+		pud = alloc_stage2_page(1);
+		__pgd_populate(pgd, (phys_addr_t)pud, PUD_TYPE_TABLE);
+	}
+
+	pud = stage2_pud_offset(pgd, addr);
+	if (stage2_pud_none(*pud)) {
+		pmd = alloc_stage2_page(1);
+		__pud_populate(pud, (phys_addr_t)pmd, PMD_TYPE_TABLE);
+	}
+
+	pmd = pmd_offset_el2(pud, addr);
+	if (pmd_none(*pmd)) {
+		pte = alloc_stage2_page(1);
+		__pmd_populate(pmd, (phys_addr_t)pte, PMD_TYPE_TABLE);
+	}
+	
+	pte = pte_offset_el2(pmd, addr);
+	kvm_set_pte(pte, new_pte);
+
+	stage2_spin_unlock(&stage2_data->fault_lock);
+}
+
+static int __hyp_text stage2_emul_mmio(phys_addr_t addr,
+					struct s2_host_regs *host_regs)
+{
+	/* Fill in the stuff for SMMU later */
+	return false;
+}
+
+void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
+					struct s2_host_regs *host_regs)
+{
+	u32 vmid;
+	phys_addr_t addr;
+	kvm_pfn_t pfn;
+	pte_t new_pte;
+	struct stage2_data *stage2_data;
+
+	addr = (read_sysreg(hpfar_el2) & HPFAR_MASK) << 8;
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+
+	pfn = addr >> PAGE_SHIFT;
+	if (stage2_is_map_memory(addr)) {
+		new_pte = pfn_pte(pfn, PAGE_S2_KERNEL);
+	} else if (!stage2_emul_mmio(addr, host_regs)) {
+		new_pte = pfn_pte(pfn, PAGE_S2_DEVICE);
+		new_pte = kvm_s2pte_mkwrite(new_pte);
+	} else
+		goto out;
+
+	handle_host_stage2_trans_fault(host_lr, addr, stage2_data, new_pte);
+
+out:
+	return;
+}

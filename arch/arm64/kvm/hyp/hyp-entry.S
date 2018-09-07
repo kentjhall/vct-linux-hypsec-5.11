@@ -153,7 +153,7 @@ el1_sync:				// Guest trapped into EL2
 	cbnz    x1, el1_trap
 
 	ldp	x0, x1,   [sp], #16
-	#handle_dabt
+	handle_dabt
 4:
 	mrs	x1, tpidr_el2
 	cbnz	x1, el1_hvc_guest	// called HVC
