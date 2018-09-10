@@ -387,7 +387,9 @@ static inline void __cpu_init_hyp_mode(phys_addr_t pgd_ptr,
 				       unsigned long hyp_stack_ptr,
 				       unsigned long vector_ptr)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	u64 tpidr_el2;
+#endif
 
 	/*
 	 * Call initialization code, and switch to the full blown HYP code.
@@ -398,6 +400,7 @@ static inline void __cpu_init_hyp_mode(phys_addr_t pgd_ptr,
 	BUG_ON(!static_branch_likely(&arm64_const_caps_ready));
 	__kvm_call_hyp((void *)pgd_ptr, hyp_stack_ptr, vector_ptr);
 
+#ifndef CONFIG_STAGE2_KERNEL
 	/*
 	 * Calculate the raw per-cpu offset without a translation from the
 	 * kernel's mapping to the linear mapping, and store it in tpidr_el2
@@ -407,6 +410,7 @@ static inline void __cpu_init_hyp_mode(phys_addr_t pgd_ptr,
 		- (u64)kvm_ksym_ref(kvm_host_cpu_state);
 
 	kvm_call_hyp(__kvm_set_tpidr_el2, tpidr_el2);
+#endif
 }
 
 static inline bool kvm_arch_check_sve_has_vhe(void)
