@@ -18,6 +18,9 @@
 #include <asm/kvm_hyp.h>
 #include <asm/kvm_mmu.h>
 #include <asm/tlbflush.h>
+#ifdef CONFIG_STAGE2_KERNEL
+#include <asm/stage2_host.h>
+#endif
 
 static void __hyp_text __tlb_switch_to_guest_vhe(struct kvm *kvm)
 {
@@ -60,7 +63,13 @@ static void __hyp_text __tlb_switch_to_host_vhe(struct kvm *kvm)
 
 static void __hyp_text __tlb_switch_to_host_nvhe(struct kvm *kvm)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	write_sysreg(0, vttbr_el2);
+#else
+	struct stage2_data *stage2_data;
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	write_sysreg(stage2_data->host_vttbr, vttbr_el2);
+#endif
 }
 
 static hyp_alternate_select(__tlb_switch_to_host,
