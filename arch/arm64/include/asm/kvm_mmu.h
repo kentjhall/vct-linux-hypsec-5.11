@@ -152,6 +152,10 @@ int create_hyp_io_mappings(phys_addr_t phys_addr, size_t size,
 			   void __iomem **haddr);
 int create_hyp_exec_mappings(phys_addr_t phys_addr, size_t size,
 			     void **haddr);
+#ifdef CONFIG_STAGE2_KERNEL
+int create_hypsec_io_mappings(phys_addr_t phys_addr, size_t size,
+			      unsigned long *haddr);
+#endif
 void free_hyp_pgds(void);
 
 void stage2_unmap_vm(struct kvm *kvm);

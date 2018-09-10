@@ -48,6 +48,9 @@
 #include <linux/acpi.h>
 
 #include "amba-pl011.h"
+#ifdef CONFIG_STAGE2_KERNEL
+#include <asm/stage2_host.h>
+#endif
 
 #define UART_NR			14
 
@@ -2574,6 +2577,11 @@ static int pl011_setup_port(struct device *dev, struct uart_amba_port *uap,
 {
 	void __iomem *base;
 
+#ifdef CONFIG_STAGE2_KERNEL
+	struct stage2_data *stage2_data = kvm_ksym_ref(stage2_data_start);
+	if (!stage2_data->pl011_base)
+		stage2_data->pl011_base = mmiobase->start;
+#endif
 	base = devm_ioremap_resource(dev, mmiobase);
 	if (IS_ERR(base))
 		return PTR_ERR(base);

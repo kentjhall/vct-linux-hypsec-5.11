@@ -895,6 +895,25 @@ int create_hyp_exec_mappings(phys_addr_t phys_addr, size_t size,
 	return 0;
 }
 
+#ifdef CONFIG_STAGE2_KERNEL
+int create_hypsec_io_mappings(phys_addr_t phys_addr, size_t size,
+			      unsigned long *haddr)
+{
+	unsigned long addr;
+	int ret;
+
+	ret = __create_hyp_private_mapping(phys_addr, size,
+					   &addr, PAGE_HYP_DEVICE);
+	if (ret) {
+		*haddr = NULL;
+		return ret;
+	}
+
+	*haddr = addr;
+	return 0;
+}
+#endif
+
 /**
  * kvm_alloc_stage2_pgd - allocate level-1 table for stage-2 translation.
  * @kvm:	The KVM struct pointer for the VM.

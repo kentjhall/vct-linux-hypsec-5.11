@@ -19,7 +19,7 @@
 
 void init_stage2_data_page(void)
 {
-	int i = 0, index = 0;
+	int i = 0, index = 0, err;
 	struct stage2_data *stage2_data;
 	struct memblock_region *r;
 
@@ -52,6 +52,14 @@ void init_stage2_data_page(void)
 	stage2_data->shadow_vm_ctxt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	stage2_data->vmid_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
+	err = create_hypsec_io_mappings((phys_addr_t)stage2_data->pl011_base,
+					 PAGE_SIZE,
+					 &stage2_data->pl011_base);
+	if (err) {
+		kvm_err("Cannot map pl011\n");
+		goto out_err;
+	}
+
 	memset(&stage2_data->arch, 0, sizeof(struct s2_cpu_arch));
 
 	memset(stage2_data->s2_pages, 0, sizeof(struct s2_page) * S2_PFN_SIZE);
@@ -72,6 +80,7 @@ void init_stage2_data_page(void)
 
 	stage2_data->next_vmid = 1;
 
+out_err:
 	return;
 }
 
