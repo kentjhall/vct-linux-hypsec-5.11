@@ -209,7 +209,11 @@ typedef struct kvm_cpu_context kvm_cpu_context_t;
 
 struct kvm_vcpu_arch {
 	struct kvm_cpu_context ctxt;
-
+#ifdef CONFIG_STAGE2_KERNEL
+	u64 host_hcr_el2;
+	u64 host_vttbr_el2;
+	u64 tpidr_el2;
+#endif
 	/* HYP configuration */
 	u64 hcr_el2;
 	u32 mdcr_el2;
@@ -412,6 +416,14 @@ static inline void __cpu_init_hyp_mode(phys_addr_t pgd_ptr,
 	kvm_call_hyp(__kvm_set_tpidr_el2, tpidr_el2);
 #endif
 }
+
+#ifdef CONFIG_STAGE2_KERNEL
+static inline u64 get_tpidr_el2(void)
+{
+	return (u64)this_cpu_ptr(&kvm_host_cpu_state)
+		- (u64)kvm_ksym_ref(kvm_host_cpu_state);
+}
+#endif
 
 static inline bool kvm_arch_check_sve_has_vhe(void)
 {

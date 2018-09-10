@@ -780,6 +780,9 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *run)
 			ret = kvm_vcpu_run_vhe(vcpu);
 			kvm_arm_vhe_guest_exit();
 		} else {
+#ifdef CONFIG_STAGE2_KERNEL
+			vcpu->arch.tpidr_el2 = get_tpidr_el2();
+#endif
 			ret = kvm_call_hyp(__kvm_vcpu_run_nvhe, vcpu);
 		}
 
