@@ -80,3 +80,24 @@ out_err:
 	return;
 }
 
+unsigned long __hyp_text get_s2_page_index(struct stage2_data *stage2_data,
+                                           phys_addr_t addr)
+{
+	int i;
+	unsigned long ret = 0;
+
+	i = stage2_mem_regions_search(addr, stage2_data->regions,
+			stage2_data->regions_cnt);
+	if (i == -1)
+		goto out;
+
+	/* The requested memblock is unused! */
+	if (stage2_data->s2_memblock_info[i].index == S2_PFN_SIZE)
+		print_string("memblock unused\n");
+
+	ret = stage2_data->s2_memblock_info[i].index +
+		((addr - stage2_data->regions[i].base) >> PAGE_SHIFT);
+
+out:
+	return ret;
+}
