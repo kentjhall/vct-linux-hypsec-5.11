@@ -67,10 +67,6 @@ void init_stage2_data_page(void)
 
 	stage2_data->host_vttbr = __pa(stage2_pgs_start);
 
-	hash_init(stage2_data->softtlb);
-	memset(stage2_data->ipa_hash, 0, sizeof(struct ipa_hash) * IPA_HASH_SIZE);
-	stage2_data->ipa_hash_cnt = 0;
-
 	memset(stage2_data->vm_info, 0, sizeof(struct el2_vm_info) * EL2_VM_INFO_SIZE);
 	stage2_data->used_vm_info = 0;
 	stage2_data->last_remap_ptr = 0;

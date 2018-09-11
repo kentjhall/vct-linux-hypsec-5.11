@@ -37,10 +37,6 @@ struct stage2_data {
 	kvm_pfn_t ram_start_pfn;
 	struct s2_page s2_pages[S2_PFN_SIZE];
 
-	DECLARE_HASHTABLE(softtlb, 9);
-	unsigned long ipa_hash_cnt;
-	struct ipa_hash ipa_hash[IPA_HASH_SIZE];
-
 	struct s2_sys_reg_desc s2_sys_reg_descs[SHADOW_SYS_REGS_DESC_SIZE];
 
 	struct el2_vm_info vm_info[EL2_VM_INFO_SIZE];
