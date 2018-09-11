@@ -285,10 +285,10 @@ void el2_protect_stack_page(phys_addr_t addr)
 
 void el2_flush_dcache_to_poc(void *addr, size_t size)
 {
-	kvm_call_hyp(__flush_dcache_area, kern_hyp_va(addr), size);
+	kvm_call_hyp(__flush_dcache_area, __el2_va(__pa(addr)), size);
 }
 
 void el2_flush_icache_range(unsigned long start, unsigned long end)
 {
-	kvm_call_hyp(flush_icache_range, kern_hyp_va(start), kern_hyp_va(end));
+	kvm_call_hyp(flush_icache_range, __el2_va(__pa(start)), __el2_va(__pa(end)));
 }
