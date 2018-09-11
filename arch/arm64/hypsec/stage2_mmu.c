@@ -268,9 +268,19 @@ void __hyp_text protect_el2_pgtable_mem(void)
 	} while (addr < end);
 }
 
+void __hyp_text __el2_protect_stack_page(phys_addr_t addr)
+{
+	unsigned long index;
+	struct stage2_data *stage2_data;
+
+	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	index = get_s2_page_index(stage2_data, addr & PAGE_MASK);
+	stage2_data->s2_pages[index].vmid = HYPSEC_VMID;
+}
+
 void el2_protect_stack_page(phys_addr_t addr)
 {
-	/* TODO: Have to protect the stack page from the host */
+	kvm_call_hyp(__el2_protect_stack_page, addr);
 }
 
 void el2_flush_dcache_to_poc(void *addr, size_t size)
