@@ -563,9 +563,14 @@ static void update_vttbr(struct kvm *kvm)
 	}
 
 	kvm->arch.vmid_gen = atomic64_read(&kvm_vmid_gen);
+#ifndef CONFIG_STAGE2_KERNEL
 	kvm->arch.vmid = kvm_next_vmid;
 	kvm_next_vmid++;
 	kvm_next_vmid &= (1 << kvm_vmid_bits) - 1;
+#else
+	/* Ask the corevisor to allocate vmid for us. */
+	kvm->arch.vmid = el2_alloc_vm_info(kvm);
+#endif
 
 	/* update vttbr to be used with the new vmid */
 	pgd_phys = virt_to_phys(kvm->arch.pgd);

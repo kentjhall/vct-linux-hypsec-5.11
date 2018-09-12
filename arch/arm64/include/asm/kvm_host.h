@@ -69,6 +69,7 @@ struct kvm_arch {
 	u64    vttbr;
 #ifdef CONFIG_STAGE2_KERNEL
 	u64    shadow_vttbr;
+	struct	el2_vm_info	*vm_info;
 #endif
 
 	/* The last vcpu id that ran on each physical CPU */
