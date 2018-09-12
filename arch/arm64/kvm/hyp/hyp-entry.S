@@ -102,6 +102,10 @@
 	mov	x0, x1
 	mov	x1, x2
 	mov	x2, x3
+#ifdef CONFIG_STAGE2_KERNEL
+	mov	x3, x4
+	mov	x4, x5
+#endif
 	blr	lr
 	ldr	lr, [sp], #16
 .endm
