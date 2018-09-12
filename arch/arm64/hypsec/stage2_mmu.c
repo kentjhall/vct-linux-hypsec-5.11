@@ -75,6 +75,30 @@ void* __hyp_text alloc_stage2_page(unsigned int num)
 	return (void *)p_addr;
 }
 
+/* Allocate a 4k page from the reserved 2M area  */
+void* __hyp_text alloc_shadow_s2_pgd(unsigned int num)
+{
+	u64 p_addr, start;
+	struct stage2_data *stage2_data;
+
+	if (!num)
+		return NULL;
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	stage2_spin_lock(&stage2_data->page_pool_lock);
+
+	/* Check if we're out of memory in the reserved area */
+	if (stage2_data->used_pgd_pages >= STAGE2_NUM_PGD_PAGES)
+		print_string("stage2: out of pages\r\n");
+
+	start = stage2_data->page_pool_start;
+	p_addr = (u64)start + (PAGE_SIZE * stage2_data->used_pgd_pages);
+	stage2_data->used_pgd_pages += num;
+
+	stage2_spin_unlock(&stage2_data->page_pool_lock);
+	return (void *)p_addr;
+}
+
 #if CONFIG_PGTABLE_LEVELS > 3
 static pud_t __hyp_text *pud_offset_el2(pgd_t *pgd, u64 addr)
 {
@@ -386,6 +410,15 @@ out:
 	return err;
 }
 
+#define S2_PGD_PAGES_NUM	(PTRS_PER_S2_PGD * sizeof(pgd_t)) / PAGE_SIZE
+void __hyp_text __alloc_shadow_vttbr(struct kvm *kvm)
+{
+	struct kvm *kvm_el2 = kern_hyp_va(kvm);
+
+	/* Allocates a 8KB page for stage 2 pgd */
+	kvm_el2->arch.shadow_vttbr = (u64)alloc_shadow_s2_pgd(S2_PGD_PAGES_NUM);
+}
+
 void el2_protect_stack_page(phys_addr_t addr)
 {
 	kvm_call_hyp(__el2_protect_stack_page, addr);
@@ -405,4 +438,9 @@ int el2_create_hyp_mapping(unsigned long start, unsigned long end,
 			    unsigned long pfn, pgprot_t prot)
 {
 	return kvm_call_hyp(map_el2_mem, start, end, pfn, prot);
+}
+
+void alloc_shadow_vttbr(struct kvm *kvm)
+{
+	kvm_call_hyp(__alloc_shadow_vttbr, kvm);
 }
