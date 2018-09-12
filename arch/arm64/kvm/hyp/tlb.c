@@ -165,3 +165,39 @@ void __hyp_text __kvm_flush_vm_context(void)
 	asm volatile("ic ialluis" : : );
 	dsb(ish);
 }
+
+/* Call here with shadow vttbr loaded */
+#ifdef CONFIG_STAGE2_KERNEL
+void __hyp_text __kvm_tlb_flush_vmid_ipa_shadow(phys_addr_t ipa)
+{
+	dsb(ishst);
+	isb();
+
+	/*
+	 * We could do so much better if we had the VA as well.
+	 * Instead, we invalidate Stage-2 for this IPA, and the
+	 * whole of Stage-1. Weep...
+	 */
+	ipa >>= 12;
+	asm volatile("tlbi ipas2e1is, %0" : : "r" (ipa));
+
+	/*
+	 * We have to ensure completion of the invalidation at Stage-2,
+	 * since a table walk on another CPU could refill a TLB with a
+	 * complete (S1 + S2) walk based on the old Stage-2 mapping if
+	 * the Stage-1 invalidation happened first.
+	 */
+	dsb(ish);
+	asm volatile("tlbi vmalle1is" : : );
+	dsb(ish);
+	isb();
+}
+
+/* Flush stage2 entries corresponded to the currend VMID */
+void __hyp_text __kvm_tlb_flush_vmid_el2(void)
+{
+	isb();
+	asm volatile("tlbi vmalls12e1is" : : );
+	isb();
+}
+#endif
