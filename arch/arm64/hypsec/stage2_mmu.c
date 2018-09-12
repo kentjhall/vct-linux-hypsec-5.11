@@ -99,6 +99,126 @@ void* __hyp_text alloc_shadow_s2_pgd(unsigned int num)
 	return (void *)p_addr;
 }
 
+u64 __hyp_text get_shadow_vttbr(struct kvm *kvm)
+{
+	u64 pool_start, ret = kvm->arch.shadow_vttbr;
+
+	pool_start = __pa(stage2_pgs_start);
+	if (ret >= pool_start &&
+	    ret < (pool_start + (STAGE2_NUM_PGD_PAGES << PAGE_SHIFT)))
+		return ret;
+	else
+		__hyp_panic();
+}
+
+static u32 __hyp_text get_hpa_owner(phys_addr_t addr)
+{
+	u32 ret;
+	unsigned long index;
+	struct stage2_data *stage2_data;
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	index = get_s2_page_index(stage2_data, addr & PAGE_MASK);
+
+	stage2_spin_lock(&stage2_data->s2pages_lock);
+	ret = stage2_data->s2_pages[index].vmid;
+	stage2_spin_unlock(&stage2_data->s2pages_lock);
+
+	return ret;
+}
+
+static int __hyp_text stage2_pmd_huge(pmd_t pmd)
+{
+	return pmd_val(pmd) && !(pmd_val(pmd) & PMD_TABLE_BIT);
+}
+
+#define stage2_pmd_thp_or_huge(pmd)	(stage2_pmd_huge(pmd) || pmd_trans_huge(pmd))
+
+static void __hyp_text walk_stage2_pte(pmd_t *pmd, phys_addr_t addr,
+				struct s2_trans *result )
+{
+	u64 desc;
+	pte_t *pte;
+
+	pte = pte_offset_el2(pmd, addr);
+	if (pte_none(*pte))
+		return;
+
+	result->pfn = pte_pfn(*pte);
+	result->output = result->pfn << PAGE_SHIFT;
+	desc = pte_val(*pte);
+	result->level = 3;
+	result->readable = desc & (0b01 << 6);
+        result->writable = desc & (0b10 << 6);
+	result->desc = desc;
+}
+
+static void __hyp_text walk_stage2_pmd(pud_t *pud, phys_addr_t addr,
+				struct s2_trans *result)
+{
+	pmd_t *pmd;
+	u64 addr_off;
+	kvm_pfn_t pfn;
+
+	pmd = pmd_offset_el2(pud, addr);
+	if (!pmd_none(*pmd)) {
+		if (stage2_pmd_thp_or_huge(*pmd)) {
+			pfn = pmd_pfn(*pmd);
+			result->output = pfn << PAGE_SHIFT;
+			result->desc = pmd_val(*pmd);
+
+			addr_off = (addr & (PMD_SIZE - 1)) >> PAGE_SHIFT;
+			pfn += addr_off;
+			result->pfn = pfn;
+			result->level = 2;
+			result->readable = pmd_val(*pmd) & (0b01 << 6);
+			result->writable = pmd_val(*pmd) & (0b10 << 6);
+		} else
+			walk_stage2_pte(pmd, addr, result);
+	}
+}
+
+static void __hyp_text walk_stage2_pud(pgd_t *pgd, phys_addr_t addr,
+				struct s2_trans *result)
+{
+	pud_t *pud;
+
+	pud = stage2_pud_offset(pgd, addr);
+	if (!stage2_pud_none(*pud))
+		walk_stage2_pmd(pud, addr, result);
+}
+
+void __hyp_text walk_stage2_pgd(struct kvm *kvm, phys_addr_t addr,
+				struct s2_trans *result, bool walk_shadow_s2)
+{
+	pgd_t *vttbr;
+	pgd_t *pgd;
+	struct stage2_data *stage2_data;
+	arch_spinlock_t *lock;
+
+	/* Just in case we cannot find the pfn.. */
+	el2_memset(result, 0, sizeof(struct s2_trans));
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+
+	if (walk_shadow_s2) {
+		vttbr = (pgd_t *)get_shadow_vttbr(kvm);
+		lock = get_shadow_pt_lock(kvm);
+	} else {
+		vttbr = (void *)kvm->arch.vttbr;
+		lock = &kvm->mmu_lock.rlock.raw_lock;
+	}
+
+	vttbr = __el2_va(vttbr);
+
+	stage2_spin_lock(lock);
+	pgd = vttbr + stage2_pgd_index(addr);
+	if (stage2_pgd_present(*pgd))
+		walk_stage2_pud(pgd, addr, result);
+	stage2_spin_unlock(lock);
+
+	return;
+}
+
 #if CONFIG_PGTABLE_LEVELS > 3
 static pud_t __hyp_text *pud_offset_el2(pgd_t *pgd, u64 addr)
 {
@@ -213,6 +333,128 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 
 out:
 	return;
+}
+
+static int __hyp_text map_shadow_s2pt_mem(struct kvm *kvm,
+					  struct stage2_data *stage2_data,
+					  phys_addr_t addr,
+					  struct s2_trans result)
+{
+	pgd_t *pgd;
+	pgd_t *vttbr;
+	pud_t *pud;
+	pmd_t *pmd, *old_pmd;
+	pte_t *pte;
+	pte_t new_pte;
+	kvm_pfn_t pfn;
+	arch_spinlock_t *lock;
+	int ret = -ENOMEM;
+	u32 vmid = el2_get_vmid(stage2_data, kvm);
+
+	lock = get_shadow_pt_lock(kvm);
+
+	vttbr = (pgd_t *)get_shadow_vttbr(kvm);
+	vttbr = __el2_va(vttbr);
+
+	stage2_spin_lock(lock);
+
+	pgd = vttbr + stage2_pgd_index(addr);
+	if (stage2_pgd_none(*pgd)) {
+		pud = alloc_stage2_page(1);
+		__pgd_populate(pgd, (phys_addr_t)pud, PUD_TYPE_TABLE);
+	}
+
+	pud = stage2_pud_offset(pgd, addr);
+	if (stage2_pud_none(*pud)) {
+		pmd = alloc_stage2_page(1);
+		__pud_populate(pud, (phys_addr_t)pmd, PMD_TYPE_TABLE);
+	}
+
+	pmd = pmd_offset_el2(pud, addr);
+	if (result.level == 2) {
+		pmd_t new_pmd = pfn_pmd(result.output >> PAGE_SHIFT, PAGE_S2);
+		new_pmd = pmd_mkhuge(new_pmd);
+		if (result.writable)
+			new_pmd = kvm_s2pmd_mkwrite(new_pmd);
+		old_pmd = pmd;
+		if (pmd_present(*old_pmd)) {
+			ret = 1;
+			goto out;
+		}
+		kvm_set_pmd(pmd, new_pmd);
+		__kvm_tlb_flush_vmid_ipa_shadow(addr);
+
+		ret = 1;
+		goto out;
+	}
+
+	/* Now we know the host uses pte mapping */
+	if (pmd_none(*pmd)) {
+		pte = alloc_stage2_page(1);
+		__pmd_populate(pmd, (phys_addr_t)pte, PMD_TYPE_TABLE);
+	}
+
+	pte = pte_offset_el2(pmd, addr);
+	if (!pte_none(*pte)) {
+		ret = 1;
+		goto out;
+	}
+
+	pfn = result.pfn;
+	if (stage2_is_map_memory(result.output)) {
+		new_pte = pfn_pte(pfn, PAGE_S2);
+		if (result.writable)
+			new_pte = kvm_s2pte_mkwrite(new_pte);
+	} else {
+		new_pte = pfn_pte(pfn, PAGE_S2_DEVICE);
+		new_pte = kvm_s2pte_mkwrite(new_pte);
+	}
+
+	kvm_set_pte(pte, new_pte);
+	__kvm_tlb_flush_vmid_ipa_shadow(addr);
+
+	ret = 1;
+
+out:
+	stage2_spin_unlock(lock);
+
+	return ret;
+}
+
+int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
+{
+	phys_addr_t addr;
+	struct stage2_data *stage2_data;
+	struct kvm *kvm = kern_hyp_va(vcpu->kvm);
+	struct s2_trans result;
+	int ret = -ENOMEM;
+	u32 vmid, target_vmid;
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	addr = (hpfar & HPFAR_MASK) << 8;
+	vmid = el2_get_vmid(stage2_data, kvm);
+
+	walk_stage2_pgd(kvm, addr, &result, false);
+	if (!result.level)
+		return ret;
+
+	if (stage2_is_map_memory(result.output)) {
+		if (result.output >= __pa(kvm_ksym_ref(stage2_pgs_start)) &&
+			result.output <= __pa(kvm_ksym_ref(stage2_data_end)))
+				return ret;
+
+		/* Check if a page is owned by EL2 or already belongs to a VM */
+		target_vmid = get_hpa_owner(result.output);
+		if (target_vmid == HYPSEC_VMID || (target_vmid && target_vmid != vmid))
+			return ret;
+	}
+
+	ret = map_shadow_s2pt_mem(kvm, stage2_data, addr, result);
+
+	/* TODO: We should unmap the pfn from host address space here. */
+	__kvm_flush_vm_context();
+
+	return ret;
 }
 
 static void __hyp_text protect_el2_pmd_mem(pud_t *pud, unsigned long start,

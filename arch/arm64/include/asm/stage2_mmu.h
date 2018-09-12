@@ -110,5 +110,6 @@ extern void el2_encrypt_buf(void *buf, uint32_t len);
 extern void el2_decrypt_buf(void *buf, uint32_t len);
 
 extern void map_mem_el2(void);
+extern void __kvm_tlb_flush_vmid_ipa_shadow(phys_addr_t ipa);
 #endif /* __ARM_STAGE2_MMU__ */
 
