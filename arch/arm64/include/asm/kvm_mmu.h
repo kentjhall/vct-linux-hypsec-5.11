@@ -160,6 +160,7 @@ int create_hyp_exec_mappings(phys_addr_t phys_addr, size_t size,
 #ifdef CONFIG_STAGE2_KERNEL
 int create_hypsec_io_mappings(phys_addr_t phys_addr, size_t size,
 			      unsigned long *haddr);
+int el2_create_hyp_mappings(void *from, void *to, pgprot_t prot);
 #endif
 void free_hyp_pgds(void);
 

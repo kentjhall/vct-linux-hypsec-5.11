@@ -278,6 +278,114 @@ void __hyp_text __el2_protect_stack_page(phys_addr_t addr)
 	stage2_data->s2_pages[index].vmid = HYPSEC_VMID;
 }
 
+static void __hyp_text map_el2_pte_mem(pmd_t *pmd, unsigned long start,
+				    unsigned long end, unsigned long pfn, pgprot_t prot)
+{
+	pte_t *pte;
+	unsigned long addr;
+	pte_t hi;
+
+	addr = start;
+	do {
+		pte = pte_offset_el2(pmd, addr);
+		hi = pfn_pte(pfn, prot);
+		kvm_set_pte(pte, pfn_pte(pfn, prot));
+		__flush_dcache_area(pte, sizeof(*pte));
+
+		pfn++;
+	} while (addr += PAGE_SIZE, addr != end);
+}
+
+static int __hyp_text map_el2_pmd_mem(pud_t *pud, unsigned long start,
+				    unsigned long end, unsigned long pfn, pgprot_t prot)
+{
+	pmd_t *pmd;
+	pte_t *pte;
+	unsigned long addr, next;
+
+	addr = start;
+	do {
+		pmd = pmd_offset_el2(pud, addr);
+
+		if (pmd_none(*pmd)) {
+			pte = alloc_stage2_page(1);
+			__pmd_populate(pmd, (phys_addr_t)pte, PMD_TYPE_TABLE);
+			__flush_dcache_area(pmd, sizeof(*pmd));
+		}
+
+		next = pmd_addr_end(addr, end);
+
+		map_el2_pte_mem(pmd, addr, next, pfn, prot);
+		pfn += (next - addr) >> PAGE_SHIFT;
+	} while (addr = next, addr != end);
+
+	return 0;
+}
+
+
+static int __hyp_text map_el2_pud_mem(pgd_t *pgd, unsigned long start,
+				    unsigned long end, unsigned long pfn, pgprot_t prot)
+{
+	pud_t *pud;
+	pmd_t *pmd;
+	unsigned long addr, next;
+	int ret;
+
+	addr = start;
+	do {
+		pud = pud_offset_el2(pgd, addr);
+
+		if (pud_none_or_clear_bad(pud)) {
+			pmd = alloc_stage2_page(1);
+			__pud_populate(pud, (phys_addr_t)pmd, PMD_TYPE_TABLE);
+			__flush_dcache_area(pud, sizeof(*pud));
+		}
+
+		next = pud_addr_end(addr, end);
+
+		ret = map_el2_pmd_mem(pud, addr, next, pfn, prot);
+		if (ret)
+			return ret;
+		pfn += (next - addr) >> PAGE_SHIFT;
+	} while (addr = next, addr != end);
+
+	return 0;
+}
+
+int __hyp_text map_el2_mem(unsigned long start, unsigned long end,
+			    unsigned long pfn, pgprot_t prot)
+{
+	pgd_t *pgd, *pgdp;
+	pud_t *pud;
+	unsigned long addr, next;
+	int err = 0;
+
+	pgdp = (pgd_t *)read_sysreg(ttbr0_el2);
+	pgdp =__el2_va(pgdp);
+
+	addr = start & PAGE_MASK;
+	end = PAGE_ALIGN(end);
+
+	do {
+		pgd =  pgdp + pgd_index(addr);
+		if (pgd_none(*pgd)) {
+			pud = alloc_stage2_page(1);
+			__pgd_populate(pgd, (phys_addr_t)pud, PUD_TYPE_TABLE);
+			__flush_dcache_area(pgd, sizeof(*pgd));
+		}
+
+		next = pgd_addr_end(addr, end);
+
+		err = map_el2_pud_mem(pgd, addr, next, pfn, prot);
+		if (err)
+			goto out;
+		pfn += (next - addr) >> PAGE_SHIFT;
+	} while (addr = next, addr != end);
+
+out:
+	return err;
+}
+
 void el2_protect_stack_page(phys_addr_t addr)
 {
 	kvm_call_hyp(__el2_protect_stack_page, addr);
@@ -291,4 +399,10 @@ void el2_flush_dcache_to_poc(void *addr, size_t size)
 void el2_flush_icache_range(unsigned long start, unsigned long end)
 {
 	kvm_call_hyp(flush_icache_range, __el2_va(__pa(start)), __el2_va(__pa(end)));
+}
+
+int el2_create_hyp_mapping(unsigned long start, unsigned long end,
+			    unsigned long pfn, pgprot_t prot)
+{
+	return kvm_call_hyp(map_el2_mem, start, end, pfn, prot);
 }

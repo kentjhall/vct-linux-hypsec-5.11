@@ -153,7 +153,11 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 	if (ret)
 		goto out_fail_alloc;
 
+#ifndef CONFIG_STAGE2_KERNEL
 	ret = create_hyp_mappings(kvm, kvm + 1, PAGE_HYP);
+#else
+	ret = el2_create_hyp_mappings(kvm, kvm + 1, PAGE_HYP);
+#endif
 	if (ret)
 		goto out_free_stage2_pgd;
 
@@ -312,7 +316,11 @@ struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
 	if (err)
 		goto free_vcpu;
 
+#ifndef CONFIG_STAGE2_KERNEL
 	err = create_hyp_mappings(vcpu, vcpu + 1, PAGE_HYP);
+#else
+	err = el2_create_hyp_mappings(vcpu, vcpu + 1, PAGE_HYP);
+#endif
 	if (err)
 		goto vcpu_uninit;
 

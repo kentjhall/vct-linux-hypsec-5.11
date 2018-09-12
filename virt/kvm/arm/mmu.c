@@ -912,6 +912,36 @@ int create_hypsec_io_mappings(phys_addr_t phys_addr, size_t size,
 	*haddr = addr;
 	return 0;
 }
+
+/* Make hypercall to EL2 to create stage2 mapping.. */
+int el2_create_hyp_mappings(void *from, void *to, pgprot_t prot)
+{
+	phys_addr_t phys_addr;
+	unsigned long virt_addr;
+	unsigned long start = kern_hyp_va((unsigned long)from);
+	unsigned long end = kern_hyp_va((unsigned long)to);
+
+	if (is_kernel_in_hyp_mode())
+		return 0;
+
+	start = start & PAGE_MASK;
+	end = PAGE_ALIGN(end);
+
+	for (virt_addr = start; virt_addr < end; virt_addr += PAGE_SIZE) {
+		int err;
+
+		phys_addr = kvm_kaddr_to_phys(from + virt_addr - start);
+		err = el2_create_hyp_mapping(virt_addr,
+					    virt_addr + PAGE_SIZE,
+					    __phys_to_pfn(phys_addr),
+					    prot);
+		if (err)
+			return err;
+	}
+
+	return 0;
+
+}
 #endif
 
 /**

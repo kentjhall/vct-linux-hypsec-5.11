@@ -77,9 +77,6 @@ int el2_memcmp(void *dest, void *src, size_t len);
 int el2_hex_to_bin(char ch);
 int el2_hex2bin(unsigned char *dst, const char *src, int count);
 
-int el2_create_hyp_mapping(unsigned long start, unsigned long end,
-			    unsigned long pfn, pgprot_t prot);
-
 extern void el2_protect_stack_page(phys_addr_t addr);
 
 extern void el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid);
