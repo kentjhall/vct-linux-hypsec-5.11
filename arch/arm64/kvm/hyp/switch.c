@@ -200,7 +200,9 @@ static void __hyp_text __activate_vm(struct kvm *kvm)
 
 static void __hyp_text __deactivate_vm(struct kvm_vcpu *vcpu)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	write_sysreg(0, vttbr_el2);
+#endif
 }
 
 /* Save VGICv3 state on non-VHE systems */
