@@ -155,6 +155,12 @@ el1_sync:				// Guest trapped into EL2
 	/* Here, we're pretty sure the host called HVC. */
 	ldp	x0, x1, [sp], #16
 
+	cmp	x0, #HVC_GET_VECTORS
+	b.ne	2f
+	mrs	x0, vbar_el2
+	eret
+
+2:
 	/* Check for a stub HVC call */
 	cmp	x0, #HVC_STUB_HCALL_NR
 	b.hs	1f

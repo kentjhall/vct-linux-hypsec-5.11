@@ -60,6 +60,7 @@ __asm__(".arch_extension	virt");
 
 DEFINE_PER_CPU(kvm_cpu_context_t, kvm_host_cpu_state);
 static DEFINE_PER_CPU(unsigned long, kvm_arm_hyp_stack_page);
+static unsigned long hyp_default_vectors;
 
 /* Per-CPU variable containing the currently running vcpu. */
 static DEFINE_PER_CPU(struct kvm_vcpu *, kvm_arm_running_vcpu);
@@ -1307,7 +1308,8 @@ static void cpu_hyp_reinit(void)
 		__cpu_init_stage2();
 		kvm_timer_init_vhe();
 	} else {
-		cpu_init_hyp_mode(NULL);
+		if (__hyp_get_vectors() == hyp_default_vectors)
+			cpu_init_hyp_mode(NULL);
 	}
 
 	if (vgic_present)
@@ -1478,6 +1480,8 @@ static int init_hyp_mode(void)
 	err = kvm_mmu_init();
 	if (err)
 		goto out_err;
+
+	hyp_default_vectors = __hyp_get_vectors();
 
 	/*
 	 * Allocate stack pages for Hypervisor-mode

@@ -53,6 +53,8 @@
 #define HVC_ENABLE_S2_TRANS 4
 #endif
 
+#define HVC_GET_VECTORS	5
+
 /* Error returned when an invalid stub number is passed into x0 */
 #define HVC_STUB_ERR	0xbadca11
 
@@ -79,6 +81,7 @@ extern u32 __boot_cpu_mode[2];
 
 void __hyp_set_vectors(phys_addr_t phys_vector_base);
 void __hyp_reset_vectors(void);
+phys_addr_t __hyp_get_vectors(void);
 #ifdef CONFIG_STAGE2_KERNEL
 void enable_stage2_translation(phys_addr_t vttbr_base);
 #endif
