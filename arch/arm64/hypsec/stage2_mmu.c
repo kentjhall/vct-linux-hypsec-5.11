@@ -102,8 +102,10 @@ void* __hyp_text alloc_shadow_s2_pgd(unsigned int num)
 u64 __hyp_text get_shadow_vttbr(struct kvm *kvm)
 {
 	u64 pool_start, ret = kvm->arch.shadow_vttbr;
+	struct stage2_data *stage2_data =
+			kern_hyp_va(kvm_ksym_ref(stage2_data_start));
 
-	pool_start = __pa(stage2_pgs_start);
+	pool_start = stage2_data->page_pool_start;
 	if (ret >= pool_start &&
 	    ret < (pool_start + (STAGE2_NUM_PGD_PAGES << PAGE_SHIFT)))
 		return ret;
@@ -188,35 +190,34 @@ static void __hyp_text walk_stage2_pud(pgd_t *pgd, phys_addr_t addr,
 		walk_stage2_pmd(pud, addr, result);
 }
 
-void __hyp_text walk_stage2_pgd(struct kvm *kvm, phys_addr_t addr,
-				struct s2_trans *result, bool walk_shadow_s2)
+struct s2_trans __hyp_text walk_stage2_pgd(struct kvm *kvm,
+					   phys_addr_t addr,
+					   bool walk_shadow_s2)
 {
 	pgd_t *vttbr;
 	pgd_t *pgd;
-	struct stage2_data *stage2_data;
 	arch_spinlock_t *lock;
+	struct s2_trans result;
 
 	/* Just in case we cannot find the pfn.. */
-	el2_memset(result, 0, sizeof(struct s2_trans));
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
 
 	if (walk_shadow_s2) {
 		vttbr = (pgd_t *)get_shadow_vttbr(kvm);
 		lock = get_shadow_pt_lock(kvm);
 	} else {
 		vttbr = (void *)kvm->arch.vttbr;
+		vttbr = (void *)((unsigned long)vttbr & VTTBR_BADDR_MASK);
 		lock = &kvm->mmu_lock.rlock.raw_lock;
 	}
-
 	vttbr = __el2_va(vttbr);
 
 	stage2_spin_lock(lock);
 	pgd = vttbr + stage2_pgd_index(addr);
 	if (stage2_pgd_present(*pgd))
-		walk_stage2_pud(pgd, addr, result);
+		walk_stage2_pud(pgd, addr, &result);
 	stage2_spin_unlock(lock);
 
-	return;
+	return result;
 }
 
 #if CONFIG_PGTABLE_LEVELS > 3
@@ -434,7 +435,7 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 	addr = (hpfar & HPFAR_MASK) << 8;
 	vmid = el2_get_vmid(stage2_data, kvm);
 
-	walk_stage2_pgd(kvm, addr, &result, false);
+	result = walk_stage2_pgd(kvm, addr, false);
 	if (!result.level)
 		return ret;
 
