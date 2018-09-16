@@ -75,6 +75,7 @@ static bool vgic_present;
 
 static DEFINE_PER_CPU(unsigned char, kvm_arm_hardware_enabled);
 
+static void update_vttbr(struct kvm *kvm);
 static void kvm_arm_set_running_vcpu(struct kvm_vcpu *vcpu)
 {
 	__this_cpu_write(kvm_arm_running_vcpu, vcpu);
@@ -168,6 +169,7 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 	kvm->arch.vmid_gen = 0;
 #ifdef CONFIG_STAGE2_KERNEL
 	alloc_shadow_vttbr(kvm);
+	update_vttbr(kvm);
 #endif
 
 	/* The maximum number of VCPUs is limited by the host's GIC model */
