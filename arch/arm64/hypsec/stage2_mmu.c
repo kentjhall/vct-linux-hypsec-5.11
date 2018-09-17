@@ -463,6 +463,91 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 	return ret;
 }
 
+void __hyp_text clear_vm_stage2_ptes(pmd_t *pmd, phys_addr_t addr,
+				phys_addr_t end)
+{
+	pte_t *pte, *start_pte;
+
+	start_pte = pte = pte_offset_el2(pmd, addr);
+	do {
+		if (!pte_none(*pte)) {
+			kvm_set_pte(pte, __pte(0));
+			__kvm_tlb_flush_vmid_ipa(NULL, addr);
+
+			if (stage2_is_map_memory(addr))
+				__flush_dcache_area(__el2_va(addr),
+					PAGE_SIZE);
+		}
+	} while (pte++, addr += PAGE_SIZE, addr != end);
+}
+
+static void __hyp_text clear_vm_stage2_pmds(pud_t *pud, phys_addr_t addr,
+				phys_addr_t end)
+{
+	phys_addr_t next;
+	pmd_t *pmd, *start_pmd;
+
+	start_pmd = pmd = pmd_offset_el2(pud, addr);
+	do {
+		next = stage2_pmd_addr_end(addr, end);
+		if (!pmd_none(*pmd)) {
+			if (stage2_pmd_thp_or_huge(*pmd)) {
+				pmd_clear(pmd);
+				__kvm_tlb_flush_vmid_ipa(NULL, addr);
+
+				if (stage2_is_map_memory(addr))
+					__flush_dcache_area(__el2_va(addr),
+						PMD_SIZE);
+			} else
+				clear_vm_stage2_ptes(pmd, addr, next);
+		}
+	} while (pmd++, addr = next, addr != end);
+}
+
+static void __hyp_text clear_vm_stage2_puds(pgd_t *pgd, phys_addr_t addr,
+				phys_addr_t end)
+{
+	phys_addr_t next;
+	pud_t *pud, *start_pud;
+
+	start_pud = pud = stage2_pud_offset(pgd, addr);
+	do {
+		next = stage2_pud_addr_end(addr, end);
+		if (!stage2_pud_none(*pud))
+			clear_vm_stage2_pmds(pud, addr, next);
+	} while (pud++, addr = next, addr != end);
+}
+
+void __hyp_text clear_shadow_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size)
+{
+	pgd_t *pgd;
+	pgd_t *vttbr;
+	phys_addr_t addr = start, end = start + size;
+	phys_addr_t next;
+	struct stage2_data *stage2_data;
+	arch_spinlock_t *lock;
+
+	vttbr = (pgd_t *)get_shadow_vttbr(kvm);
+	if (!vttbr)
+		return;
+	vttbr = __el2_va(vttbr);
+
+	kvm = kern_hyp_va(kvm);
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	lock = get_shadow_pt_lock(kvm);
+	stage2_spin_lock(lock);
+
+	pgd = vttbr + stage2_pgd_index(addr);
+
+	do {
+		next = stage2_pgd_addr_end(addr, end);
+		if (!stage2_pgd_none(*pgd))
+			clear_vm_stage2_puds(pgd, addr, next);
+	} while (pgd++, addr = next, addr != end);
+
+	stage2_spin_unlock(lock);
+}
+
 static void __hyp_text protect_el2_pmd_mem(pud_t *pud, unsigned long start,
 				   unsigned long end,
 				   struct stage2_data *stage2_data)

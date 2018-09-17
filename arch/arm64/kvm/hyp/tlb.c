@@ -125,7 +125,9 @@ void __hyp_text __kvm_tlb_flush_vmid_ipa(struct kvm *kvm, phys_addr_t ipa)
 	 */
 	if (!has_vhe() && icache_is_vpipt())
 		__flush_icache_all();
-
+#ifdef CONFIG_STAGE2_KERNEL
+	clear_shadow_stage2_range(kvm, ipa & PMD_MASK, PMD_SIZE);
+#endif
 	__tlb_switch_to_host()(kvm);
 }
 
