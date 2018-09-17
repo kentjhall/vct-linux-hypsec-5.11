@@ -66,8 +66,8 @@ extern void el2_flush_dcache_to_poc(void *addr, size_t size);
 extern void el2_flush_icache_range(unsigned long start, unsigned long end);
 
 void set_stage2_vring_gpa(struct kvm_vcpu *vcpu);
-void set_stage2_sg_gpa(struct kvm_vcpu *vcpu);
-void unset_stage2_sg_gpa(struct kvm_vcpu *vcpu);
+void grant_stage2_sg_gpa(struct kvm_vcpu *vcpu);
+void revoke_stage2_sg_gpa(struct kvm_vcpu *vcpu);
 void set_balloon_pfn(struct kvm_vcpu *vcpu);
 
 void* alloc_stage2_page(unsigned int order);

@@ -21,10 +21,10 @@ int __hyp_text handle_pvops(struct kvm_vcpu *vcpu)
 			set_stage2_vring_gpa(vcpu);
 			break;
 		case KVM_SET_DESC_PFN:
-			set_stage2_sg_gpa(vcpu);
+			grant_stage2_sg_gpa(vcpu);
 			break;
 		case KVM_UNSET_DESC_PFN:
-			unset_stage2_sg_gpa(vcpu);
+			revoke_stage2_sg_gpa(vcpu);
 			break;
 		case KVM_SET_BALLOON_PFN:
 			set_balloon_pfn(vcpu);
