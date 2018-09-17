@@ -321,6 +321,10 @@ static void unmap_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size)
 		if (next != end)
 			cond_resched_lock(&kvm->mmu_lock);
 	} while (pgd++, addr = next, addr != end);
+
+#ifdef CONFIG_STAGE2_KERNEL
+	clear_vm_stage2_range(kvm, start, size);
+#endif
 }
 
 static void stage2_flush_ptes(struct kvm *kvm, pmd_t *pmd,
@@ -1402,6 +1406,10 @@ static void stage2_wp_range(struct kvm *kvm, phys_addr_t addr, phys_addr_t end)
 {
 	pgd_t *pgd;
 	phys_addr_t next;
+#ifdef CONFIG_STAGE2_KERNEL
+	phys_addr_t start = addr;
+	u64 size = end - addr;
+#endif
 
 	pgd = kvm->arch.pgd + stage2_pgd_index(addr);
 	do {
@@ -1421,6 +1429,10 @@ static void stage2_wp_range(struct kvm *kvm, phys_addr_t addr, phys_addr_t end)
 		if (stage2_pgd_present(*pgd))
 			stage2_wp_puds(pgd, addr, next);
 	} while (pgd++, addr = next, addr != end);
+
+#ifdef CONFIG_STAGE2_KERNEL
+	clear_vm_stage2_range(kvm, start, size);
+#endif
 }
 
 /**

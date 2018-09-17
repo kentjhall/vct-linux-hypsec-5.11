@@ -716,6 +716,22 @@ void __hyp_text clear_shadow_stage2_range(struct kvm *kvm, phys_addr_t start, u6
 	stage2_spin_unlock(lock);
 }
 
+static void __hyp_text __clear_vm_stage2_range(struct kvm *kvm,
+			phys_addr_t start, u64 size)
+{
+	struct stage2_data *stage2_data;
+	u32 vmid;
+	kvm = kern_hyp_va(kvm);
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	clear_shadow_stage2_range(kvm, start, size);
+
+	if (size != KVM_PHYS_SIZE)
+		return;
+	vmid = el2_get_vmid(stage2_data, kvm);
+	clear_vm_pfn_owner(stage2_data, vmid);
+}
+
 static void __hyp_text protect_el2_pmd_mem(pud_t *pud, unsigned long start,
 				   unsigned long end,
 				   struct stage2_data *stage2_data)
@@ -944,4 +960,9 @@ int el2_create_hyp_mapping(unsigned long start, unsigned long end,
 void alloc_shadow_vttbr(struct kvm *kvm)
 {
 	kvm_call_hyp(__alloc_shadow_vttbr, kvm);
+}
+
+void clear_vm_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size)
+{
+	kvm_call_hyp(__clear_vm_stage2_range, kvm, start, size);
 }
