@@ -762,7 +762,7 @@ static void __hyp_text protect_el2_pud_mem(pgd_t *pgd, unsigned long start,
  * them by setting the ownership of the pages to HYPSEC_VMID. This allows
  * the core to reject any following accesses from the host.
  */
-void __hyp_text protect_el2_pgtable_mem(void)
+void __hyp_text protect_el2_mem(void)
 {
 	pgd_t *pgd, *pgdp;
 	unsigned long addr, next, end, index;
