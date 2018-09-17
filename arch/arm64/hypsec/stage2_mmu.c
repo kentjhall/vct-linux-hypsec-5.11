@@ -463,12 +463,13 @@ static void __hyp_text reject_invalid_mem_access(phys_addr_t addr,
 	stage2_inject_el1_fault(addr);
 }
 
-/*
 static pte_t __hyp_text gen_encrypted_pte(struct stage2_data *stage2_data,
                                          phys_addr_t addr)
 {
+	print_string("\raccessing vm page\n");
+	printhex_ul(addr);
+	return pfn_pte(0, PAGE_S2_KERNEL);
 }
-*/
 
 void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 					struct s2_host_regs *host_regs)
@@ -490,7 +491,7 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 			reject_invalid_mem_access(addr, host_lr);
 			goto out;
 		} else if (vmid) {
-			//new_pte = gen_encrypted_pte(stage2_data, addr);
+			new_pte = gen_encrypted_pte(stage2_data, addr);
 		} else if (!vmid)
 			new_pte = pfn_pte(pfn, PAGE_S2_KERNEL);
 	} else if (!stage2_emul_mmio(addr, host_regs)) {
