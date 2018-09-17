@@ -626,7 +626,16 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 	ret = map_shadow_s2pt_mem(kvm, stage2_data, addr, result,
 				  kvm_vcpu_trap_is_iabt(vcpu));
 
-	/* TODO: We should unmap the pfn from host address space here. */
+	if (result.pfn && (ret > 0) && !is_mmio_gpa(addr)) {
+		if (result.level == 2) {
+			set_pfn_owner(stage2_data, result.output, PMD_SIZE, vmid);
+			__set_pfn_host(result.output, PMD_SIZE, 0, PAGE_GUEST);
+		} else if (result.level == 3) {
+			set_pfn_owner(stage2_data, result.output, PAGE_SIZE, vmid);
+			__set_pfn_host(result.output, PAGE_SIZE, 0, PAGE_GUEST);
+		}
+	}
+
 	__kvm_flush_vm_context();
 
 	return ret;
