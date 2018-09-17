@@ -331,7 +331,7 @@ void __hyp_text set_pfn_host_ptes(pmd_t *pmd, phys_addr_t addr,
 	do {
 		new_pte = pfn_pte(pfn, prot);
 		kvm_set_pte(pte, new_pte);
-		__kvm_tlb_flush_vmid_ipa(NULL, addr);
+		__kvm_tlb_flush_vmid_ipa_shadow(addr);
 
 		if (stage2_is_map_memory(addr))
 			__flush_dcache_area(__el2_va(addr), PAGE_SIZE);
