@@ -520,7 +520,6 @@ static int __hyp_text map_shadow_s2pt_mem(struct kvm *kvm,
 	kvm_pfn_t pfn;
 	arch_spinlock_t *lock;
 	int ret = -ENOMEM;
-	u32 vmid = el2_get_vmid(stage2_data, kvm);
 
 	lock = get_shadow_pt_lock(kvm);
 
