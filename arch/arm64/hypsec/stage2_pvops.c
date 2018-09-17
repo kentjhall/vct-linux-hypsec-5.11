@@ -50,6 +50,29 @@ void __hyp_text set_stage2_vring_gpa(struct kvm_vcpu *vcpu)
 
 void __hyp_text set_balloon_pfn(struct kvm_vcpu *vcpu)
 {
+	struct kvm *kvm = (void *)kern_hyp_va(vcpu->kvm);
+	struct s2_trans result;
+	struct stage2_data *stage2_data;
+	unsigned long gpa = vcpu_get_reg(vcpu, 1);
+	kvm_pfn_t pfn;
+
+	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+
+	result = walk_stage2_pgd(kvm, gpa, true);
+	if (!result.level)
+		return;
+
+	pfn = result.pfn;
+	if (pfn) {
+		/* FIXME: Do we really need to flush the entire thing? */
+		clear_shadow_stage2_range(kvm, 0, KVM_PHYS_SIZE);
+		el2_memset((void *)__el2_va(pfn << PAGE_SHIFT), 0, PAGE_SIZE);
+		__set_pfn_host(pfn << PAGE_SHIFT, PAGE_SIZE,
+			pfn, PAGE_S2_KERNEL);
+		set_pfn_owner(stage2_data, pfn << PAGE_SHIFT, PAGE_SIZE, 0);
+	}
+
+	return;
 }
 
 static void __hyp_text __grant_stage2_sg_gpa(struct kvm *kvm,
