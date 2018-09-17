@@ -200,7 +200,7 @@ struct s2_trans __hyp_text walk_stage2_pgd(struct kvm *kvm,
 	struct s2_trans result;
 
 	/* Just in case we cannot find the pfn.. */
-
+	el2_memset(&result, 0, sizeof(struct s2_trans));
 	if (walk_shadow_s2) {
 		vttbr = (pgd_t *)get_shadow_vttbr(kvm);
 		lock = get_shadow_pt_lock(kvm);
@@ -339,7 +339,8 @@ out:
 static int __hyp_text map_shadow_s2pt_mem(struct kvm *kvm,
 					  struct stage2_data *stage2_data,
 					  phys_addr_t addr,
-					  struct s2_trans result)
+					  struct s2_trans result,
+					  bool exec_fault)
 {
 	pgd_t *pgd;
 	pgd_t *vttbr;
@@ -377,11 +378,14 @@ static int __hyp_text map_shadow_s2pt_mem(struct kvm *kvm,
 		new_pmd = pmd_mkhuge(new_pmd);
 		if (result.writable)
 			new_pmd = kvm_s2pmd_mkwrite(new_pmd);
+		if (exec_fault)
+			new_pmd = kvm_s2pmd_mkexec(new_pmd);
 		old_pmd = pmd;
 		if (pmd_present(*old_pmd)) {
 			ret = 1;
 			goto out;
 		}
+		//new_pmd.pmd = result.desc;
 		kvm_set_pmd(pmd, new_pmd);
 		__kvm_tlb_flush_vmid_ipa_shadow(addr);
 
@@ -450,7 +454,8 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 			return ret;
 	}
 
-	ret = map_shadow_s2pt_mem(kvm, stage2_data, addr, result);
+	ret = map_shadow_s2pt_mem(kvm, stage2_data, addr, result,
+				  kvm_vcpu_trap_is_iabt(vcpu));
 
 	/* TODO: We should unmap the pfn from host address space here. */
 	__kvm_flush_vm_context();

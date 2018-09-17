@@ -32,6 +32,9 @@
 #include <asm/debug-monitors.h>
 #include <asm/processor.h>
 #include <asm/thread_info.h>
+#ifdef CONFIG_STAGE2_KERNEL
+#include <asm/stage2_host.h>
+#endif
 
 /* Check whether the FP regs were dirtied while in the host-side run loop: */
 static bool __hyp_text update_fp_enabled(struct kvm_vcpu *vcpu)
@@ -195,7 +198,17 @@ void deactivate_traps_vhe_put(void)
 
 static void __hyp_text __activate_vm(struct kvm *kvm)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	write_sysreg(kvm->arch.vttbr, vttbr_el2);
+#else
+	u64 vmid, shadow_vttbr;
+	struct stage2_data *stage2_data;
+	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	vmid = el2_get_vmid(stage2_data, kvm) & 0xff;
+	vmid = vmid << VTTBR_VMID_SHIFT;
+	shadow_vttbr = get_shadow_vttbr(kvm);
+	write_sysreg(shadow_vttbr | vmid, vttbr_el2);
+#endif
 }
 
 static void __hyp_text __deactivate_vm(struct kvm_vcpu *vcpu)
@@ -301,6 +314,13 @@ static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu)
 
 	vcpu->arch.fault.far_el2 = far;
 	vcpu->arch.fault.hpfar_el2 = hpfar;
+#ifdef CONFIG_STAGE2_KERNEL
+	if (kvm_vcpu_trap_get_fault_type(vcpu) == FSC_FAULT) {
+		if (handle_shadow_s2pt_fault(vcpu, hpfar) > 0)
+			return false;
+	}
+#endif
+
 	return true;
 }
 
