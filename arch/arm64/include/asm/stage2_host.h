@@ -95,4 +95,6 @@ extern bool search_load_info(struct kvm *kvm, struct stage2_data *stage2_data,
 
 extern int el2_alloc_vm_info(struct kvm *kvm);
 extern int el2_get_vmid(struct stage2_data *stage2_data, struct kvm *kvm);
+
+int handle_pvops(struct kvm_vcpu *vcpu);
 #endif /* __ARM_STAGE2_H__ */
