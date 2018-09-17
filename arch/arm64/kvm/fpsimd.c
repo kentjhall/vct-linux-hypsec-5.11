@@ -13,7 +13,9 @@
 #include <asm/kvm_host.h>
 #include <asm/kvm_mmu.h>
 #include <asm/sysreg.h>
-
+#ifdef CONFIG_STAGE2_KERNEL
+#include <asm/stage2_host.h>
+#endif
 /*
  * Called on entry to KVM_RUN unless this vcpu previously ran at least
  * once and the most recent prior KVM_RUN for this vcpu was called from
@@ -34,11 +36,19 @@ int kvm_arch_vcpu_run_map_fp(struct kvm_vcpu *vcpu)
 	 * Make sure the host task thread flags and fpsimd state are
 	 * visible to hyp:
 	 */
+#ifndef CONFIG_STAGE2_KERNEL
 	ret = create_hyp_mappings(ti, ti + 1, PAGE_HYP);
+#else
+	ret = el2_create_hyp_mappings(ti, ti + 1, PAGE_HYP);
+#endif
 	if (ret)
 		goto error;
 
+#ifndef CONFIG_STAGE2_KERNEL
 	ret = create_hyp_mappings(fpsimd, fpsimd + 1, PAGE_HYP);
+#else
+	ret = el2_create_hyp_mappings(fpsimd, fpsimd + 1, PAGE_HYP);
+#endif
 	if (ret)
 		goto error;
 
