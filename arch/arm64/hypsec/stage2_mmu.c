@@ -472,7 +472,7 @@ void __hyp_text clear_vm_stage2_ptes(pmd_t *pmd, phys_addr_t addr,
 	do {
 		if (!pte_none(*pte)) {
 			kvm_set_pte(pte, __pte(0));
-			__kvm_tlb_flush_vmid_ipa(NULL, addr);
+			__kvm_tlb_flush_vmid_ipa_shadow(addr);
 
 			if (stage2_is_map_memory(addr))
 				__flush_dcache_area(__el2_va(addr),
@@ -493,7 +493,7 @@ static void __hyp_text clear_vm_stage2_pmds(pud_t *pud, phys_addr_t addr,
 		if (!pmd_none(*pmd)) {
 			if (stage2_pmd_thp_or_huge(*pmd)) {
 				pmd_clear(pmd);
-				__kvm_tlb_flush_vmid_ipa(NULL, addr);
+				__kvm_tlb_flush_vmid_ipa_shadow(addr);
 
 				if (stage2_is_map_memory(addr))
 					__flush_dcache_area(__el2_va(addr),
@@ -532,7 +532,6 @@ void __hyp_text clear_shadow_stage2_range(struct kvm *kvm, phys_addr_t start, u6
 		return;
 	vttbr = __el2_va(vttbr);
 
-	kvm = kern_hyp_va(kvm);
 	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
 	lock = get_shadow_pt_lock(kvm);
 	stage2_spin_lock(lock);
