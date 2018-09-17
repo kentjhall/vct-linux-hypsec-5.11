@@ -92,7 +92,7 @@ static void __hyp_text free_s2pages_vmid(struct stage2_data *stage2_data,
 	}
 	stage2_spin_unlock(&stage2_data->s2pages_lock);
 	if (is_vm_page)
-		__set_host_stage2_range(addr, PAGE_SIZE, 0, PAGE_NONE);
+		__set_pfn_host(addr, PAGE_SIZE, 0, PAGE_NONE);
 }
 
 static void __hyp_text clear_vm_pfn_owner(struct stage2_data *stage2_data, u32 vmid)
@@ -319,6 +319,83 @@ pte_t __hyp_text *pte_offset_el2(pmd_t *pmd, u64 addr)
 	pmd_pa = pmd_val(*pmd) & PHYS_MASK & (s32)PAGE_MASK;
 	pte = (pte_t *)((u64)pmd_pa + (pte_index(addr) * sizeof(pte_t)));
 	return __el2_va(pte);
+}
+
+void __hyp_text set_pfn_host_ptes(pmd_t *pmd, phys_addr_t addr,
+				phys_addr_t end, kvm_pfn_t pfn, pgprot_t prot)
+{
+	pte_t *pte, *start_pte;
+	pte_t new_pte;
+
+	start_pte = pte = pte_offset_el2(pmd, addr);
+	do {
+		new_pte = pfn_pte(pfn, prot);
+		kvm_set_pte(pte, new_pte);
+		__kvm_tlb_flush_vmid_ipa(NULL, addr);
+
+		if (stage2_is_map_memory(addr))
+			__flush_dcache_area(__el2_va(addr), PAGE_SIZE);
+
+		/* Why am I doing this? */
+		if (pte_none(*pte))
+			el2_memset(__el2_va(addr), 0, PAGE_SIZE);
+
+		if (pfn)
+			pfn++;
+	} while (pte++, addr += PAGE_SIZE, addr != end);
+}
+
+static void __hyp_text set_pfn_host_pmds(pud_t *pud, phys_addr_t addr,
+				phys_addr_t end, kvm_pfn_t pfn, pgprot_t prot)
+{
+	phys_addr_t next;
+	pmd_t *pmd, *start_pmd;
+
+	start_pmd = pmd = pmd_offset_el2(pud, addr);
+	do {
+		next = stage2_pmd_addr_end(addr, end);
+		if (!pmd_none(*pmd))
+			set_pfn_host_ptes(pmd, addr, next, pfn, prot);
+	} while (pmd++, addr = next, addr != end);
+}
+
+static void __hyp_text set_pfn_host_puds(pgd_t *pgd, phys_addr_t addr,
+				phys_addr_t end, kvm_pfn_t pfn, pgprot_t prot)
+{
+	phys_addr_t next;
+	pud_t *pud, *start_pud;
+
+	start_pud = pud = stage2_pud_offset(pgd, addr);
+	do {
+		next = stage2_pud_addr_end(addr, end);
+		if (!stage2_pud_none(*pud))
+			set_pfn_host_pmds(pud, addr, next, pfn, prot);
+	} while (pud++, addr = next, addr != end);
+}
+
+void __hyp_text __set_pfn_host(phys_addr_t start, u64 size,
+			kvm_pfn_t pfn, pgprot_t prot)
+{
+	pgd_t *pgd;
+	pgd_t *vttbr;
+	phys_addr_t addr = start, end = start + size;
+	phys_addr_t next;
+	struct stage2_data *stage2_data;
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	stage2_spin_lock(&stage2_data->fault_lock);
+
+	vttbr = (pgd_t *)stage2_data->host_vttbr;
+	vttbr = __el2_va(vttbr);
+	pgd = vttbr + stage2_pgd_index(addr);
+
+	do {
+		next = stage2_pgd_addr_end(addr, end);
+		if (!stage2_pgd_none(*pgd))
+			set_pfn_host_puds(pgd, addr, next, pfn, prot);
+	} while (pgd++, addr = next, addr != end);
+
+	stage2_spin_unlock(&stage2_data->fault_lock);
 }
 
 static void __hyp_text handle_host_stage2_trans_fault(unsigned host_lr,
