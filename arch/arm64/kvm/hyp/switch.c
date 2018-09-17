@@ -428,7 +428,7 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 		return true;
 
 #ifdef CONFIG_STAGE2_KERNEL
-	if (exit_code == ARM_EXCEPTION_TRAP &&
+	if (*exit_code == ARM_EXCEPTION_TRAP &&
 	    kvm_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_HVC64) {
 		if (handle_pvops(vcpu) > 0)
 			return true;
