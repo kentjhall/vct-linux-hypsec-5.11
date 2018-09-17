@@ -449,6 +449,20 @@ static int __hyp_text stage2_emul_mmio(phys_addr_t addr,
 	return false;
 }
 
+static void __hyp_text reject_invalid_mem_access(phys_addr_t addr,
+						unsigned long host_lr)
+{
+	print_string("\rinvalid access of guest memory\n\r");
+	print_string("\rpc: \n");
+	printhex_ul(read_sysreg(elr_el2));
+	print_string("\rpa: \n");
+	printhex_ul(addr);
+	print_string("\rlr: \n");
+	printhex_ul(host_lr);
+
+	stage2_inject_el1_fault(addr);
+}
+
 void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 					struct s2_host_regs *host_regs)
 {
