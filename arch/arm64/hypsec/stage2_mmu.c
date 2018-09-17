@@ -49,6 +49,70 @@ bool __hyp_text stage2_is_map_memory(phys_addr_t addr)
 	return true;
 }
 
+void __hyp_text set_pfn_owner(struct stage2_data *stage2_data, phys_addr_t addr,
+				size_t len, u32 vmid)
+{
+	kvm_pfn_t pfn;
+	struct s2_page *s2_pages = stage2_data->s2_pages;
+	unsigned long index, end;
+
+	pfn = addr >> PAGE_SHIFT;
+	end = addr + len;
+
+	stage2_spin_lock(&stage2_data->s2pages_lock);
+	do {
+		index = get_s2_page_index(stage2_data, addr);
+
+		/*
+		 * If count > 0, it means the host may still own the page.
+		 * So when we are called by handle_shadow fault, we should
+		 * not set the owner to VM this time.
+		*/
+		if (!vmid || !s2_pages[index].count)
+			s2_pages[index].vmid = vmid;
+	} while (addr += PAGE_SIZE, addr < end);
+	stage2_spin_unlock(&stage2_data->s2pages_lock);
+}
+
+static void __hyp_text free_s2pages_vmid(struct stage2_data *stage2_data,
+				unsigned long addr, u32 vmid)
+{
+	struct s2_page *s2_pages = stage2_data->s2_pages;
+	unsigned long index;
+	bool is_vm_page = false;
+
+	index = get_s2_page_index(stage2_data, addr);
+
+	stage2_spin_lock(&stage2_data->s2pages_lock);
+	if (vmid == s2_pages[index].vmid) {
+		s2_pages[index].vmid = 0;
+		s2_pages[index].count = 0;
+		el2_memset((void *)__el2_va(addr), 0, PAGE_SIZE);
+		is_vm_page = true;
+	}
+	stage2_spin_unlock(&stage2_data->s2pages_lock);
+	if (is_vm_page)
+		__set_host_stage2_range(addr, PAGE_SIZE, 0, PAGE_NONE);
+}
+
+static void __hyp_text clear_vm_pfn_owner(struct stage2_data *stage2_data, u32 vmid)
+{
+	struct memblock_region *r;
+	unsigned long addr;
+	int i;
+
+	for (i = 0; i < stage2_data->regions_cnt; i++) {
+		r = &stage2_data->regions[i];
+		if (r->flags & MEMBLOCK_NOMAP)
+			continue;
+
+		addr = r->base;
+		do {
+			free_s2pages_vmid(stage2_data, addr, vmid);
+		} while (addr += PAGE_SIZE, addr < (r->base + r->size));
+	}
+}
+
 void* __hyp_text alloc_stage2_page(unsigned int num)
 {
 	u64 p_addr, start;
