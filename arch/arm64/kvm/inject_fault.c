@@ -26,6 +26,7 @@
 #include <asm/esr.h>
 #ifdef CONFIG_STAGE2_KERNEL
 #include <asm/kvm_hyp.h>
+#include <asm/kvm_mmu.h>
 #endif
 
 #define PSTATE_FAULT_BITS_64 	(PSR_MODE_EL1h | PSR_A_BIT | PSR_F_BIT | \
@@ -43,7 +44,11 @@ enum exception_type {
 	except_type_serror	= 0x180,
 };
 
+#ifndef CONFIG_STAGE2_KERNEL
 static u64 get_except_vector(struct kvm_vcpu *vcpu, enum exception_type type)
+#else
+static u64 __hyp_text get_except_vector(struct kvm_vcpu *vcpu, enum exception_type type)
+#endif
 {
 	u64 exc_offset;
 
@@ -117,6 +122,29 @@ void __hyp_text update_exception_gp_regs(struct kvm_vcpu *vcpu)
 
 	shadow_ctxt->sys_regs[ESR_EL1] = esr;
 }
+
+static void __hyp_text __update_exception_shadow_flag(struct kvm_vcpu *vcpu,
+						      int exp)
+{
+	struct shadow_vcpu_context *shadow_ctxt;
+
+	vcpu = kern_hyp_va(vcpu);
+	shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
+
+	if (exp == DABT)
+		shadow_ctxt->dirty |= PENDING_DABT_INJECT;
+	else if (exp == IABT)
+		shadow_ctxt->dirty |= PENDING_IABT_INJECT;
+	else if (exp == UNDEF)
+		shadow_ctxt->dirty |= PENDING_UNDEF_INJECT;
+
+	shadow_ctxt->far_el2 = kvm_vcpu_get_hfar(vcpu);
+}
+
+static unsigned long el2_update_exception_gp_regs(struct kvm_vcpu *vcpu, int exp)
+{
+	return kvm_call_hyp(__update_exception_shadow_flag, vcpu, exp);
+}
 #endif
 
 static void inject_abt64(struct kvm_vcpu *vcpu, bool is_iabt, unsigned long addr)
@@ -125,11 +153,20 @@ static void inject_abt64(struct kvm_vcpu *vcpu, bool is_iabt, unsigned long addr
 	bool is_aarch32 = vcpu_mode_is_32bit(vcpu);
 	u32 esr = 0;
 
+#ifndef CONFIG_STAGE2_KERNEL
 	vcpu_write_elr_el1(vcpu, *vcpu_pc(vcpu));
 	*vcpu_pc(vcpu) = get_except_vector(vcpu, except_type_sync);
 
 	*vcpu_cpsr(vcpu) = PSTATE_FAULT_BITS_64;
 	vcpu_write_spsr(vcpu, cpsr);
+#else
+	if (!is_iabt)
+		el2_update_exception_gp_regs(vcpu, DABT);
+	else
+		el2_update_exception_gp_regs(vcpu, IABT);
+
+	return;
+#endif
 
 	vcpu_write_sys_reg(vcpu, addr, FAR_EL1);
 
@@ -157,6 +194,7 @@ static void inject_abt64(struct kvm_vcpu *vcpu, bool is_iabt, unsigned long addr
 
 static void inject_undef64(struct kvm_vcpu *vcpu)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	unsigned long cpsr = *vcpu_cpsr(vcpu);
 	u32 esr = (ESR_ELx_EC_UNKNOWN << ESR_ELx_EC_SHIFT);
 
@@ -174,6 +212,10 @@ static void inject_undef64(struct kvm_vcpu *vcpu)
 		esr |= ESR_ELx_IL;
 
 	vcpu_write_sys_reg(vcpu, esr, ESR_EL1);
+#else
+	el2_update_exception_gp_regs(vcpu, UNDEF);
+	return;
+#endif
 }
 
 /**
