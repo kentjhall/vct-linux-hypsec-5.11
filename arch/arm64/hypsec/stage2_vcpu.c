@@ -273,6 +273,10 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 	 */
 	if (shadow_ctxt->dirty == -1) {
 		stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+
+		el2_reset_gp_regs(vcpu, shadow_ctxt);
+		el2_reset_sysregs(vcpu, shadow_ctxt, stage2_data);
+
 		el2_save_sys_regs_32(vcpu, shadow_ctxt);
 		shadow_ctxt->dirty = 0;
 
@@ -299,9 +303,9 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 	shadow_ctxt->dirty = 0;
 	shadow_ctxt->far_el2 = 0;
 
-	if (shadow_ctxt->hpfar)
-		handle_shadow_s2pt_fault(vcpu, shadow_ctxt->hpfar);
-	shadow_ctxt->hpfar = 0;
+	//if (shadow_ctxt->hpfar)
+	//	handle_shadow_s2pt_fault(vcpu, shadow_ctxt->hpfar);
+	//shadow_ctxt->hpfar = 0;
 
 	sync_from_shadow_hcr(vcpu, shadow_ctxt->hcr_el2);
 }

@@ -73,7 +73,11 @@ int __hyp_text __vgic_v2_perform_cpuif_access(struct kvm_vcpu *vcpu)
 	addr += fault_ipa - vgic->vgic_cpu_base;
 
 	if (kvm_vcpu_dabt_iswrite(vcpu)) {
+#ifndef CONFIG_STAGE2_KERNEL
 		u32 data = vcpu_get_reg(vcpu, rd);
+#else
+		u32 data = shadow_vcpu_get_reg(vcpu, rd);
+#endif
 		if (__is_be(vcpu)) {
 			/* guest pre-swabbed data, undo this for writel() */
 			data = swab32(data);
@@ -85,7 +89,11 @@ int __hyp_text __vgic_v2_perform_cpuif_access(struct kvm_vcpu *vcpu)
 			/* guest expects swabbed data */
 			data = swab32(data);
 		}
+#ifndef CONFIG_STAGE2_KERNEL
 		vcpu_set_reg(vcpu, rd, data);
+#else
+		shadow_vcpu_set_reg(vcpu, rd, data);
+#endif
 	}
 
 	return 1;

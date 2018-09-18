@@ -30,8 +30,8 @@ void __hyp_text set_stage2_vring_gpa(struct kvm_vcpu *vcpu)
 
 	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
 
-	addr = vcpu_get_reg(vcpu, 1) & PAGE_MASK;
-	size_in_bytes = vcpu_get_reg(vcpu, 2);
+	addr = shadow_vcpu_get_reg(vcpu, 1) & PAGE_MASK;
+	size_in_bytes = shadow_vcpu_get_reg(vcpu, 2);
 	npages = (size_in_bytes >> PAGE_SHIFT) + 1;
 
 	for (i = 0; i < npages; i++) {
@@ -53,7 +53,7 @@ void __hyp_text set_balloon_pfn(struct kvm_vcpu *vcpu)
 	struct kvm *kvm = (void *)kern_hyp_va(vcpu->kvm);
 	struct s2_trans result;
 	struct stage2_data *stage2_data;
-	unsigned long gpa = vcpu_get_reg(vcpu, 1);
+	unsigned long gpa = shadow_vcpu_get_reg(vcpu, 1);
 	kvm_pfn_t pfn;
 
 	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
@@ -122,10 +122,10 @@ void __hyp_text grant_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 
 	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
 
-	addr = vcpu_get_reg(vcpu, 1);
-	len = vcpu_get_reg(vcpu, 2) >> PAGE_SHIFT;
+	addr = shadow_vcpu_get_reg(vcpu, 1);
+	len = shadow_vcpu_get_reg(vcpu, 2) >> PAGE_SHIFT;
 
-	writable = vcpu_get_reg(vcpu, 3);
+	writable = shadow_vcpu_get_reg(vcpu, 3);
 	if (writable == 1)
 		mem_type = PAGE_S2_KERNEL;
 
@@ -181,8 +181,8 @@ void __hyp_text revoke_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 
 	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
 
-	addr = vcpu_get_reg(vcpu, 1);
-	len = vcpu_get_reg(vcpu, 2) >> PAGE_SHIFT;
+	addr = shadow_vcpu_get_reg(vcpu, 1);
+	len = shadow_vcpu_get_reg(vcpu, 2) >> PAGE_SHIFT;
 
 	do {
 		__revoke_stage2_sg_gpa(kvm, stage2_data, addr);

@@ -51,8 +51,12 @@ static void __hyp_text __fpsimd_save_fpexc32(struct kvm_vcpu *vcpu)
 {
 	if (!vcpu_el1_is_32bit(vcpu))
 		return;
-
+#ifndef CONFIG_STAGE2_KERNEL
 	vcpu->arch.ctxt.sys_regs[FPEXC32_EL2] = read_sysreg(fpexc32_el2);
+#else
+	vcpu->arch.shadow_vcpu_ctxt->sys_regs[FPEXC32_EL2] =
+						read_sysreg(fpexc32_el2);
+#endif
 }
 
 static void __hyp_text __activate_traps_fpsimd32(struct kvm_vcpu *vcpu)
@@ -330,6 +334,7 @@ static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu)
  */
 static bool __hyp_text __skip_instr(struct kvm_vcpu *vcpu)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	*vcpu_pc(vcpu) = read_sysreg_el2(elr);
 
 	if (vcpu_mode_is_32bit(vcpu)) {
@@ -341,6 +346,19 @@ static bool __hyp_text __skip_instr(struct kvm_vcpu *vcpu)
 	}
 
 	write_sysreg_el2(*vcpu_pc(vcpu), elr);
+#else
+	*shadow_vcpu_pc(vcpu) = read_sysreg_el2(elr);
+
+	if (shadow_vcpu_mode_is_32bit(vcpu)) {
+		vcpu->arch.shadow_vcpu_ctxt->gp_regs.regs.pstate = read_sysreg_el2(spsr);
+		kvm_skip_instr32(vcpu, kvm_vcpu_trap_il_is32bit(vcpu));
+		write_sysreg_el2(vcpu->arch.shadow_vcpu_ctxt->gp_regs.regs.pstate, spsr);
+	} else {
+		*shadow_vcpu_pc(vcpu) += 4;
+	}
+
+	write_sysreg_el2(*shadow_vcpu_pc(vcpu), elr);
+#endif
 
 	if (vcpu->guest_debug & KVM_GUESTDBG_SINGLESTEP) {
 		vcpu->arch.fault.esr_el2 =
@@ -383,11 +401,19 @@ static bool __hyp_text __hyp_switch_fpsimd(struct kvm_vcpu *vcpu)
 		vcpu->arch.flags &= ~KVM_ARM64_FP_HOST;
 	}
 
+#ifndef CONFIG_STAGE2_KERNEL
 	__fpsimd_restore_state(&vcpu->arch.ctxt.gp_regs.fp_regs);
+#else
+	__fpsimd_restore_state(&vcpu->arch.shadow_vcpu_ctxt->gp_regs.fp_regs);
+#endif
 
 	/* Skip restoring fpexc32 for AArch64 guests */
 	if (!(read_sysreg(hcr_el2) & HCR_RW))
+#ifndef CONFIG_STAGE2_KERNEL
 		write_sysreg(vcpu->arch.ctxt.sys_regs[FPEXC32_EL2],
+#else
+		write_sysreg(vcpu->arch.shadow_vcpu_ctxt->sys_regs[FPEXC32_EL2],
+#endif
 			     fpexc32_el2);
 
 	vcpu->arch.flags |= KVM_ARM64_FP_ENABLED;
@@ -458,7 +484,11 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 				 * do after dealing with the error.
 				 */
 				if (!__skip_instr(vcpu))
+#ifndef CONFIG_STAGE2_KERNEL
 					*vcpu_cpsr(vcpu) &= ~DBG_SPSR_SS;
+#else
+					*shadow_vcpu_cpsr(vcpu) &= ~DBG_SPSR_SS;
+#endif
 				*exit_code = ARM_EXCEPTION_EL1_SERROR;
 			}
 
@@ -577,6 +607,9 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 {
 	struct kvm_cpu_context *host_ctxt;
 	struct kvm_cpu_context *guest_ctxt;
+#ifdef CONFIG_STAGE2_KERNEL
+	struct kvm_cpu_context *shadow_ctxt;
+#endif
 	u64 exit_code;
 
 	vcpu = kern_hyp_va(vcpu);
@@ -584,12 +617,17 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 	host_ctxt = kern_hyp_va(vcpu->arch.host_cpu_context);
 	host_ctxt->__hyp_running_vcpu = vcpu;
 	guest_ctxt = &vcpu->arch.ctxt;
+#ifdef CONFIG_STAGE2_KERNEL
+	shadow_ctxt =
+		(struct kvm_cpu_context *)vcpu->arch.shadow_vcpu_ctxt;
+#endif
 
 	__sysreg_save_state_nvhe(host_ctxt);
 
 #ifdef CONFIG_STAGE2_KERNEL
 	write_sysreg(vcpu->arch.tpidr_el2, tpidr_el2);
 	__host_el2_save_state(vcpu);
+	__restore_shadow_kvm_regs(vcpu);
 #endif
 	__activate_traps(vcpu);
 	__activate_vm(kern_hyp_va(vcpu->kvm));
@@ -602,7 +640,11 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 	 * to erratum #852523 (Cortex-A57) or #853709 (Cortex-A72).
 	 */
 	__sysreg32_restore_state(vcpu);
+#ifndef CONFIG_STAGE2_KERNEL
 	__sysreg_restore_state_nvhe(guest_ctxt);
+#else
+	__sysreg_restore_state_nvhe(shadow_ctxt);
+#endif
 	__debug_switch_to_guest(vcpu);
 
 	__set_guest_arch_workaround_state(vcpu);
@@ -616,7 +658,11 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 
 	__set_host_arch_workaround_state(vcpu);
 
+#ifndef CONFIG_STAGE2_KERNEL
 	__sysreg_save_state_nvhe(guest_ctxt);
+#else
+	__sysreg_save_state_nvhe(shadow_ctxt);
+#endif
 	__sysreg32_save_state(vcpu);
 	__timer_disable_traps(vcpu);
 	__hyp_vgic_save_state(vcpu);
@@ -631,6 +677,10 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 
 	if (vcpu->arch.flags & KVM_ARM64_FP_ENABLED)
 		__fpsimd_save_fpexc32(vcpu);
+
+#ifdef CONFIG_STAGE2_KERNEL
+	__save_shadow_kvm_regs(vcpu, exit_code);
+#endif
 
 	/*
 	 * This must come after restoring the host sysregs, since a non-VHE

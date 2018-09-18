@@ -134,6 +134,13 @@ static inline bool vcpu_mode_is_32bit(const struct kvm_vcpu *vcpu)
 	return !!(*vcpu_cpsr(vcpu) & PSR_MODE32_BIT);
 }
 
+#ifdef CONFIG_STAGE2_KERNEL
+static inline bool shadow_vcpu_mode_is_32bit(const struct kvm_vcpu *vcpu)
+{
+	return !!(*shadow_vcpu_cpsr(vcpu) & PSR_MODE32_BIT);
+}
+#endif
+
 static inline bool kvm_condition_valid(const struct kvm_vcpu *vcpu)
 {
 	if (vcpu_mode_is_32bit(vcpu))

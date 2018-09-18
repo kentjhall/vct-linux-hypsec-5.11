@@ -14,7 +14,7 @@
 int __hyp_text handle_pvops(struct kvm_vcpu *vcpu)
 {
 	/* TODO: We should get call num from shadow regs later */
-	unsigned long call_num = vcpu_get_reg(vcpu, 0);
+	unsigned long call_num = shadow_vcpu_get_reg(vcpu, 0);
 
 	switch (call_num) {
 		case KVM_SET_VRING_PFN:

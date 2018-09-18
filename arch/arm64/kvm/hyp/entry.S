@@ -62,7 +62,12 @@ ENTRY(__guest_enter)
 	// Store the host regs
 	save_callee_saved_regs x1
 
+#ifndef CONFIG_STAGE2_KERNEL
 	add	x18, x0, #VCPU_CONTEXT
+#else
+	add	x18, x0, #SHADOW_VCPU_CONTEXT
+	ldr	x18, [x18]
+#endif
 
 	// Restore guest regs x0-x17
 	ldp	x0, x1,   [x18, #CPU_XREG_OFFSET(0)]
@@ -91,7 +96,12 @@ ENTRY(__guest_exit)
 	// x2-x29,lr: vcpu regs
 	// vcpu x0-x1 on the stack
 
+#ifndef CONFIG_STAGE2_KERNEL
 	add	x1, x1, #VCPU_CONTEXT
+#else
+	add	x1, x1, #SHADOW_VCPU_CONTEXT
+	ldr	x1, [x1]
+#endif
 
 	ALTERNATIVE(nop, SET_PSTATE_PAN(1), ARM64_HAS_PAN, CONFIG_ARM64_PAN)
 
