@@ -352,7 +352,6 @@ struct kvm_vcpu_arch {
 
 #ifdef CONFIG_STAGE2_KERNEL
 #define vcpu_shadow_gp_regs(v)	(&(v)->arch.shadow_vcpu_ctxt->gp_regs)
-#define vcpu_shadow_sys_regs(v)	(&(v)->arch.shadow_vm_ctxt->sys_regs[(r)])
 #endif
 
 u64 vcpu_read_sys_reg(struct kvm_vcpu *vcpu, int reg);
