@@ -17,6 +17,87 @@
 #include <asm/spinlock_types.h>
 #include <linux/serial_reg.h>
 
+#define Op0(_x) 	.Op0 = _x
+#define Op1(_x) 	.Op1 = _x
+#define CRn(_x)		.CRn = _x
+#define CRm(_x) 	.CRm = _x
+#define Op2(_x) 	.Op2 = _x
+
+static struct s2_sys_reg_desc host_sys_reg_descs[] = {
+	/* TTBR0_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b0010), CRm(0b0000), Op2(0b000),
+	  TTBR0_EL1, 0x1de7ec7edbadc0deULL },
+	/* TTBR1_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b0010), CRm(0b0000), Op2(0b001),
+	  TTBR1_EL1, 0x1de7ec7edbadc0deULL },
+	/* VBAR_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b1100), CRm(0b0000), Op2(0b000),
+	  VBAR_EL1, 0 },
+	/* SCTLR_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b0001), CRm(0b0000), Op2(0b000),
+	  SCTLR_EL1, 0x00C50078 },
+	/* ESR_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b0101), CRm(0b0010), Op2(0b000),
+	  ESR_EL1, 0x1de7ec7edbadc0deULL },
+	/* FAR_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b0110), CRm(0b0000), Op2(0b000),
+	  FAR_EL1, 0x1de7ec7edbadc0deULL },
+	/* TPIDR_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b1101), CRm(0b0000), Op2(0b100),
+	  TPIDR_EL1, 0x1de7ec7edbadc0deULL },
+	/* TPIDRRO_EL0 */
+	{ Op0(0b11), Op1(0b011), CRn(0b1101), CRm(0b0000), Op2(0b011),
+	  TPIDRRO_EL0, 0x1de7ec7edbadc0deULL },
+	/* TPIDR_EL0 */
+	{ Op0(0b11), Op1(0b011), CRn(0b1101), CRm(0b0000), Op2(0b010),
+	  TPIDR_EL0, 0x1de7ec7edbadc0deULL },
+	/* CONTEXTIDR_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b1101), CRm(0b0000), Op2(0b001),
+	  CONTEXTIDR_EL1, 0 },
+	/* PAR_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b0111), CRm(0b0100), Op2(0b000),
+	  PAR_EL1, 0x1de7ec7edbadc0deULL },
+	/* MPIDR_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b0000), CRm(0b0000), Op2(0b101),
+	  MPIDR_EL1, 0 },
+	/* CSSELR_EL1 */
+	{ Op0(0b11), Op1(0b010), CRn(0b0000), CRm(0b0000), Op2(0b000),
+	  CSSELR_EL1, 0x1de7ec7edbadc0deULL },
+	/* ACTLR_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b0001), CRm(0b0000), Op2(0b001),
+	  ACTLR_EL1, 0 },
+	/* CPACR_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b0001), CRm(0b0000), Op2(0b010),
+	  CPACR_EL1, 0x1de7ec7edbadc0deULL },
+	/* TCR_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b0010), CRm(0b0000), Op2(0b010),
+	  TCR_EL1, 0 },
+	/* AFSR0_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b0101), CRm(0b0001), Op2(0b000),
+	  AFSR0_EL1, 0x1de7ec7edbadc0deULL },
+	/* AFSR1_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b0101), CRm(0b0001), Op2(0b001),
+	  AFSR1_EL1, 0x1de7ec7edbadc0deULL },
+	/* MAIR_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b1010), CRm(0b0010), Op2(0b000),
+	  MAIR_EL1, 0x1de7ec7edbadc0deULL },
+	/* AMAIR_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b1010), CRm(0b0011), Op2(0b000),
+	  AMAIR_EL1, 0x1de7ec7edbadc0deULL },
+	/* CNTKCTL_EL1 */
+	{ Op0(0b11), Op1(0b000), CRn(0b1110), CRm(0b0001), Op2(0b000),
+	  CNTKCTL_EL1, 0 },
+	/* DACR32_EL2 */
+	{ Op0(0b11), Op1(0b100), CRn(0b0011), CRm(0b0000), Op2(0b000),
+	  DACR32_EL2, 0x1de7ec7edbadc0deULL },
+	/* IFSR32_EL2 */
+	{ Op0(0b11), Op1(0b100), CRn(0b0101), CRm(0b0000), Op2(0b001),
+	  IFSR32_EL2, 0x1de7ec7edbadc0deULL },
+	/* FPEXC32_EL2 */
+	{ Op0(0b11), Op1(0b100), CRn(0b0101), CRm(0b0011), Op2(0b000),
+	  FPEXC32_EL2, 0x70 }
+};
+
 void init_stage2_data_page(void)
 {
 	int i = 0, index = 0, err;
@@ -78,6 +159,9 @@ void init_stage2_data_page(void)
 
 	memset(stage2_data->smmu_cfg, 0,
 		sizeof(struct el2_smmu_cfg) * EL2_SMMU_CFG_SIZE);
+
+	for (i = 0; i < SHADOW_SYS_REGS_DESC_SIZE; i++)
+		stage2_data->s2_sys_reg_descs[i] = host_sys_reg_descs[i];
 
 	stage2_data->next_vmid = 1;
 

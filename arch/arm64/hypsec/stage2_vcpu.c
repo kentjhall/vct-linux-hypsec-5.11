@@ -1,0 +1,262 @@
+#include <linux/types.h>
+#include <asm/kvm_asm.h>
+#include <asm/kvm_hyp.h>
+#include <linux/mman.h>
+#include <linux/kvm_host.h>
+#include <linux/io.h>
+#include <trace/events/kvm.h>
+#include <asm/pgalloc.h>
+#include <asm/cacheflush.h>
+#include <asm/kvm_arm.h>
+#include <asm/kvm_mmu.h>
+#include <asm/kvm_mmio.h>
+#include <asm/kvm_emulate.h>
+#include <asm/virt.h>
+#include <asm/kernel-pgtable.h>
+#include <asm/stage2_host.h>
+#include <uapi/linux/psci.h>
+
+static void __hyp_text prep_noop(struct kvm_vcpu *vcpu)
+{
+	/*
+	 * It seems host only reads the PC and we don't have to
+	 * do anything here.
+	 */
+}
+
+static void __hyp_text prep_hvc(struct kvm_vcpu *vcpu)
+{
+	/* We care only about hvc for psci now. */
+	struct shadow_vcpu_context *shadow_ctxt =
+		vcpu->arch.shadow_vcpu_ctxt;
+	struct kvm_regs *gp_regs = &shadow_ctxt->gp_regs;
+	unsigned long psci_fn = gp_regs->regs.regs[0] & ~((u32) 0);
+
+	/* PSCI updates x0 for return value */
+	shadow_ctxt->dirty |= (1UL << 0);
+
+	vcpu_set_reg(vcpu, 0, gp_regs->regs.regs[0]);
+
+	switch (psci_fn) {
+		case PSCI_0_2_FN64_CPU_ON:
+			vcpu_set_reg(vcpu, 1, gp_regs->regs.regs[1]);
+			vcpu_set_reg(vcpu, 2, gp_regs->regs.regs[2]);
+			vcpu_set_reg(vcpu, 3, gp_regs->regs.regs[3]);
+			break;
+		case PSCI_0_2_FN_AFFINITY_INFO:
+		case PSCI_0_2_FN64_AFFINITY_INFO:
+			vcpu_set_reg(vcpu, 1, gp_regs->regs.regs[1]);
+			vcpu_set_reg(vcpu, 2, gp_regs->regs.regs[2]);
+			break;
+		default:
+			break;
+	}
+}
+
+static void __hyp_text prep_wfx(struct kvm_vcpu *vcpu)
+{
+	// We should make sure we skip the WFx instruction later
+	struct shadow_vcpu_context *shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
+	shadow_ctxt->dirty |= DIRTY_PC_FLAG;
+}
+
+static void __hyp_text prep_sys_reg(struct kvm_vcpu *vcpu)
+{
+	struct shadow_vcpu_context *shadow_ctxt =
+		vcpu->arch.shadow_vcpu_ctxt;
+	struct kvm_regs *gp_regs = &shadow_ctxt->gp_regs;
+	unsigned long esr = kvm_vcpu_get_hsr(vcpu);
+	int Rt = (esr >> 5) & 0x1f, ret;
+	bool is_write = !(esr & 1);
+
+	vcpu_set_reg(vcpu, Rt, gp_regs->regs.regs[Rt]);
+
+	ret = sec_el2_handle_sys_reg(vcpu, esr);
+
+	shadow_ctxt->dirty = 0;
+	smp_wmb();
+	shadow_ctxt->dirty |= DIRTY_PC_FLAG;
+	if (!is_write) {
+		if (ret > 0)
+			gp_regs->regs.regs[Rt] = shadow_ctxt->sys_regs[ret];
+		else
+			shadow_ctxt->dirty |= (1UL << Rt);
+	} else {
+		if (ret > 0)
+			shadow_ctxt->sys_regs[ret] = gp_regs->regs.regs[Rt];
+	}
+}
+
+static void __hyp_text prep_abort(struct kvm_vcpu *vcpu)
+{
+	struct shadow_vcpu_context *shadow_ctxt =
+		vcpu->arch.shadow_vcpu_ctxt;
+	struct kvm_regs *gp_regs = &shadow_ctxt->gp_regs;
+	int Rd = kvm_vcpu_dabt_get_rd(vcpu);
+	phys_addr_t fault_ipa = kvm_vcpu_get_fault_ipa(vcpu);
+
+	/* We only have to care about regiters if it's MMIO */
+	if (!is_mmio_gpa(fault_ipa))
+		return;
+
+	shadow_ctxt->dirty |= DIRTY_PC_FLAG;
+	if (kvm_vcpu_dabt_iswrite(vcpu))
+		vcpu_set_reg(vcpu, Rd, gp_regs->regs.regs[Rd]);
+	else
+		shadow_ctxt->dirty |= (1UL << Rd);
+}
+
+static void __hyp_text sync_dirty_to_shadow(struct kvm_vcpu *vcpu)
+{
+	struct shadow_vcpu_context *shadow_ctxt =
+		vcpu->arch.shadow_vcpu_ctxt;
+	struct kvm_regs *gp_regs = &shadow_ctxt->gp_regs;
+	int i;
+
+	if (!shadow_ctxt->dirty)
+		return;
+
+	for (i = 0; i < 31; i++)
+		if (shadow_ctxt->dirty & (1UL << i))
+			gp_regs->regs.regs[i] = vcpu_get_reg(vcpu, i);
+}
+
+static void __hyp_text el2_prepare_exit_ctxt(struct kvm_vcpu *vcpu)
+{
+	u32 hsr = kvm_vcpu_get_hsr(vcpu);
+	u8 hsr_ec = ESR_ELx_EC(hsr);
+
+	switch (hsr_ec) {
+		case ESR_ELx_EC_CP15_32:
+		case ESR_ELx_EC_CP15_64:
+		case ESR_ELx_EC_CP14_MR:
+		case ESR_ELx_EC_CP14_LS:
+		case ESR_ELx_EC_CP14_64:
+		case ESR_ELx_EC_SMC32:
+		case ESR_ELx_EC_SMC64:
+		case ESR_ELx_EC_SOFTSTP_LOW:
+		case ESR_ELx_EC_WATCHPT_LOW:
+		case ESR_ELx_EC_BREAKPT_LOW:
+		case ESR_ELx_EC_BKPT32:
+		case ESR_ELx_EC_BRK64:
+			prep_noop(vcpu);
+			break;
+		case ESR_ELx_EC_WFx:
+			prep_wfx(vcpu);
+			break;
+		case ESR_ELx_EC_HVC32:
+		case ESR_ELx_EC_HVC64:
+			prep_hvc(vcpu);
+			break;
+		case ESR_ELx_EC_SYS64:
+			prep_sys_reg(vcpu);
+			break;
+		case ESR_ELx_EC_IABT_LOW:
+		case ESR_ELx_EC_DABT_LOW:
+			prep_abort(vcpu);
+			break;
+		default:
+			print_string("\runknown exception\n");
+			BUG();
+	}
+}
+
+void __hyp_text el2_save_sys_regs_32(struct kvm_vcpu *vcpu,
+				     struct shadow_vcpu_context *shadow_ctxt)
+{
+	/* save to shadow sysregs */
+	shadow_ctxt->sys_regs[DACR32_EL2] = vcpu->arch.ctxt.sys_regs[DACR32_EL2];
+	shadow_ctxt->sys_regs[IFSR32_EL2] = vcpu->arch.ctxt.sys_regs[IFSR32_EL2];
+	shadow_ctxt->sys_regs[FPEXC32_EL2] = vcpu->arch.ctxt.sys_regs[FPEXC32_EL2];
+
+	/* clear the vcpu entries */
+	vcpu->arch.ctxt.sys_regs[DACR32_EL2] = 0;
+	vcpu->arch.ctxt.sys_regs[IFSR32_EL2] = 0;
+	vcpu->arch.ctxt.sys_regs[FPEXC32_EL2] = 0;
+}
+
+void __hyp_text el2_restore_sys_regs_32(struct kvm_vcpu *vcpu,
+					struct shadow_vcpu_context *shadow_ctxt)
+{
+	/* restore to vcpu from shadow entries */
+	vcpu->arch.ctxt.sys_regs[DACR32_EL2] = shadow_ctxt->sys_regs[DACR32_EL2];
+	vcpu->arch.ctxt.sys_regs[IFSR32_EL2] = shadow_ctxt->sys_regs[IFSR32_EL2];
+	vcpu->arch.ctxt.sys_regs[FPEXC32_EL2] = shadow_ctxt->sys_regs[FPEXC32_EL2];
+}
+
+static void __hyp_text sync_from_shadow_hcr(struct kvm_vcpu *vcpu, u64 shadow_hcr_el2)
+{
+	shadow_hcr_el2 |= (vcpu->arch.hcr_el2 & HCR_VIRT_EXCP_MASK);
+	if (!(vcpu->arch.hcr_el2 & ~HCR_TVM))
+		shadow_hcr_el2 &= ~HCR_TVM;
+	else
+		shadow_hcr_el2 |= HCR_TVM;
+	vcpu->arch.hcr_el2 = shadow_hcr_el2;
+}
+
+void __hyp_text __save_shadow_kvm_regs(struct kvm_vcpu *vcpu, u64 ec)
+{
+	struct shadow_vcpu_context *shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
+	shadow_ctxt->ec = ec;
+
+	switch (ec) {
+		case ARM_EXCEPTION_TRAP:
+			el2_prepare_exit_ctxt(vcpu);
+			break;
+		case ARM_EXCEPTION_IRQ:
+		case ARM_EXCEPTION_EL1_SERROR:
+		default:
+			break;
+	};
+
+	/* Shadow hcr_el2 before entering the host */
+	shadow_ctxt->hcr_el2 = vcpu->arch.hcr_el2;
+
+}
+
+void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
+{
+	struct shadow_vcpu_context *shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
+	u64 ec;
+	size_t shadow_sys_regs_len = sizeof(u64) * (SHADOW_SYS_REGS_SIZE + 1);
+	struct stage2_data *stage2_data;
+	struct kvm *kvm = kern_hyp_va(vcpu->kvm);
+
+	/*
+	 * We don't have anything to restore when entering the
+	 * guest for the first time..
+	 */
+	if (shadow_ctxt->dirty == -1) {
+		stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+		el2_save_sys_regs_32(vcpu, shadow_ctxt);
+		shadow_ctxt->dirty = 0;
+
+		return;
+	}
+
+	ec = shadow_ctxt->ec;
+	switch (ec) {
+		case ARM_EXCEPTION_TRAP:
+			sync_dirty_to_shadow(vcpu);
+			break;
+		case ARM_EXCEPTION_IRQ:
+		case ARM_EXCEPTION_EL1_SERROR:
+		default:
+			break;
+	};
+
+	if (shadow_ctxt->dirty & PENDING_EXCEPT_INJECT_FLAG)
+		update_exception_gp_regs(vcpu);
+
+	if (shadow_ctxt->dirty & DIRTY_PC_FLAG)
+		*shadow_vcpu_pc(vcpu) += 4;
+
+	shadow_ctxt->dirty = 0;
+	shadow_ctxt->far_el2 = 0;
+
+	if (shadow_ctxt->hpfar)
+		handle_shadow_s2pt_fault(vcpu, shadow_ctxt->hpfar);
+	shadow_ctxt->hpfar = 0;
+
+	sync_from_shadow_hcr(vcpu, shadow_ctxt->hcr_el2);
+}
