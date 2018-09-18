@@ -218,6 +218,7 @@ typedef struct kvm_cpu_context kvm_cpu_context_t;
 #define	PENDING_UNDEF_INJECT		1UL << 35
 #define PENDING_EXCEPT_INJECT_FLAG	(PENDING_DABT_INJECT | \
 					 PENDING_IABT_INJECT | \
+					 PENDING_UNDEF_INJECT)
 
 struct shadow_vcpu_context {
 	struct kvm_regs gp_regs;
