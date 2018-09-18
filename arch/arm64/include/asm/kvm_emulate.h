@@ -86,6 +86,18 @@ static inline void vcpu_set_vsesr(struct kvm_vcpu *vcpu, u64 vsesr)
 	vcpu->arch.vsesr_el2 = vsesr;
 }
 
+#ifdef CONFIG_STAGE2_KERNEL
+static inline unsigned long *shadow_vcpu_pc(const struct kvm_vcpu *vcpu)
+{
+	return (unsigned long *)&vcpu_shadow_gp_regs(vcpu)->regs.pc;
+}
+
+static inline unsigned long *shadow_vcpu_cpsr(const struct kvm_vcpu *vcpu)
+{
+	return (unsigned long *)&vcpu_shadow_gp_regs(vcpu)->regs.pstate;
+}
+#endif
+
 static inline unsigned long *vcpu_pc(const struct kvm_vcpu *vcpu)
 {
 	return (unsigned long *)&vcpu_gp_regs(vcpu)->regs.pc;
@@ -160,6 +172,21 @@ static inline void vcpu_set_reg(struct kvm_vcpu *vcpu, u8 reg_num,
 	if (reg_num != 31)
 		vcpu_gp_regs(vcpu)->regs.regs[reg_num] = val;
 }
+
+#ifdef CONFIG_STAGE2_KERNEL
+static inline unsigned long shadow_vcpu_get_reg(const struct kvm_vcpu *vcpu,
+                                                u8 reg_num)
+{
+	return (reg_num == 31) ? 0 : vcpu_shadow_gp_regs(vcpu)->regs.regs[reg_num];
+}
+
+static inline void shadow_vcpu_set_reg(struct kvm_vcpu *vcpu, u8 reg_num,
+                                       unsigned long val)
+{
+	if (reg_num != 31)
+		vcpu_shadow_gp_regs(vcpu)->regs.regs[reg_num] = val;
+}
+#endif
 
 static inline unsigned long vcpu_read_spsr(const struct kvm_vcpu *vcpu)
 {
