@@ -211,9 +211,25 @@ struct kvm_cpu_context {
 
 typedef struct kvm_cpu_context kvm_cpu_context_t;
 
+#ifdef CONFIG_STAGE2_KERNEL
+struct shadow_vcpu_context {
+	struct kvm_regs gp_regs;
+	union {
+		u64 sys_regs[NR_SYS_REGS];
+		u32 copro[NR_COPRO_REGS];
+	};
+	u64 ec;
+	u64 dirty;
+	u64 hpfar;
+	u64 hcr_el2;
+	unsigned long far_el2;
+};
+#endif
+
 struct kvm_vcpu_arch {
 	struct kvm_cpu_context ctxt;
 #ifdef CONFIG_STAGE2_KERNEL
+	struct shadow_vcpu_context *shadow_vcpu_ctxt;
 	u64 host_hcr_el2;
 	u64 host_vttbr_el2;
 	u64 tpidr_el2;

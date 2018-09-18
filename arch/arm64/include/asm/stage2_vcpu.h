@@ -36,7 +36,6 @@ struct s2_sys_reg_desc {
 };
 
 
-int el2_alloc_shadow_vm_ctxt(struct kvm_vcpu *vcpu);
 void __save_shadow_kvm_regs(struct kvm_vcpu *vcpu, u64 ec);
 void __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu);
 

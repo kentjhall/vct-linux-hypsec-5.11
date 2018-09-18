@@ -591,6 +591,10 @@ static int kvm_vcpu_first_run_init(struct kvm_vcpu *vcpu)
 
 	if (likely(vcpu->arch.has_run_once))
 		return 0;
+#ifdef CONFIG_STAGE2_KERNEL
+	if (!el2_alloc_shadow_ctxt(vcpu))
+		return 1;
+#endif
 
 	vcpu->arch.has_run_once = true;
 

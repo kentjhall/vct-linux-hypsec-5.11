@@ -49,7 +49,7 @@ void init_stage2_data_page(void)
 	stage2_data->s2pages_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	stage2_data->page_pool_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	stage2_data->tmp_page_pool_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	stage2_data->shadow_vm_ctxt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	stage2_data->shadow_vcpu_ctxt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	stage2_data->vmid_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
 	err = create_hypsec_io_mappings((phys_addr_t)stage2_data->pl011_base,
@@ -67,7 +67,12 @@ void init_stage2_data_page(void)
 
 	stage2_data->host_vttbr = __pa(stage2_pgs_start);
 
-	memset(stage2_data->vm_info, 0, sizeof(struct el2_vm_info) * EL2_VM_INFO_SIZE);
+	memset(stage2_data->shadow_vcpu_ctxt, 0,
+	       sizeof(struct shadow_vcpu_context) * NUM_SHADOW_VCPU_CTXT);
+	stage2_data->used_shadow_vcpu_ctxt = 0;
+
+	memset(stage2_data->vm_info, 0,
+	       sizeof(struct el2_vm_info) * EL2_VM_INFO_SIZE);
 	stage2_data->used_vm_info = 0;
 	stage2_data->last_remap_ptr = 0;
 
@@ -100,4 +105,36 @@ unsigned long __hyp_text get_s2_page_index(struct stage2_data *stage2_data,
 
 out:
 	return ret;
+}
+
+static int __hyp_text alloc_shadow_vcpu_ctxt(struct kvm_vcpu *vcpu)
+{
+	struct stage2_data *stage2_data;
+	struct shadow_vcpu_context *new_ctxt = NULL;
+	int index, ret = 0;
+	arch_spinlock_t *lock;
+
+	vcpu = kern_hyp_va(vcpu);
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	lock = &stage2_data->shadow_vcpu_ctxt_lock;
+	stage2_spin_lock(lock);
+
+	index = stage2_data->used_shadow_vcpu_ctxt++;
+	if (index > NUM_SHADOW_VCPU_CTXT)
+		goto err_unlock;
+
+	ret = 1;
+	stage2_data->shadow_vcpu_ctxt[index].dirty = -1;
+	new_ctxt = &stage2_data->shadow_vcpu_ctxt[index];
+
+err_unlock:
+	stage2_spin_unlock(lock);
+	vcpu->arch.shadow_vcpu_ctxt = new_ctxt;
+
+	return ret;
+}
+
+int el2_alloc_shadow_ctxt(struct kvm_vcpu *vcpu)
+{
+	return kvm_call_hyp(alloc_shadow_vcpu_ctxt, vcpu);
 }

@@ -12,6 +12,7 @@
 #define SHADOW_SYS_REGS_SIZE		(PAR_EL1)
 #define SHADOW_32BIT_REGS_SIZE		3
 #define SHADOW_SYS_REGS_DESC_SIZE	(SHADOW_SYS_REGS_SIZE + SHADOW_32BIT_REGS_SIZE)
+#define NUM_SHADOW_VCPU_CTXT		128
 
 struct stage2_data {
 	struct memblock_region regions[32];
@@ -31,11 +32,14 @@ struct stage2_data {
 	arch_spinlock_t s2pages_lock;
 	arch_spinlock_t page_pool_lock;
 	arch_spinlock_t tmp_page_pool_lock;
-	arch_spinlock_t shadow_vm_ctxt_lock;
+	arch_spinlock_t shadow_vcpu_ctxt_lock;
 	arch_spinlock_t vmid_lock;
 
 	kvm_pfn_t ram_start_pfn;
 	struct s2_page s2_pages[S2_PFN_SIZE];
+
+	struct shadow_vcpu_context shadow_vcpu_ctxt[NUM_SHADOW_VCPU_CTXT];
+	int used_shadow_vcpu_ctxt;
 
 	struct s2_sys_reg_desc s2_sys_reg_descs[SHADOW_SYS_REGS_DESC_SIZE];
 
@@ -97,4 +101,5 @@ extern int el2_alloc_vm_info(struct kvm *kvm);
 extern int el2_get_vmid(struct stage2_data *stage2_data, struct kvm *kvm);
 
 int handle_pvops(struct kvm_vcpu *vcpu);
+int el2_alloc_shadow_ctxt(struct kvm_vcpu *vcpu);
 #endif /* __ARM_STAGE2_H__ */
