@@ -24,6 +24,9 @@
 #include <linux/kvm_host.h>
 #include <asm/kvm_emulate.h>
 #include <asm/esr.h>
+#ifdef CONFIG_STAGE2_KERNEL
+#include <asm/kvm_hyp.h>
+#endif
 
 #define PSTATE_FAULT_BITS_64 	(PSR_MODE_EL1h | PSR_A_BIT | PSR_F_BIT | \
 				 PSR_I_BIT | PSR_D_BIT)
@@ -60,6 +63,61 @@ static u64 get_except_vector(struct kvm_vcpu *vcpu, enum exception_type type)
 
 	return vcpu_read_sys_reg(vcpu, VBAR_EL1) + exc_offset + type;
 }
+
+#ifdef CONFIG_STAGE2_KERNEL
+enum inject_exp {
+	DABT,
+	IABT,
+	UNDEF
+};
+
+void __hyp_text update_exception_gp_regs(struct kvm_vcpu *vcpu)
+{
+	struct shadow_vcpu_context *shadow_ctxt;
+	struct kvm_regs *gp_regs;
+	unsigned long cpsr;
+	u64 flag;
+	u32 esr = 0;
+	bool is_aarch32;
+
+	shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
+	gp_regs = &shadow_ctxt->gp_regs;
+	cpsr = gp_regs->regs.pstate;
+	is_aarch32 = (cpsr & PSR_MODE32_BIT);
+	flag = shadow_ctxt->dirty;
+
+	*__vcpu_elr_el1(vcpu) = gp_regs->regs.pc;
+
+	/* Setup cpsr temporarily before calling get_except_vector */
+	*vcpu_cpsr(vcpu) = cpsr;
+	gp_regs->regs.pc = get_except_vector(vcpu, 0);
+	*vcpu_cpsr(vcpu) = 0;
+
+	gp_regs->regs.pstate = PSTATE_FAULT_BITS_64;
+	vcpu_write_spsr(vcpu, cpsr);
+
+	if (flag & PENDING_UNDEF_INJECT) {
+		esr = (ESR_ELx_EC_UNKNOWN << ESR_ELx_EC_SHIFT);
+		if (kvm_vcpu_trap_il_is32bit(vcpu))
+			esr |= ESR_ELx_IL;
+	} else {
+		shadow_ctxt->sys_regs[FAR_EL1] = shadow_ctxt->far_el2;
+
+		if (kvm_vcpu_trap_il_is32bit(vcpu))
+			esr |= ESR_ELx_IL;
+
+		if (is_aarch32 || (cpsr & PSR_MODE_MASK) == PSR_MODE_EL0t)
+			esr |= (ESR_ELx_EC_IABT_LOW << ESR_ELx_EC_SHIFT);
+		else
+			esr |= (ESR_ELx_EC_IABT_CUR << ESR_ELx_EC_SHIFT);
+
+		if (flag & PENDING_IABT_INJECT)
+			esr |= ESR_ELx_EC_DABT_LOW << ESR_ELx_EC_SHIFT;
+	}
+
+	shadow_ctxt->sys_regs[ESR_EL1] = esr;
+}
+#endif
 
 static void inject_abt64(struct kvm_vcpu *vcpu, bool is_iabt, unsigned long addr)
 {
