@@ -212,6 +212,13 @@ struct kvm_cpu_context {
 typedef struct kvm_cpu_context kvm_cpu_context_t;
 
 #ifdef CONFIG_STAGE2_KERNEL
+#define	DIRTY_PC_FLAG			1UL << 32
+#define	PENDING_DABT_INJECT		1UL << 33
+#define	PENDING_IABT_INJECT		1UL << 34
+#define	PENDING_UNDEF_INJECT		1UL << 35
+#define PENDING_EXCEPT_INJECT_FLAG	(PENDING_DABT_INJECT | \
+					 PENDING_IABT_INJECT | \
+
 struct shadow_vcpu_context {
 	struct kvm_regs gp_regs;
 	union {
