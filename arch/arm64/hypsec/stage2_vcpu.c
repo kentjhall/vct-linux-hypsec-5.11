@@ -194,6 +194,51 @@ static void __hyp_text sync_from_shadow_hcr(struct kvm_vcpu *vcpu, u64 shadow_hc
 	vcpu->arch.hcr_el2 = shadow_hcr_el2;
 }
 
+static u64 __hyp_text el2_reset_mpidr(struct kvm_vcpu *vcpu)
+{
+	u64 mpidr;
+	mpidr = (vcpu->vcpu_id & 0x0f) << MPIDR_LEVEL_SHIFT(0);
+	mpidr |= ((vcpu->vcpu_id >> 4) & 0xff) << MPIDR_LEVEL_SHIFT(1);
+	mpidr |= ((vcpu->vcpu_id >> 12) & 0xff) << MPIDR_LEVEL_SHIFT(2);
+	return ((1ULL << 31) | mpidr);
+}
+
+static void __hyp_text el2_reset_sysregs(struct kvm_vcpu *vcpu,
+					 struct shadow_vcpu_context *shadow_ctxt,
+					 struct stage2_data *stage2_data)
+{
+	int i;
+	u64 val;
+
+	for (i = 1; i <= SHADOW_SYS_REGS_SIZE; i++) {
+		if (i == MPIDR_EL1)
+			val = el2_reset_mpidr(vcpu);
+		else if (i == ACTLR_EL1)
+			val = read_sysreg(actlr_el1);
+		else
+			val = stage2_data->s2_sys_reg_descs[i].val;
+
+		shadow_ctxt->sys_regs[i] = val;
+	}
+}
+
+static void __hyp_text el2_reset_gp_regs(struct kvm_vcpu *vcpu,
+					 struct shadow_vcpu_context *shadow_ctxt)
+{
+	struct kvm_regs *kvm_regs = &vcpu->arch.ctxt.gp_regs;
+	struct el2_load_info li;
+	__u64 pc = kvm_regs->regs.pc;
+	struct stage2_data *stage2_data;
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+
+	el2_memset(&shadow_ctxt->gp_regs, 0, sizeof(struct kvm_regs));
+	shadow_ctxt->gp_regs.regs.pstate = kvm_regs->regs.pstate;
+	shadow_ctxt->gp_regs.regs.pc = pc;
+	el2_memcpy(&shadow_ctxt->gp_regs.fp_regs, &kvm_regs->fp_regs,
+					sizeof(struct user_fpsimd_state));
+}
+
 void __hyp_text __save_shadow_kvm_regs(struct kvm_vcpu *vcpu, u64 ec)
 {
 	struct shadow_vcpu_context *shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
