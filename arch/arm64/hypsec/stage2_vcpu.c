@@ -184,16 +184,6 @@ void __hyp_text el2_restore_sys_regs_32(struct kvm_vcpu *vcpu,
 	vcpu->arch.ctxt.sys_regs[FPEXC32_EL2] = shadow_ctxt->sys_regs[FPEXC32_EL2];
 }
 
-static void __hyp_text sync_from_shadow_hcr(struct kvm_vcpu *vcpu, u64 shadow_hcr_el2)
-{
-	shadow_hcr_el2 |= (vcpu->arch.hcr_el2 & HCR_VIRT_EXCP_MASK);
-	if (!(vcpu->arch.hcr_el2 & ~HCR_TVM))
-		shadow_hcr_el2 &= ~HCR_TVM;
-	else
-		shadow_hcr_el2 |= HCR_TVM;
-	vcpu->arch.hcr_el2 = shadow_hcr_el2;
-}
-
 static u64 __hyp_text el2_reset_mpidr(struct kvm_vcpu *vcpu)
 {
 	u64 mpidr;
@@ -253,10 +243,6 @@ void __hyp_text __save_shadow_kvm_regs(struct kvm_vcpu *vcpu, u64 ec)
 		default:
 			break;
 	};
-
-	/* Shadow hcr_el2 before entering the host */
-	shadow_ctxt->hcr_el2 = vcpu->arch.hcr_el2;
-
 }
 
 void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
@@ -306,6 +292,4 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 	if (shadow_ctxt->hpfar)
 		handle_shadow_s2pt_fault(vcpu, shadow_ctxt->hpfar);
 	shadow_ctxt->hpfar = 0;
-
-	sync_from_shadow_hcr(vcpu, shadow_ctxt->hcr_el2);
 }
