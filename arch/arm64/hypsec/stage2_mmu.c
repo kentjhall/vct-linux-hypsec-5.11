@@ -321,6 +321,56 @@ pte_t __hyp_text *pte_offset_el2(pmd_t *pmd, u64 addr)
 	return __el2_va(pte);
 }
 
+void __hyp_text walk_el2_pte(pmd_t *pmd, unsigned long addr, struct s2_trans *result)
+{
+	pte_t *pte;
+	u64 desc;
+
+	pte = pte_offset_el2(pmd, addr);
+	if (pte_none(*pte))
+		return;
+
+	result->pfn = pte_pfn(*pte);
+	result->output = result->pfn << PAGE_SHIFT;
+	desc = pte_val(*pte);
+	result->level = 3;
+	result->readable = desc & (0b01 << 6);
+	result->writable = desc & (0b10 << 6);
+	result->desc = desc;
+}
+
+void __hyp_text walk_el2_pmd(pud_t *pud, unsigned long addr, struct s2_trans *result)
+{
+	pmd_t *pmd;
+	pmd = pmd_offset_el2(pud, addr);
+	if (pmd_none(*pmd))
+		return;
+	walk_el2_pte(pmd, addr, result);
+}
+
+void __hyp_text walk_el2_pud(pgd_t *pgd, unsigned long addr, struct s2_trans *result)
+{
+	pud_t *pud;
+	pud = pud_offset_el2(pgd, addr);
+	if (pud_none(*pud))
+		return;
+	walk_el2_pmd(pud, addr, result);
+}
+
+void __hyp_text walk_el2_pgd(unsigned long addr, struct s2_trans *result)
+{
+	pgd_t *ttbr_el2 = (pgd_t *)read_sysreg(ttbr0_el2);
+	pgd_t *pgd;
+
+	ttbr_el2 = __el2_va(ttbr_el2);
+	el2_memset(result, 0, sizeof(struct s2_trans));
+	pgd = ttbr_el2 + pgd_index(addr);
+	if (stage2_pgd_present(*pgd))
+		walk_el2_pud(pgd, addr, result);
+
+	return;
+}
+
 void __hyp_text set_pfn_host_ptes(pmd_t *pmd, phys_addr_t addr,
 				phys_addr_t end, kvm_pfn_t pfn, pgprot_t prot)
 {
