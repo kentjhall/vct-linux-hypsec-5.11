@@ -38,6 +38,7 @@ struct el2_vm_info {
 	bool inc_exe;
 	struct el2_load_info load_info[5];
 	arch_spinlock_t shadow_pt_lock;
+	arch_spinlock_t boot_lock;
 };
 
 extern int el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,

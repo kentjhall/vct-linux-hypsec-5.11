@@ -15,6 +15,8 @@
 #include <asm/kernel-pgtable.h>
 #include <asm/stage2_host.h>
 
+#include "ed25519/ed25519.h"
+
 static int __hyp_text hypsec_gen_vmid(struct stage2_data *stage2_data)
 {
 	int vmid;
@@ -38,6 +40,8 @@ static int __hyp_text __alloc_vm_info(struct kvm* kvm)
 	stage2_data->vm_info[count].inc_exe = false;
 	stage2_data->vm_info[count].vmid = hypsec_gen_vmid(stage2_data);
 	stage2_data->vm_info[count].shadow_pt_lock =
+		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	stage2_data->vm_info[count].boot_lock =
 		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	kvm->arch.vm_info = &stage2_data->vm_info[count];
 	return stage2_data->vm_info[count].vmid;
@@ -139,6 +143,53 @@ void __hyp_text __el2_remap_vm_image(struct kvm *kvm, unsigned long pfn)
 	load_info->el2_mapped_pages++; 
 }
 
+bool __hyp_text __el2_verify_and_load_images(struct kvm *kvm)
+{
+	struct stage2_data *stage2_data;
+	struct el2_vm_info *vm_info;
+	struct el2_load_info load_info;
+	int i;
+	bool res = true;
+	unsigned char signature[64];
+	unsigned char public_key[32];
+	unsigned char *signature_hex = "3f8e027d94055d36a8a12de3472970e7072897a0700d09e8fd03ff78dcbeb939723ff81f098db82a1562dfd3cf1794aa61a210c733d849bcdfdf55f69014780a";
+	unsigned char *public_key_hex = "25f2d889403a586265eeff77d54687971301c280a02a4b5e7a416449be2ab239";
+	arch_spinlock_t *lock;
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	kvm = kern_hyp_va(kvm);
+	vm_info = get_vm_info(stage2_data, kvm);
+
+	lock = &vm_info->boot_lock;
+	stage2_spin_lock(lock);
+
+	if (vm_info->is_valid_vm)
+		goto out;
+	/* Traverse through the load info list and check the integrity of images. */
+	for (i = 0; i < vm_info->load_info_cnt; i++) {
+		//Call to the crypto authentication function here.
+		unsigned char *kern_img;
+		int verify_res = 0;
+
+		load_info = vm_info->load_info[i];
+		unmap_image_from_host_s2pt(kvm, load_info.el2_remap_addr,
+			load_info.el2_mapped_pages);
+
+		el2_hex2bin(signature, signature_hex, 64);
+		el2_hex2bin(public_key, public_key_hex, 32);
+
+		load_info = vm_info->load_info[i];
+		kern_img = (char *) load_info.el2_remap_addr;
+		verify_res = ed25519_verify(signature, kern_img, load_info.size, public_key);
+	}
+	/* We want to load the images later. */
+	vm_info->is_valid_vm = true;
+
+out:
+	stage2_spin_unlock(lock);
+	return res;
+}
+
 int el2_alloc_vm_info(struct kvm *kvm)
 {
 	return kvm_call_hyp(__alloc_vm_info, kvm);
@@ -154,4 +205,9 @@ int el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
 int el2_remap_vm_image(struct kvm *kvm, unsigned long pfn)
 {
 	return kvm_call_hyp(__el2_remap_vm_image, kvm, pfn);
+}
+
+int el2_verify_and_load_images(struct kvm *kvm)
+{
+	return kvm_call_hyp(__el2_verify_and_load_images, kvm);
 }

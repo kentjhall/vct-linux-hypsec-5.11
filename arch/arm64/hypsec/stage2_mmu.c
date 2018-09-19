@@ -371,6 +371,33 @@ void __hyp_text walk_el2_pgd(unsigned long addr, struct s2_trans *result)
 	return;
 }
 
+void __hyp_text unmap_image_from_host_s2pt(struct kvm* kvm,
+					   unsigned long el2_remap_addr,
+					   unsigned long pgnum)
+{
+	struct s2_trans result;
+	struct stage2_data *stage2_data;
+	int i = 0;
+	unsigned long addr;
+	u32 vmid;
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	kvm = kern_hyp_va(kvm);
+	vmid = el2_get_vmid(stage2_data, kvm);
+
+	while (i < pgnum) {
+		addr = el2_remap_addr + (i * PAGE_SIZE);
+		walk_el2_pgd(addr, &result);
+		if (!result.level)
+			__hyp_panic();
+		__set_pfn_host(result.output, PAGE_SIZE, 0, PAGE_GUEST);
+		set_pfn_owner(stage2_data, result.output, PAGE_SIZE, vmid);
+		__kvm_flush_vm_context();
+
+		i++;
+	}
+}
+
 void __hyp_text set_pfn_host_ptes(pmd_t *pmd, phys_addr_t addr,
 				phys_addr_t end, kvm_pfn_t pfn, pgprot_t prot)
 {
