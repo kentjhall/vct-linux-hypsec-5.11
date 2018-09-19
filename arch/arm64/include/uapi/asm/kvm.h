@@ -154,6 +154,14 @@ struct kvm_sync_regs {
 struct kvm_arch_memory_slot {
 };
 
+#ifdef CONFIG_STAGE2_KERNEL
+struct kvm_boot_info {
+	__u32 datasize;
+	__u8 *data;
+	__u64 addr;
+};
+#endif
+
 /* If you need to interpret the index values, here is the key: */
 #define KVM_REG_ARM_COPROC_MASK		0x000000000FFF0000
 #define KVM_REG_ARM_COPROC_SHIFT	16

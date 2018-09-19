@@ -1268,6 +1268,31 @@ long kvm_arch_vm_ioctl(struct file *filp,
 
 		return 0;
 	}
+#ifdef CONFIG_STAGE2_KERNEL
+	case KVM_ARM_SET_BOOT_INFO: {
+		struct kvm_boot_info info;
+		struct page *page[1];
+		int npages;
+		unsigned long start, end, virt_addr;
+
+		if (copy_from_user(&info, argp, sizeof(info)))
+			return -EFAULT;
+
+		start = (unsigned long)info.data;
+		end = start + info.datasize;
+
+		el2_set_boot_info(kvm, info.addr, info.datasize, 0);
+		for (virt_addr = start; virt_addr < end; virt_addr += PAGE_SIZE) {
+			npages = __get_user_pages_fast(virt_addr, 1, 1, page);
+			if (npages == 1)
+				el2_remap_vm_image(kvm, page_to_pfn(page[0]));
+			else
+				return -EFAULT;
+		}
+
+		return 0;
+	}
+#endif
 	default:
 		return -EINVAL;
 	}
