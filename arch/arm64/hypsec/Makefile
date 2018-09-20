@@ -9,4 +9,4 @@ obj-y += stage2_boot.o
 obj-y += stage2_pvops.o
 obj-y += stage2_mmio.o
 obj-y += ed25519/
-#obj-y += tiny-AES-c/
+obj-y += tiny-AES-c/
