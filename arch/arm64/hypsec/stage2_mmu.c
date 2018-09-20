@@ -139,6 +139,28 @@ void* __hyp_text alloc_stage2_page(unsigned int num)
 	return (void *)p_addr;
 }
 
+void * __hyp_text alloc_tmp_page(void)
+{
+	u64 p_addr, start;
+	struct stage2_data *stage2_data;
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	stage2_spin_lock(&stage2_data->tmp_page_pool_lock);
+
+	/* Check if we're out of memory in the reserved area */
+	if (stage2_data->used_tmp_pages >= STAGE2_NUM_TMP_PAGES) {
+		print_string("stage2: out of tmp pages\r\n");
+		stage2_data->used_tmp_pages = 0;
+	}
+
+	start = stage2_data->page_pool_start + STAGE2_NORM_PAGES_SIZE;
+	p_addr = (u64)start + (PAGE_SIZE * stage2_data->used_tmp_pages);
+	stage2_data->used_tmp_pages++;
+
+	stage2_spin_unlock(&stage2_data->tmp_page_pool_lock);
+	return (void *)p_addr;
+}
+
 /* Allocate a 4k page from the reserved 2M area  */
 void* __hyp_text alloc_shadow_s2_pgd(unsigned int num)
 {
