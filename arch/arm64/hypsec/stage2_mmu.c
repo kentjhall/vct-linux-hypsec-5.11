@@ -1124,6 +1124,34 @@ void __hyp_text __alloc_shadow_vttbr(struct kvm *kvm)
 	kvm_el2->arch.shadow_vttbr = (u64)alloc_shadow_s2_pgd(S2_PGD_PAGES_NUM);
 }
 
+void __hyp_text __el2_encrypt_buf(void *buf, uint32_t len)
+{
+	struct stage2_data *stage2_data;
+	phys_addr_t pa, addr = (phys_addr_t)buf;
+	pte_t new_pte;
+
+	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+
+	pa = (phys_addr_t)alloc_tmp_page();
+	el2_memcpy(__el2_va(pa), __el2_va(addr), len);
+
+	encrypt_buf(stage2_data, __el2_va(pa), len);
+	new_pte = pfn_pte(pa >> PAGE_SHIFT, PAGE_S2_KERNEL);
+
+	handle_host_stage2_trans_fault(0, addr, stage2_data, new_pte);
+	__kvm_tlb_flush_vmid_el2();
+}
+
+void __hyp_text __el2_decrypt_buf(void *buf, uint32_t len)
+{
+	struct stage2_data *stage2_data;
+	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+
+	/* Unmap the decrypted page now so the host can not get access to it. */
+	__set_pfn_host((phys_addr_t)buf, PAGE_SIZE, 0, PAGE_NONE);
+	decrypt_buf(stage2_data, __el2_va(buf), len);
+}
+
 void el2_protect_stack_page(phys_addr_t addr)
 {
 	kvm_call_hyp(__el2_protect_stack_page, addr);
@@ -1158,4 +1186,14 @@ void clear_vm_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size)
 void el2_register_smmu(void)
 {
 	kvm_call_hyp(__el2_register_smmu);
+}
+
+void el2_encrypt_buf(void *buf, uint32_t len)
+{
+	kvm_call_hyp(__el2_encrypt_buf, buf, len);
+}
+
+void el2_decrypt_buf(void *buf, uint32_t len)
+{
+	kvm_call_hyp(__el2_decrypt_buf, buf, len);
 }

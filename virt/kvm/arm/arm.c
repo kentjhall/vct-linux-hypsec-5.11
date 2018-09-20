@@ -1294,6 +1294,34 @@ long kvm_arch_vm_ioctl(struct file *filp,
 
 		return 0;
 	}
+
+	case KVM_ARM_ENCRYPT_BUF: {
+		struct page *page[1];
+		int npages;
+
+		npages = __get_user_pages_fast(arg, 1, 1, page);
+		if (npages == 1)
+			el2_encrypt_buf((void *)(page_to_pfn(page[0]) << PAGE_SHIFT),
+					PAGE_SIZE);
+		else
+			return -EFAULT;
+
+		return 0;
+	}
+
+	case KVM_ARM_DECRYPT_BUF: {
+		struct page *page[1];
+		int npages;
+
+		npages = __get_user_pages_fast(arg, 1, 1, page);
+		if (npages == 1)
+			el2_decrypt_buf((void *)(page_to_pfn(page[0]) << PAGE_SHIFT),
+					PAGE_SIZE);
+		else
+			return -EFAULT;
+
+		return 0;
+	}
 #endif
 	default:
 		return -EINVAL;
