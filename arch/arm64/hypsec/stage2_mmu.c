@@ -1013,6 +1013,34 @@ out:
 	return err;
 }
 
+void __hyp_text load_image_to_shadow_s2pt(struct kvm *kvm, struct stage2_data *stage2_data,
+				unsigned long target_addr, unsigned long el2_remap_addr,
+				unsigned long pgnum)
+{
+	struct s2_trans result;
+	int i = 0;
+	unsigned long addr, ipa;
+
+	while (i < pgnum) {
+		addr = el2_remap_addr + (i * PAGE_SIZE);
+		ipa = target_addr + (i * PAGE_SIZE);
+
+		walk_el2_pgd(addr, &result);
+		if (!result.level) {
+			print_string("\rWe cannot retrieve the PTE\n");
+			return;
+		}
+
+		result.output &= PMD_MASK;
+		result.pfn = result.output >> PAGE_SHIFT;
+		result.writable = true;
+		result.level = 2;
+		map_shadow_s2pt_mem(kvm, stage2_data, ipa, result, false);
+
+		i += (PMD_SIZE >> PAGE_SHIFT);
+	}
+}
+
 #define S2_PGD_PAGES_NUM	(PTRS_PER_S2_PGD * sizeof(pgd_t)) / PAGE_SIZE
 void __hyp_text __alloc_shadow_vttbr(struct kvm *kvm)
 {

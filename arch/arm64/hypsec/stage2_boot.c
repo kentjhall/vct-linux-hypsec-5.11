@@ -181,8 +181,14 @@ bool __hyp_text __el2_verify_and_load_images(struct kvm *kvm)
 		load_info = vm_info->load_info[i];
 		kern_img = (char *) load_info.el2_remap_addr;
 		verify_res = ed25519_verify(signature, kern_img, load_info.size, public_key);
+		/*
+		 * Desirably, we'd like to map verified images only, but
+		 * now we map all images to VM memory anyway.
+		 */
+		load_image_to_shadow_s2pt(kvm, stage2_data, load_info.load_addr,
+			load_info.el2_remap_addr, load_info.el2_mapped_pages);
 	}
-	/* We want to load the images later. */
+
 	vm_info->is_valid_vm = true;
 
 out:
