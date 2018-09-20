@@ -15,7 +15,7 @@
 
 struct el2_arm_smmu_device {
 	u64				phys_base;
-	unsigned long			size;
+	u64				size;
 	unsigned long			pgshift;
 
 	#define ARM_SMMU_FEAT_COHERENT_WALK	(1 << 0)

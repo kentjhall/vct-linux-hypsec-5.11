@@ -52,6 +52,9 @@
 #include <linux/spinlock.h>
 
 #include <linux/amba/bus.h>
+#ifdef CONFIG_STAGE2_KERNEL
+#include <asm/stage2_host.h>
+#endif
 
 #include "io-pgtable.h"
 #include "arm-smmu-regs.h"
@@ -2039,6 +2042,36 @@ static void arm_smmu_bus_init(void)
 #endif
 }
 
+#ifdef CONFIG_STAGE2_KERNEL
+static void s2_smmu_probe(struct arm_smmu_device *smmu,
+			  u64 base, u64 size)
+{
+	struct stage2_data *stage2_data;
+	struct el2_arm_smmu_device *el2_smmu;
+
+	BUG_ON(!smmu);
+
+	stage2_data = (void *)kvm_ksym_ref(stage2_data_start);
+	el2_smmu = &stage2_data->smmu;
+
+	el2_smmu->phys_base = base;
+	el2_smmu->size = size;
+	el2_smmu->pgshift = smmu->pgshift;
+	el2_smmu->features = smmu->features;
+	el2_smmu->options = smmu->options;
+
+	el2_smmu->num_context_banks = smmu->num_context_banks;
+	el2_smmu->num_s2_context_banks = smmu->num_s2_context_banks;
+
+	el2_smmu->va_size = smmu->va_size;
+	el2_smmu->ipa_size = smmu->ipa_size;
+	el2_smmu->pa_size = smmu->pa_size;
+
+	el2_smmu->num_global_irqs = smmu->num_global_irqs;
+	el2_smmu->exists = true;
+}
+#endif
+
 static int arm_smmu_device_probe(struct platform_device *pdev)
 {
 	struct resource *res;
@@ -2046,6 +2079,9 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 	struct arm_smmu_device *smmu;
 	struct device *dev = &pdev->dev;
 	int num_irqs, i, err;
+#ifdef CONFIG_STAGE2_KERNEL
+	u64 phys_smmu_base, smmu_size;
+#endif
 
 	smmu = devm_kzalloc(dev, sizeof(*smmu), GFP_KERNEL);
 	if (!smmu) {
@@ -2068,6 +2104,10 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 	if (IS_ERR(smmu->base))
 		return PTR_ERR(smmu->base);
 	smmu->cb_base = smmu->base + resource_size(res) / 2;
+#ifdef CONFIG_STAGE2_KERNEL
+	phys_smmu_base = res->start;
+	smmu_size = resource_size(res);
+#endif
 
 	num_irqs = 0;
 	while ((res = platform_get_resource(pdev, IORESOURCE_IRQ, num_irqs))) {
@@ -2143,7 +2183,9 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, smmu);
 	arm_smmu_device_reset(smmu);
 	arm_smmu_test_smr_masks(smmu);
-
+#ifdef CONFIG_STAGE2_KERNEL
+	s2_smmu_probe(smmu, phys_smmu_base, smmu_size);
+#endif
 	/*
 	 * For ACPI and generic DT bindings, an SMMU will be probed before
 	 * any device which might need it, so we want the bus ops in place

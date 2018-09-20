@@ -103,6 +103,8 @@ void init_stage2_data_page(void)
 	int i = 0, index = 0, err;
 	struct stage2_data *stage2_data;
 	struct memblock_region *r;
+	struct el2_arm_smmu_device smmu;
+	void *smmu_start;
 
 	memset((void *)kvm_ksym_ref(stage2_pgs_start), 0, STAGE2_PAGES_SIZE);
 	__flush_dcache_area((void *)kvm_ksym_ref(stage2_pgs_start), STAGE2_PAGES_SIZE);
@@ -157,6 +159,18 @@ void init_stage2_data_page(void)
 	stage2_data->used_vm_info = 0;
 	stage2_data->last_remap_ptr = 0;
 
+	/* FIXME: hardcode SMMU base address for now. */
+	smmu = stage2_data->smmu;
+	if (smmu.exists) {
+		smmu_start = (void *)SMMU_BASE(smmu);
+		err = create_hypsec_io_mappings((phys_addr_t)smmu_start,
+						SMMU_SIZE(smmu),
+						smmu_start);
+		if (err) {
+			kvm_err("Cannot map smmu\n");
+			goto out_err;
+		}
+	}
 	memset(stage2_data->smmu_cfg, 0,
 		sizeof(struct el2_smmu_cfg) * EL2_SMMU_CFG_SIZE);
 
