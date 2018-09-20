@@ -1073,6 +1073,21 @@ out:
 	return result;
 }
 
+void __hyp_text __el2_register_smmu(void)
+{
+	struct stage2_data *stage2_data;
+	struct el2_arm_smmu_device el2_smmu;
+	u64 start, end;
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_smmu = stage2_data->smmu;
+	start = el2_smmu.phys_base;
+	end = start + el2_smmu.size;
+	map_el2_mem(start, end, start >> PAGE_SHIFT, PAGE_HYP_DEVICE);
+
+	__set_pfn_host(start, end - start, 0, PAGE_NONE);
+}
+
 #define S2_PGD_PAGES_NUM	(PTRS_PER_S2_PGD * sizeof(pgd_t)) / PAGE_SIZE
 void __hyp_text __alloc_shadow_vttbr(struct kvm *kvm)
 {
@@ -1111,4 +1126,9 @@ void alloc_shadow_vttbr(struct kvm *kvm)
 void clear_vm_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size)
 {
 	kvm_call_hyp(__clear_vm_stage2_range, kvm, start, size);
+}
+
+void el2_register_smmu(void)
+{
+	kvm_call_hyp(__el2_register_smmu);
 }

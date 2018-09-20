@@ -2075,13 +2075,7 @@ static void s2_smmu_probe(struct arm_smmu_device *smmu,
 
 	el2_smmu->num_global_irqs = smmu->num_global_irqs;
 
-	err = el2_create_hyp_mappings((void *)smmu_start,
-					  (void *)smmu_end,
-					  PAGE_HYP_DEVICE);
-	if (err) {
-		printk("Cannot map smmu\n");
-		return;
-	}
+	el2_register_smmu();
 }
 #endif
 
