@@ -1035,7 +1035,7 @@ void __hyp_text load_image_to_shadow_s2pt(struct kvm *kvm, struct stage2_data *s
 		result.pfn = result.output >> PAGE_SHIFT;
 		result.writable = true;
 		result.level = 2;
-		map_shadow_s2pt_mem(kvm, stage2_data, ipa, result, false);
+		map_shadow_s2pt_mem(kvm, stage2_data, ipa, result, true);
 
 		i += (PMD_SIZE >> PAGE_SHIFT);
 	}
