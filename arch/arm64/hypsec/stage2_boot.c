@@ -196,6 +196,35 @@ out:
 	return res;
 }
 
+unsigned long __hyp_text search_load_info(struct kvm *kvm,
+					  struct stage2_data *stage2_data,
+					  unsigned long addr)
+{
+	struct el2_load_info li;
+	int i;
+	struct el2_vm_info *vm_info = get_vm_info(stage2_data, kvm);
+	unsigned long el2_va = 0;
+
+	for (i = 0; i < vm_info->load_info_cnt; i++) {
+		li = vm_info->load_info[i];
+		if (addr >= li.load_addr && (li.load_addr + li.size) >= addr) {
+			el2_va = (addr - li.load_addr) + li.el2_remap_addr;
+			break;
+		}
+	}
+	return el2_va;
+}
+
+unsigned long __hyp_text get_el2_image_va(struct kvm *kvm, unsigned long addr)
+{
+	struct stage2_data *stage2_data;
+	unsigned long ret = 0;
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	ret = search_load_info(kvm, stage2_data, addr);
+	return ret;
+}
+
 int el2_alloc_vm_info(struct kvm *kvm)
 {
 	return kvm_call_hyp(__alloc_vm_info, kvm);

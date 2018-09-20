@@ -680,12 +680,19 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 	struct s2_trans result;
 	int ret = -ENOMEM;
 	u32 vmid, target_vmid;
+	unsigned long remapped_va;
 
 	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
 	addr = (hpfar & HPFAR_MASK) << 8;
 	vmid = el2_get_vmid(stage2_data, kvm);
 
-	result = walk_stage2_pgd(kvm, addr, false);
+	remapped_va = get_el2_image_va(kvm, addr);
+	if (remapped_va)
+		result = handle_from_vm_info(kvm, stage2_data,
+					remapped_va, addr);
+	else
+		result = walk_stage2_pgd(kvm, addr, false);
+
 	if (!result.level)
 		return ret;
 
@@ -1039,6 +1046,27 @@ void __hyp_text load_image_to_shadow_s2pt(struct kvm *kvm, struct stage2_data *s
 
 		i += (PMD_SIZE >> PAGE_SHIFT);
 	}
+}
+
+struct s2_trans __hyp_text handle_from_vm_info(struct kvm *kvm, struct stage2_data *stage2_data,
+				unsigned long el2_va, unsigned long addr)
+{
+	struct s2_trans result;
+
+	walk_el2_pgd(el2_va, &result);
+	if (!result.level) {
+		print_string("\rWe cannot retrieve the PTE for vm_info\n");
+		goto out;
+	}
+
+	/* Aligned to 2MB size */
+	result.output &= PMD_MASK;
+	result.pfn = result.output >> PAGE_SHIFT;
+	result.level = 2;
+	result.readable = true;
+	result.writable = true;
+out:
+	return result;
 }
 
 #define S2_PGD_PAGES_NUM	(PTRS_PER_S2_PGD * sizeof(pgd_t)) / PAGE_SIZE

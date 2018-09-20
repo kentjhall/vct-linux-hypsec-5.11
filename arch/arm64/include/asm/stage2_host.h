@@ -94,8 +94,8 @@ void decrypt_buf(struct stage2_data *stage2_data, void *buf, uint32_t len);
 
 extern void el2_boot_from_inc_exe(struct kvm *kvm);
 extern bool el2_use_inc_exe(struct kvm *kvm, struct stage2_data *stage2_data);
-extern bool search_load_info(struct kvm *kvm, struct stage2_data *stage2_data,
-			     unsigned long addr, struct el2_load_info *input);
+extern unsigned long search_load_info(struct kvm *kvm, struct stage2_data *stage2_data,
+				      unsigned long addr);
 
 extern int el2_alloc_vm_info(struct kvm *kvm);
 extern int el2_get_vmid(struct stage2_data *stage2_data, struct kvm *kvm);

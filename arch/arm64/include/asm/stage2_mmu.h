@@ -96,9 +96,9 @@ extern void load_image_to_shadow_s2pt(struct kvm *kvm, struct stage2_data *stage
 				unsigned long pgnum);
 
 bool stage2_is_map_memory(phys_addr_t addr);
-extern bool el2_is_image_range(struct kvm *kvm, unsigned long addr, struct s2_trans *result);
-extern void handle_from_vm_info(struct kvm *kvm, struct stage2_data *stage2_data, unsigned long el2_va,
-					unsigned long addr, struct s2_trans *result_in);
+unsigned long get_el2_image_va(struct kvm *kvm, unsigned long addr);
+extern struct s2_trans handle_from_vm_info(struct kvm *kvm, struct stage2_data *stage2_data,
+					   unsigned long el2_va, unsigned long addr);
 
 static inline bool is_mmio_gpa(u64 addr)
 {
