@@ -225,6 +225,15 @@ unsigned long __hyp_text get_el2_image_va(struct kvm *kvm, unsigned long addr)
 	return ret;
 }
 
+bool __hyp_text el2_use_inc_exe(struct kvm *kvm,
+			        struct stage2_data *stage2_data)
+{
+	struct el2_vm_info *vm_info;
+
+	vm_info = get_vm_info(stage2_data, kvm);
+	return vm_info->inc_exe;
+}
+
 void __hyp_text __el2_boot_from_inc_exe(struct kvm *kvm)
 {
 	struct stage2_data *stage2_data;
