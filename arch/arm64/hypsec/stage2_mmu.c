@@ -519,11 +519,15 @@ static void __hyp_text handle_host_stage2_trans_fault(unsigned host_lr,
 	stage2_spin_unlock(&stage2_data->fault_lock);
 }
 
-static int __hyp_text stage2_emul_mmio(phys_addr_t addr,
-					struct s2_host_regs *host_regs)
+static int __hyp_text stage2_emul_mmio(struct stage2_data *stage2_data,
+				       phys_addr_t addr,
+				       struct s2_host_regs *host_regs)
 {
-	/* Fill in the stuff for SMMU later */
-	return false;
+	if (stage2_data->smmu.exists && is_smmu_range(stage2_data->smmu, addr)) {
+		handle_host_mmio(addr, host_regs);
+		return 1;
+	}
+	return 0;
 }
 
 static void __hyp_text reject_invalid_mem_access(phys_addr_t addr,
@@ -571,7 +575,7 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 			new_pte = gen_encrypted_pte(stage2_data, addr);
 		} else if (!vmid)
 			new_pte = pfn_pte(pfn, PAGE_S2_KERNEL);
-	} else if (!stage2_emul_mmio(addr, host_regs)) {
+	} else if (!stage2_emul_mmio(stage2_data, addr, host_regs)) {
 		new_pte = pfn_pte(pfn, PAGE_S2_DEVICE);
 		new_pte = kvm_s2pte_mkwrite(new_pte);
 	} else
