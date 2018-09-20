@@ -54,6 +54,7 @@
 #include <linux/amba/bus.h>
 #ifdef CONFIG_STAGE2_KERNEL
 #include <asm/stage2_host.h>
+#include <asm/kvm_mmu.h>
 #endif
 
 #include "io-pgtable.h"
@@ -2048,14 +2049,19 @@ static void s2_smmu_probe(struct arm_smmu_device *smmu,
 {
 	struct stage2_data *stage2_data;
 	struct el2_arm_smmu_device *el2_smmu;
+	u64 smmu_start, smmu_end;
+	int err;
 
 	BUG_ON(!smmu);
 
 	stage2_data = (void *)kvm_ksym_ref(stage2_data_start);
 	el2_smmu = &stage2_data->smmu;
-
 	el2_smmu->phys_base = base;
 	el2_smmu->size = size;
+
+	smmu_start = base;
+	smmu_end = base + size;
+
 	el2_smmu->pgshift = smmu->pgshift;
 	el2_smmu->features = smmu->features;
 	el2_smmu->options = smmu->options;
@@ -2068,7 +2074,14 @@ static void s2_smmu_probe(struct arm_smmu_device *smmu,
 	el2_smmu->pa_size = smmu->pa_size;
 
 	el2_smmu->num_global_irqs = smmu->num_global_irqs;
-	el2_smmu->exists = true;
+
+	err = el2_create_hyp_mappings((void *)smmu_start,
+					  (void *)smmu_end,
+					  PAGE_HYP_DEVICE);
+	if (err) {
+		printk("Cannot map smmu\n");
+		return;
+	}
 }
 #endif
 
