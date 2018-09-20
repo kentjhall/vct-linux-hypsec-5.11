@@ -922,12 +922,8 @@ int el2_create_hyp_mappings(void *from, void *to, pgprot_t prot)
 {
 	phys_addr_t phys_addr;
 	unsigned long virt_addr;
-	unsigned long start = ((unsigned long)from >= PAGE_OFFSET) ?
-				kern_hyp_va((unsigned long)from) :
-				(unsigned long)from;
-	unsigned long end = ((unsigned long)to >= PAGE_OFFSET) ?
-				kern_hyp_va((unsigned long)to) :
-				(unsigned long)to;
+	unsigned long start = kern_hyp_va((unsigned long)from);
+	unsigned long end = kern_hyp_va((unsigned long)to);
 
 	if (is_kernel_in_hyp_mode())
 		return 0;
@@ -938,10 +934,7 @@ int el2_create_hyp_mappings(void *from, void *to, pgprot_t prot)
 	for (virt_addr = start; virt_addr < end; virt_addr += PAGE_SIZE) {
 		int err;
 
-		if ((unsigned long)from >= PAGE_OFFSET)
-			phys_addr = kvm_kaddr_to_phys(from + virt_addr - start);
-		else
-			phys_addr = virt_addr;
+		phys_addr = kvm_kaddr_to_phys(from + virt_addr - start);
 		err = el2_create_hyp_mapping(virt_addr,
 					    virt_addr + PAGE_SIZE,
 					    __phys_to_pfn(phys_addr),
