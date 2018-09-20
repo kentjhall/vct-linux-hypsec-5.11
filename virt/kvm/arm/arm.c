@@ -1322,6 +1322,11 @@ long kvm_arch_vm_ioctl(struct file *filp,
 
 		return 0;
 	}
+
+	case KVM_ARM_RESUME_INC_EXE: {
+		el2_boot_from_inc_exe(kvm);
+		return 0;
+	}
 #endif
 	default:
 		return -EINVAL;

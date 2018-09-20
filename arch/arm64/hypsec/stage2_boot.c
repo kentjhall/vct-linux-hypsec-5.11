@@ -225,6 +225,17 @@ unsigned long __hyp_text get_el2_image_va(struct kvm *kvm, unsigned long addr)
 	return ret;
 }
 
+void __hyp_text __el2_boot_from_inc_exe(struct kvm *kvm)
+{
+	struct stage2_data *stage2_data;
+	struct el2_vm_info *vm_info;
+
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	kvm = kern_hyp_va(kvm);
+	vm_info = get_vm_info(stage2_data, kvm);
+	vm_info->inc_exe = true;
+}
+
 int el2_alloc_vm_info(struct kvm *kvm)
 {
 	return kvm_call_hyp(__alloc_vm_info, kvm);
@@ -245,4 +256,9 @@ int el2_remap_vm_image(struct kvm *kvm, unsigned long pfn)
 int el2_verify_and_load_images(struct kvm *kvm)
 {
 	return kvm_call_hyp(__el2_verify_and_load_images, kvm);
+}
+
+void el2_boot_from_inc_exe(struct kvm *kvm)
+{
+	kvm_call_hyp(__el2_boot_from_inc_exe, kvm);
 }
