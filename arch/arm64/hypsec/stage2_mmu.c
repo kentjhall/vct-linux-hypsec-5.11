@@ -569,9 +569,14 @@ static void __hyp_text reject_invalid_mem_access(phys_addr_t addr,
 static pte_t __hyp_text gen_encrypted_pte(struct stage2_data *stage2_data,
                                          phys_addr_t addr)
 {
-	print_string("\raccessing vm page\n");
-	printhex_ul(addr);
-	return pfn_pte(0, PAGE_S2_KERNEL);
+	pte_t new_pte;
+	phys_addr_t pa = (phys_addr_t)alloc_tmp_page();
+
+	el2_memcpy(__el2_va(pa), __el2_va(addr), PAGE_SIZE);
+	encrypt_buf(stage2_data, __el2_va(pa), PAGE_SIZE);
+	new_pte = pfn_pte(pa >> PAGE_SHIFT, PAGE_S2_KERNEL);
+	__kvm_tlb_flush_vmid_el2();
+	return new_pte;
 }
 
 void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
