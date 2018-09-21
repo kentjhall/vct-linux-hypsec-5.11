@@ -87,6 +87,10 @@
 			 HCR_FMO | HCR_IMO)
 #define HCR_VIRT_EXCP_MASK (HCR_VSE | HCR_VI | HCR_VF)
 #define HCR_HOST_VHE_FLAGS (HCR_RW | HCR_TGE | HCR_E2H)
+#ifdef CONFIG_STAGE2_KERNEL
+#define HCR_HYPSEC_VM_FLAGS (HCR_TSC | HCR_TWE | HCR_TWI | HCR_AMO | \
+			     HCR_TIDCP | HCR_FMO | HCR_IMO | HCR_VM)
+#endif
 
 /* TCR_EL2 Registers bits */
 #define TCR_EL2_RES1		((1 << 31) | (1 << 23))
