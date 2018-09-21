@@ -1379,6 +1379,7 @@ struct kvm_s390_ucas_mapping {
 #define KVM_ARM_RESUME_INC_EXE    _IO(KVMIO,  0xb9)
 #define KVM_ARM_ENCRYPT_BUF       _IOW(KVMIO,  0xba, unsigned long)
 #define KVM_ARM_DECRYPT_BUF       _IOW(KVMIO,  0xbb, unsigned long)
+#define KVM_ARM_PRE_VCPU	  _IO(KVMIO,  0xbc)
 #endif
 /* Available with KVM_CAP_S390_CMMA_MIGRATION */
 #define KVM_S390_GET_CMMA_BITS      _IOWR(KVMIO, 0xb8, struct kvm_s390_cmma_log)

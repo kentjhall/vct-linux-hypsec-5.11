@@ -1172,6 +1172,13 @@ long kvm_arch_vcpu_ioctl(struct file *filp,
 		r = kvm_arm_vcpu_has_attr(vcpu, &attr);
 		break;
 	}
+#ifdef CONFIG_STAGE2_KERNEL
+	case KVM_ARM_PRE_VCPU: {
+		save_encrypted_vcpu(vcpu);
+		r = 0;
+		break;
+	}
+#endif
 	default:
 		r = -EINVAL;
 	}
