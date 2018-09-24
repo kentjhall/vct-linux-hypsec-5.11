@@ -19,7 +19,7 @@
 #include <asm/kvm_mmu.h>
 #include <asm/tlbflush.h>
 #ifdef CONFIG_STAGE2_KERNEL
-#include <asm/stage2_host.h>
+#include <asm/hypsec_host.h>
 #endif
 
 static void __hyp_text __tlb_switch_to_guest_vhe(struct kvm *kvm)

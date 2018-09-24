@@ -13,7 +13,7 @@
 #include <asm/kvm_emulate.h>
 #include <asm/virt.h>
 #include <asm/kernel-pgtable.h>
-#include <asm/stage2_host.h>
+#include <asm/hypsec_host.h>
 #include <uapi/linux/psci.h>
 
 static void __hyp_text get_crypt_buf(__u64 *buf,

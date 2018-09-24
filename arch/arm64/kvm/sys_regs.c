@@ -47,7 +47,7 @@
 
 #ifdef CONFIG_STAGE2_KERNEL
 #include <asm/kvm_hyp.h>
-#include <asm/stage2_host.h>
+#include <asm/hypsec_host.h>
 #endif
 
 /*

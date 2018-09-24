@@ -36,7 +36,7 @@ NOTE:   String length must be evenly divisible by 16byte (str_len % 16 == 0)
 /* Includes:                                                                 */
 /*****************************************************************************/
 #include <asm/kvm_hyp.h>
-#include <asm/stage2_host.h>
+#include <asm/hypsec_host.h>
 
 #include "fixedint.h" //<stdint.h>
 //#include <string.h> // CBC mode, for memset

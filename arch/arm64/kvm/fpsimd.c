@@ -14,7 +14,7 @@
 #include <asm/kvm_mmu.h>
 #include <asm/sysreg.h>
 #ifdef CONFIG_STAGE2_KERNEL
-#include <asm/stage2_host.h>
+#include <asm/hypsec_host.h>
 #endif
 /*
  * Called on entry to KVM_RUN unless this vcpu previously ran at least

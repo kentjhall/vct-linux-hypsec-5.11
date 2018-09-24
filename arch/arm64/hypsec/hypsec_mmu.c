@@ -13,8 +13,8 @@
 #include <asm/kvm_emulate.h>
 #include <asm/virt.h>
 #include <asm/kernel-pgtable.h>
-#include <asm/stage2_host.h>
-#include <asm/stage2_mmio.h>
+#include <asm/hypsec_host.h>
+#include <asm/hypsec_mmio.h>
 
 int __hyp_text stage2_mem_regions_search(phys_addr_t addr,
 		struct memblock_region *regions, unsigned long cnt)

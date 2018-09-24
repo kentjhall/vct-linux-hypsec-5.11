@@ -33,7 +33,7 @@
 #include <asm/processor.h>
 #include <asm/thread_info.h>
 #ifdef CONFIG_STAGE2_KERNEL
-#include <asm/stage2_host.h>
+#include <asm/hypsec_host.h>
 #endif
 
 /* Check whether the FP regs were dirtied while in the host-side run loop: */

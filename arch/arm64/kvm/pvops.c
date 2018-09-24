@@ -7,7 +7,7 @@
 #include <asm/kvm_emulate.h>
 #include <asm/kvm_mmu.h>
 #include <asm/kvm_hyp.h>
-#include <asm/stage2_host.h>
+#include <asm/hypsec_host.h>
 
 #include <kvm/pvops.h>
 

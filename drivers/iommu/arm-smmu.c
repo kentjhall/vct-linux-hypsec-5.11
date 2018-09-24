@@ -53,7 +53,7 @@
 
 #include <linux/amba/bus.h>
 #ifdef CONFIG_STAGE2_KERNEL
-#include <asm/stage2_host.h>
+#include <asm/hypsec_host.h>
 #include <asm/kvm_mmu.h>
 #endif
 

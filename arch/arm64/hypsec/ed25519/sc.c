@@ -1,5 +1,5 @@
 #include <asm/kvm_hyp.h>
-#include <asm/stage2_host.h>
+#include <asm/hypsec_host.h>
 
 #include "fixedint.h"
 #include "sc.h"

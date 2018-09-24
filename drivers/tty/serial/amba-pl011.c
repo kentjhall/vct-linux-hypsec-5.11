@@ -49,7 +49,7 @@
 
 #include "amba-pl011.h"
 #ifdef CONFIG_STAGE2_KERNEL
-#include <asm/stage2_host.h>
+#include <asm/hypsec_host.h>
 #endif
 
 #define UART_NR			14

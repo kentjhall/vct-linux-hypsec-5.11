@@ -13,7 +13,7 @@
 #include <asm/kvm_emulate.h>
 #include <asm/virt.h>
 #include <asm/kernel-pgtable.h>
-#include <asm/stage2_host.h>
+#include <asm/hypsec_host.h>
 
 #include "ed25519/ed25519.h"
 

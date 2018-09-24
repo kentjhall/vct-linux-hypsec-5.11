@@ -3,10 +3,10 @@
 #include <linux/memblock.h>
 #include <linux/kvm_host.h>
 #include <linux/hashtable.h>
-#include <asm/stage2_boot.h>
-#include <asm/stage2_mmu.h>
-#include <asm/stage2_vcpu.h>
-#include <asm/stage2_mmio.h>
+#include <asm/hypsec_boot.h>
+#include <asm/hypsec_mmu.h>
+#include <asm/hypsec_vcpu.h>
+#include <asm/hypsec_mmio.h>
 
 /* Handler for ACTLR_EL1 is not defined */
 #define SHADOW_SYS_REGS_SIZE		(PAR_EL1)

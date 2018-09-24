@@ -32,7 +32,7 @@
 #include <asm/virt.h>
 #include <asm/system_misc.h>
 #ifdef CONFIG_STAGE2_KERNEL
-#include <asm/stage2_mmu.h>
+#include <asm/hypsec_mmu.h>
 #endif
 
 #include "trace.h"

@@ -51,7 +51,7 @@
 #include <asm/kvm_coproc.h>
 #include <asm/sections.h>
 #ifdef CONFIG_STAGE2_KERNEL
-#include <asm/stage2_host.h>
+#include <asm/hypsec_host.h>
 #endif
 
 #ifdef REQUIRES_VIRT

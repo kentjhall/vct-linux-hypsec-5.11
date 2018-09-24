@@ -14,8 +14,8 @@
 #include <asm/kvm_emulate.h>
 #include <asm/virt.h>
 #include <asm/kernel-pgtable.h>
-#include <asm/stage2_host.h>
-#include <asm/stage2_mmio.h>
+#include <asm/hypsec_host.h>
+#include <asm/hypsec_mmio.h>
 
 typedef u64 arm_lpae_iopte;
 

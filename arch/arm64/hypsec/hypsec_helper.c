@@ -13,7 +13,7 @@
 #include <asm/kvm_emulate.h>
 #include <asm/virt.h>
 #include <asm/kernel-pgtable.h>
-#include <asm/stage2_host.h>
+#include <asm/hypsec_host.h>
 #include <asm/spinlock_types.h>
 #include <linux/serial_reg.h>
 #include <linux/amba/serial.h>

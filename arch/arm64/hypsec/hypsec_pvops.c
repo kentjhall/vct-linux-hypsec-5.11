@@ -13,7 +13,7 @@
 #include <asm/kvm_emulate.h>
 #include <asm/virt.h>
 #include <asm/kernel-pgtable.h>
-#include <asm/stage2_host.h>
+#include <asm/hypsec_host.h>
 #include <asm/spinlock_types.h>
 
 extern void set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,
