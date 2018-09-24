@@ -238,7 +238,6 @@ struct kvm_vcpu_arch {
 	struct kvm_cpu_context ctxt;
 #ifdef CONFIG_STAGE2_KERNEL
 	struct shadow_vcpu_context *shadow_vcpu_ctxt;
-	u64 host_hcr_el2;
 	u64 host_vttbr_el2;
 	u64 tpidr_el2;
 #endif

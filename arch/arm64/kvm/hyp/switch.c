@@ -552,14 +552,13 @@ static void __hyp_text __set_host_arch_workaround_state(struct kvm_vcpu *vcpu)
 #ifdef CONFIG_STAGE2_KERNEL
 static void __hyp_text __host_el2_save_state(struct kvm_vcpu *vcpu)
 {
-	vcpu->arch.host_hcr_el2 = read_sysreg(hcr_el2);
 	vcpu->arch.host_vttbr_el2 = read_sysreg(vttbr_el2);
 }
 
 static void __hyp_text __host_el2_restore_state(struct kvm_vcpu *vcpu)
 {
 	write_sysreg(vcpu->arch.host_vttbr_el2, vttbr_el2);
-	write_sysreg(vcpu->arch.host_hcr_el2, hcr_el2);
+	write_sysreg(HCR_HOST_NVHE_FLAGS, hcr_el2);
 	write_sysreg(0, tpidr_el2);
 }
 #endif
