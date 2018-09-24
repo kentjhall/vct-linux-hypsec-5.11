@@ -206,20 +206,22 @@ void deactivate_traps_vhe_put(void)
 	__deactivate_traps_common();
 }
 
+#ifndef CONFIG_STAGE2_KERNEL
 static void __hyp_text __activate_vm(struct kvm *kvm)
 {
-#ifndef CONFIG_STAGE2_KERNEL
 	write_sysreg(kvm->arch.vttbr, vttbr_el2);
+}
 #else
+static void __hyp_text __activate_vm(struct kvm *kvm,
+				     struct stage2_data *stage2_data)
+{
 	u64 vmid, shadow_vttbr;
-	struct stage2_data *stage2_data;
-	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
 	vmid = el2_get_vmid(stage2_data, kvm) & 0xff;
 	vmid = vmid << VTTBR_VMID_SHIFT;
 	shadow_vttbr = get_shadow_vttbr(kvm);
 	write_sysreg(shadow_vttbr | vmid, vttbr_el2);
-#endif
 }
+#endif
 
 static void __hyp_text __deactivate_vm(struct kvm_vcpu *vcpu)
 {
@@ -550,14 +552,10 @@ static void __hyp_text __set_host_arch_workaround_state(struct kvm_vcpu *vcpu)
 }
 
 #ifdef CONFIG_STAGE2_KERNEL
-static void __hyp_text __host_el2_save_state(struct kvm_vcpu *vcpu)
+static void __hyp_text __host_el2_restore_state(struct kvm_vcpu *vcpu,
+						struct stage2_data *stage2_data)
 {
-	vcpu->arch.host_vttbr_el2 = read_sysreg(vttbr_el2);
-}
-
-static void __hyp_text __host_el2_restore_state(struct kvm_vcpu *vcpu)
-{
-	write_sysreg(vcpu->arch.host_vttbr_el2, vttbr_el2);
+	write_sysreg(stage2_data->host_vttbr, vttbr_el2);
 	write_sysreg(HCR_HOST_NVHE_FLAGS, hcr_el2);
 	write_sysreg(0, tpidr_el2);
 }
@@ -577,7 +575,9 @@ int kvm_vcpu_run_vhe(struct kvm_vcpu *vcpu)
 	sysreg_save_host_state_vhe(host_ctxt);
 
 	__activate_traps(vcpu);
+#ifndef CONFIG_STAGE2_KERNEL
 	__activate_vm(vcpu->kvm);
+#endif
 
 	sysreg_restore_guest_state_vhe(guest_ctxt);
 	__debug_switch_to_guest(vcpu);
@@ -610,12 +610,14 @@ int kvm_vcpu_run_vhe(struct kvm_vcpu *vcpu)
 /* Switch to the guest for legacy non-VHE systems */
 int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 {
+	u64 exit_code;
 	struct kvm_cpu_context *host_ctxt;
 	struct kvm_cpu_context *guest_ctxt;
 #ifdef CONFIG_STAGE2_KERNEL
 	struct kvm_cpu_context *shadow_ctxt;
+	struct stage2_data *stage2_data;
+	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
 #endif
-	u64 exit_code;
 
 	vcpu = kern_hyp_va(vcpu);
 
@@ -631,11 +633,14 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 
 #ifdef CONFIG_STAGE2_KERNEL
 	write_sysreg(vcpu->arch.tpidr_el2, tpidr_el2);
-	__host_el2_save_state(vcpu);
 	__restore_shadow_kvm_regs(vcpu);
 #endif
 	__activate_traps(vcpu);
+#ifndef CONFIG_STAGE2_KERNEL
 	__activate_vm(kern_hyp_va(vcpu->kvm));
+#else
+	__activate_vm(kern_hyp_va(vcpu->kvm), stage2_data);
+#endif
 
 	__hyp_vgic_restore_state(vcpu);
 	__timer_enable_traps(vcpu);
@@ -675,7 +680,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 	__deactivate_traps(vcpu);
 	__deactivate_vm(vcpu);
 #ifdef CONFIG_STAGE2_KERNEL
-	__host_el2_restore_state(vcpu);
+	__host_el2_restore_state(vcpu, stage2_data);
 #endif
 
 	__sysreg_restore_state_nvhe(host_ctxt);
