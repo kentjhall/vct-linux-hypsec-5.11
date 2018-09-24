@@ -408,9 +408,11 @@ static bool __hyp_text __hyp_switch_fpsimd(struct kvm_vcpu *vcpu)
 
 		vcpu->arch.flags &= ~KVM_ARM64_FP_HOST;
 	}
-
+#ifndef CONFIG_STAGE2_KERNEL
 	__fpsimd_restore_state(&vcpu->arch.ctxt.gp_regs.fp_regs);
-
+#else
+	__fpsimd_restore_state(&vcpu->arch.shadow_vcpu_ctxt->gp_regs.fp_regs);
+#endif
 	/* Skip restoring fpexc32 for AArch64 guests */
 	if (!(read_sysreg(hcr_el2) & HCR_RW))
 #ifndef CONFIG_STAGE2_KERNEL
@@ -679,8 +681,15 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 
 	__sysreg_restore_state_nvhe(host_ctxt);
 
-	if (vcpu->arch.flags & KVM_ARM64_FP_ENABLED)
+	if (vcpu->arch.flags & KVM_ARM64_FP_ENABLED) {
 		__fpsimd_save_fpexc32(vcpu);
+#ifdef CONFIG_STAGE2_KERNEL
+		__fpsimd_save_state(&shadow_ctxt->gp_regs.fp_regs);
+		__fpsimd_restore_state(&host_ctxt->gp_regs.fp_regs);
+		vcpu->arch.flags &= ~KVM_ARM64_FP_ENABLED;
+		vcpu->arch.flags |= KVM_ARM64_FP_HOST;
+#endif
+	}
 
 #ifdef CONFIG_STAGE2_KERNEL
 	__save_shadow_kvm_regs(vcpu, exit_code);
