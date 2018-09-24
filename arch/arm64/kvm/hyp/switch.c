@@ -552,8 +552,7 @@ static void __hyp_text __set_host_arch_workaround_state(struct kvm_vcpu *vcpu)
 }
 
 #ifdef CONFIG_STAGE2_KERNEL
-static void __hyp_text __host_el2_restore_state(struct kvm_vcpu *vcpu,
-						struct el2_data *el2_data)
+static void __hyp_text __host_el2_restore_state(struct el2_data *el2_data)
 {
 	write_sysreg(el2_data->host_vttbr, vttbr_el2);
 	write_sysreg(HCR_HOST_NVHE_FLAGS, hcr_el2);
@@ -680,7 +679,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 	__deactivate_traps(vcpu);
 	__deactivate_vm(vcpu);
 #ifdef CONFIG_STAGE2_KERNEL
-	__host_el2_restore_state(vcpu, el2_data);
+	__host_el2_restore_state(el2_data);
 #endif
 
 	__sysreg_restore_state_nvhe(host_ctxt);
