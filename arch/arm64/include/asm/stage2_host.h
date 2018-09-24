@@ -14,7 +14,7 @@
 #define SHADOW_SYS_REGS_DESC_SIZE	(SHADOW_SYS_REGS_SIZE + SHADOW_32BIT_REGS_SIZE)
 #define NUM_SHADOW_VCPU_CTXT		128
 
-struct stage2_data {
+struct el2_data {
 	struct memblock_region regions[32];
 	struct s2_memblock_info s2_memblock_info[32];
 	struct s2_cpu_arch arch;
@@ -56,7 +56,7 @@ struct stage2_data {
 	u32 next_vmid;
 };
 
-void init_stage2_data_page(void);
+void init_el2_data_page(void);
 
 static inline void stage2_spin_lock(arch_spinlock_t *lock)
 {	
@@ -89,16 +89,16 @@ extern void el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
 		      size_t size, u64 prot, u64 ttbr);
 extern phys_addr_t el2_arm_lpae_iova_to_phys(unsigned long iova, u64 ttbr);
 
-void encrypt_buf(struct stage2_data *stage2_data, void *buf, uint32_t len);
-void decrypt_buf(struct stage2_data *stage2_data, void *buf, uint32_t len);
+void encrypt_buf(struct el2_data *el2_data, void *buf, uint32_t len);
+void decrypt_buf(struct el2_data *el2_data, void *buf, uint32_t len);
 
 extern void el2_boot_from_inc_exe(struct kvm *kvm);
-extern bool el2_use_inc_exe(struct kvm *kvm, struct stage2_data *stage2_data);
-extern unsigned long search_load_info(struct kvm *kvm, struct stage2_data *stage2_data,
+extern bool el2_use_inc_exe(struct kvm *kvm, struct el2_data *el2_data);
+extern unsigned long search_load_info(struct kvm *kvm, struct el2_data *el2_data,
 				      unsigned long addr);
 
 extern int el2_alloc_vm_info(struct kvm *kvm);
-extern int el2_get_vmid(struct stage2_data *stage2_data, struct kvm *kvm);
+extern int el2_get_vmid(struct el2_data *el2_data, struct kvm *kvm);
 
 int handle_pvops(struct kvm_vcpu *vcpu);
 int el2_alloc_shadow_ctxt(struct kvm_vcpu *vcpu);

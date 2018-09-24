@@ -16,7 +16,7 @@
 					(EL2_PAGE_OFFSET - 1)) | EL2_PAGE_OFFSET)
 #define	HYPSEC_VMID			0xffffffff
 
-struct stage2_data;
+struct el2_data;
 
 struct vring_data {
 	size_t queue_size_in_bytes;
@@ -80,7 +80,7 @@ struct s2_trans walk_stage2_pgd(struct kvm *kvm, phys_addr_t addr,
 int stage2_mem_regions_search(phys_addr_t addr, struct memblock_region *regions,
 	unsigned long cnt);
 
-unsigned long get_s2_page_index(struct stage2_data *stage2_data, phys_addr_t addr);
+unsigned long get_s2_page_index(struct el2_data *el2_data, phys_addr_t addr);
 int handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar);
 
 extern void clear_shadow_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size);
@@ -91,13 +91,13 @@ extern int map_el2_mem(unsigned long start, unsigned long end,
 			    unsigned long pfn, pgprot_t prot);
 
 extern void unmap_image_from_host_s2pt(struct kvm *kvm, unsigned long el2_remap_addr, unsigned long pgnum);
-extern void load_image_to_shadow_s2pt(struct kvm *kvm, struct stage2_data *stage2_data,
+extern void load_image_to_shadow_s2pt(struct kvm *kvm, struct el2_data *el2_data,
 				unsigned long target_addr, unsigned long el2_remap_addr,
 				unsigned long pgnum);
 
 bool stage2_is_map_memory(phys_addr_t addr);
 unsigned long get_el2_image_va(struct kvm *kvm, unsigned long addr);
-extern struct s2_trans handle_from_vm_info(struct kvm *kvm, struct stage2_data *stage2_data,
+extern struct s2_trans handle_from_vm_info(struct kvm *kvm, struct el2_data *el2_data,
 					   unsigned long el2_va, unsigned long addr);
 
 static inline bool is_mmio_gpa(u64 addr)

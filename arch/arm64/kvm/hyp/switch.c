@@ -213,10 +213,10 @@ static void __hyp_text __activate_vm(struct kvm *kvm)
 }
 #else
 static void __hyp_text __activate_vm(struct kvm *kvm,
-				     struct stage2_data *stage2_data)
+				     struct el2_data *el2_data)
 {
 	u64 vmid, shadow_vttbr;
-	vmid = el2_get_vmid(stage2_data, kvm) & 0xff;
+	vmid = el2_get_vmid(el2_data, kvm) & 0xff;
 	vmid = vmid << VTTBR_VMID_SHIFT;
 	shadow_vttbr = get_shadow_vttbr(kvm);
 	write_sysreg(shadow_vttbr | vmid, vttbr_el2);
@@ -553,9 +553,9 @@ static void __hyp_text __set_host_arch_workaround_state(struct kvm_vcpu *vcpu)
 
 #ifdef CONFIG_STAGE2_KERNEL
 static void __hyp_text __host_el2_restore_state(struct kvm_vcpu *vcpu,
-						struct stage2_data *stage2_data)
+						struct el2_data *el2_data)
 {
-	write_sysreg(stage2_data->host_vttbr, vttbr_el2);
+	write_sysreg(el2_data->host_vttbr, vttbr_el2);
 	write_sysreg(HCR_HOST_NVHE_FLAGS, hcr_el2);
 	write_sysreg(0, tpidr_el2);
 }
@@ -615,8 +615,8 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 	struct kvm_cpu_context *guest_ctxt;
 #ifdef CONFIG_STAGE2_KERNEL
 	struct kvm_cpu_context *shadow_ctxt;
-	struct stage2_data *stage2_data;
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	struct el2_data *el2_data;
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 #endif
 
 	vcpu = kern_hyp_va(vcpu);
@@ -639,7 +639,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 #ifndef CONFIG_STAGE2_KERNEL
 	__activate_vm(kern_hyp_va(vcpu->kvm));
 #else
-	__activate_vm(kern_hyp_va(vcpu->kvm), stage2_data);
+	__activate_vm(kern_hyp_va(vcpu->kvm), el2_data);
 #endif
 
 	__hyp_vgic_restore_state(vcpu);
@@ -680,7 +680,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 	__deactivate_traps(vcpu);
 	__deactivate_vm(vcpu);
 #ifdef CONFIG_STAGE2_KERNEL
-	__host_el2_restore_state(vcpu, stage2_data);
+	__host_el2_restore_state(vcpu, el2_data);
 #endif
 
 	__sysreg_restore_state_nvhe(host_ctxt);

@@ -2076,12 +2076,12 @@ int kvm_handle_sys_reg(struct kvm_vcpu *vcpu, struct kvm_run *run)
 #ifdef CONFIG_STAGE2_KERNEL
 int __hyp_text find_s2_sys_reg(struct sys_reg_params *params)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct s2_sys_reg_desc *sys_reg_desc;
 	int i = 0;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	sys_reg_desc = stage2_data->s2_sys_reg_descs;
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	sys_reg_desc = el2_data->s2_sys_reg_descs;
 
 	do {
 		unsigned long pval = reg_to_match_value(params);

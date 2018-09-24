@@ -98,105 +98,105 @@ static struct s2_sys_reg_desc host_sys_reg_descs[] = {
 	  FPEXC32_EL2, 0x70 }
 };
 
-static void stage2_init_aes(struct stage2_data *stage2_data)
+static void stage2_init_aes(struct el2_data *el2_data)
 {
 	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
 	uint8_t iv[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
 
-	el2_memcpy(stage2_data->key, key, 16);
-	el2_memcpy(stage2_data->iv, iv, 16);
+	el2_memcpy(el2_data->key, key, 16);
+	el2_memcpy(el2_data->iv, iv, 16);
 }
 
-void init_stage2_data_page(void)
+void init_el2_data_page(void)
 {
 	int i = 0, index = 0, err;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct memblock_region *r;
 
 	memset((void *)kvm_ksym_ref(stage2_pgs_start), 0, STAGE2_PAGES_SIZE);
 	__flush_dcache_area((void *)kvm_ksym_ref(stage2_pgs_start), STAGE2_PAGES_SIZE);
 
-	stage2_data = (void *)kvm_ksym_ref(stage2_data_start);
+	el2_data = (void *)kvm_ksym_ref(el2_data_start);
 
 	/* We copied memblock_regions to the EL2 data structure*/
 	for_each_memblock(memory, r) {
-		stage2_data->regions[i] = *r;
+		el2_data->regions[i] = *r;
 		if (!(r->flags & MEMBLOCK_NOMAP)) {
-			stage2_data->s2_memblock_info[i].index = index;
+			el2_data->s2_memblock_info[i].index = index;
 			index += (r->size >> PAGE_SHIFT);
 		} else
-			stage2_data->s2_memblock_info[i].index = S2_PFN_SIZE;
+			el2_data->s2_memblock_info[i].index = S2_PFN_SIZE;
 		i++;
 	}
-	stage2_data->regions_cnt = i;
+	el2_data->regions_cnt = i;
 
-	stage2_data->used_pages = 0;
-	stage2_data->used_pgd_pages = 2;
-	stage2_data->used_tmp_pages = 0;
-	stage2_data->page_pool_start = (u64)__pa(stage2_pgs_start);
+	el2_data->used_pages = 0;
+	el2_data->used_pgd_pages = 2;
+	el2_data->used_tmp_pages = 0;
+	el2_data->page_pool_start = (u64)__pa(stage2_pgs_start);
 
-	stage2_data->fault_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	stage2_data->s2pages_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	stage2_data->page_pool_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	stage2_data->tmp_page_pool_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	stage2_data->shadow_vcpu_ctxt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	stage2_data->vmid_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->fault_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->s2pages_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->page_pool_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->tmp_page_pool_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->shadow_vcpu_ctxt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->vmid_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
-	err = create_hypsec_io_mappings((phys_addr_t)stage2_data->pl011_base,
+	err = create_hypsec_io_mappings((phys_addr_t)el2_data->pl011_base,
 					 PAGE_SIZE,
-					 &stage2_data->pl011_base);
+					 &el2_data->pl011_base);
 	if (err) {
 		kvm_err("Cannot map pl011\n");
 		goto out_err;
 	}
 
-	memset(&stage2_data->arch, 0, sizeof(struct s2_cpu_arch));
+	memset(&el2_data->arch, 0, sizeof(struct s2_cpu_arch));
 
-	memset(stage2_data->s2_pages, 0, sizeof(struct s2_page) * S2_PFN_SIZE);
-	stage2_data->ram_start_pfn = stage2_data->regions[0].base >> PAGE_SHIFT;
+	memset(el2_data->s2_pages, 0, sizeof(struct s2_page) * S2_PFN_SIZE);
+	el2_data->ram_start_pfn = el2_data->regions[0].base >> PAGE_SHIFT;
 
-	stage2_data->host_vttbr = __pa(stage2_pgs_start);
+	el2_data->host_vttbr = __pa(stage2_pgs_start);
 
-	memset(stage2_data->shadow_vcpu_ctxt, 0,
+	memset(el2_data->shadow_vcpu_ctxt, 0,
 	       sizeof(struct shadow_vcpu_context) * NUM_SHADOW_VCPU_CTXT);
-	stage2_data->used_shadow_vcpu_ctxt = 0;
+	el2_data->used_shadow_vcpu_ctxt = 0;
 
-	memset(stage2_data->vm_info, 0,
+	memset(el2_data->vm_info, 0,
 	       sizeof(struct el2_vm_info) * EL2_VM_INFO_SIZE);
-	stage2_data->used_vm_info = 0;
-	stage2_data->last_remap_ptr = 0;
+	el2_data->used_vm_info = 0;
+	el2_data->last_remap_ptr = 0;
 
-	memset(stage2_data->smmu_cfg, 0,
+	memset(el2_data->smmu_cfg, 0,
 		sizeof(struct el2_smmu_cfg) * EL2_SMMU_CFG_SIZE);
 
 	for (i = 0; i < SHADOW_SYS_REGS_DESC_SIZE; i++)
-		stage2_data->s2_sys_reg_descs[i] = host_sys_reg_descs[i];
+		el2_data->s2_sys_reg_descs[i] = host_sys_reg_descs[i];
 
-	stage2_data->next_vmid = 1;
+	el2_data->next_vmid = 1;
 
-	stage2_init_aes(stage2_data);
+	stage2_init_aes(el2_data);
 
 out_err:
 	return;
 }
 
-unsigned long __hyp_text get_s2_page_index(struct stage2_data *stage2_data,
+unsigned long __hyp_text get_s2_page_index(struct el2_data *el2_data,
                                            phys_addr_t addr)
 {
 	int i;
 	unsigned long ret = 0;
 
-	i = stage2_mem_regions_search(addr, stage2_data->regions,
-			stage2_data->regions_cnt);
+	i = stage2_mem_regions_search(addr, el2_data->regions,
+			el2_data->regions_cnt);
 	if (i == -1)
 		goto out;
 
 	/* The requested memblock is unused! */
-	if (stage2_data->s2_memblock_info[i].index == S2_PFN_SIZE)
+	if (el2_data->s2_memblock_info[i].index == S2_PFN_SIZE)
 		print_string("memblock unused\n");
 
-	ret = stage2_data->s2_memblock_info[i].index +
-		((addr - stage2_data->regions[i].base) >> PAGE_SHIFT);
+	ret = el2_data->s2_memblock_info[i].index +
+		((addr - el2_data->regions[i].base) >> PAGE_SHIFT);
 
 out:
 	return ret;
@@ -204,23 +204,23 @@ out:
 
 static int __hyp_text alloc_shadow_vcpu_ctxt(struct kvm_vcpu *vcpu)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct shadow_vcpu_context *new_ctxt = NULL;
 	int index, ret = 0;
 	arch_spinlock_t *lock;
 
 	vcpu = kern_hyp_va(vcpu);
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	lock = &stage2_data->shadow_vcpu_ctxt_lock;
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	lock = &el2_data->shadow_vcpu_ctxt_lock;
 	stage2_spin_lock(lock);
 
-	index = stage2_data->used_shadow_vcpu_ctxt++;
+	index = el2_data->used_shadow_vcpu_ctxt++;
 	if (index > NUM_SHADOW_VCPU_CTXT)
 		goto err_unlock;
 
 	ret = 1;
-	stage2_data->shadow_vcpu_ctxt[index].dirty = -1;
-	new_ctxt = &stage2_data->shadow_vcpu_ctxt[index];
+	el2_data->shadow_vcpu_ctxt[index].dirty = -1;
+	new_ctxt = &el2_data->shadow_vcpu_ctxt[index];
 
 err_unlock:
 	stage2_spin_unlock(lock);

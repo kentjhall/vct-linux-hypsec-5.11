@@ -36,12 +36,12 @@ int __hyp_text stage2_mem_regions_search(phys_addr_t addr,
 
 bool __hyp_text stage2_is_map_memory(phys_addr_t addr)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	int i;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	i = stage2_mem_regions_search(addr, stage2_data->regions,
-		stage2_data->regions_cnt);
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	i = stage2_mem_regions_search(addr, el2_data->regions,
+		el2_data->regions_cnt);
 
 	if (i == -1)
 		return false;
@@ -49,19 +49,19 @@ bool __hyp_text stage2_is_map_memory(phys_addr_t addr)
 	return true;
 }
 
-void __hyp_text set_pfn_owner(struct stage2_data *stage2_data, phys_addr_t addr,
+void __hyp_text set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,
 				size_t len, u32 vmid)
 {
 	kvm_pfn_t pfn;
-	struct s2_page *s2_pages = stage2_data->s2_pages;
+	struct s2_page *s2_pages = el2_data->s2_pages;
 	unsigned long index, end;
 
 	pfn = addr >> PAGE_SHIFT;
 	end = addr + len;
 
-	stage2_spin_lock(&stage2_data->s2pages_lock);
+	stage2_spin_lock(&el2_data->s2pages_lock);
 	do {
-		index = get_s2_page_index(stage2_data, addr);
+		index = get_s2_page_index(el2_data, addr);
 
 		/*
 		 * If count > 0, it means the host may still own the page.
@@ -71,44 +71,44 @@ void __hyp_text set_pfn_owner(struct stage2_data *stage2_data, phys_addr_t addr,
 		if (!vmid || !s2_pages[index].count)
 			s2_pages[index].vmid = vmid;
 	} while (addr += PAGE_SIZE, addr < end);
-	stage2_spin_unlock(&stage2_data->s2pages_lock);
+	stage2_spin_unlock(&el2_data->s2pages_lock);
 }
 
-static void __hyp_text free_s2pages_vmid(struct stage2_data *stage2_data,
+static void __hyp_text free_s2pages_vmid(struct el2_data *el2_data,
 				unsigned long addr, u32 vmid)
 {
-	struct s2_page *s2_pages = stage2_data->s2_pages;
+	struct s2_page *s2_pages = el2_data->s2_pages;
 	unsigned long index;
 	bool is_vm_page = false;
 
-	index = get_s2_page_index(stage2_data, addr);
+	index = get_s2_page_index(el2_data, addr);
 
-	stage2_spin_lock(&stage2_data->s2pages_lock);
+	stage2_spin_lock(&el2_data->s2pages_lock);
 	if (vmid == s2_pages[index].vmid) {
 		s2_pages[index].vmid = 0;
 		s2_pages[index].count = 0;
 		el2_memset((void *)__el2_va(addr), 0, PAGE_SIZE);
 		is_vm_page = true;
 	}
-	stage2_spin_unlock(&stage2_data->s2pages_lock);
+	stage2_spin_unlock(&el2_data->s2pages_lock);
 	if (is_vm_page)
 		__set_pfn_host(addr, PAGE_SIZE, 0, PAGE_NONE);
 }
 
-static void __hyp_text clear_vm_pfn_owner(struct stage2_data *stage2_data, u32 vmid)
+static void __hyp_text clear_vm_pfn_owner(struct el2_data *el2_data, u32 vmid)
 {
 	struct memblock_region *r;
 	unsigned long addr;
 	int i;
 
-	for (i = 0; i < stage2_data->regions_cnt; i++) {
-		r = &stage2_data->regions[i];
+	for (i = 0; i < el2_data->regions_cnt; i++) {
+		r = &el2_data->regions[i];
 		if (r->flags & MEMBLOCK_NOMAP)
 			continue;
 
 		addr = r->base;
 		do {
-			free_s2pages_vmid(stage2_data, addr, vmid);
+			free_s2pages_vmid(el2_data, addr, vmid);
 		} while (addr += PAGE_SIZE, addr < (r->base + r->size));
 	}
 }
@@ -116,48 +116,48 @@ static void __hyp_text clear_vm_pfn_owner(struct stage2_data *stage2_data, u32 v
 void* __hyp_text alloc_stage2_page(unsigned int num)
 {
 	u64 p_addr, start;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 
 	if (!num)
 		return NULL;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	stage2_spin_lock(&stage2_data->page_pool_lock);
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	stage2_spin_lock(&el2_data->page_pool_lock);
 
 	/* Check if we're out of memory in the reserved area */
-	if (stage2_data->used_pages >= STAGE2_NUM_NORM_PAGES) {
+	if (el2_data->used_pages >= STAGE2_NUM_NORM_PAGES) {
 		print_string("stage2: out of pages\r\n");
 		__hyp_panic();
 	}
 
 	/* Start allocating memory from the normal page pool */
-	start = stage2_data->page_pool_start + STAGE2_PGD_PAGES_SIZE;
-	p_addr = (u64)start + (PAGE_SIZE * stage2_data->used_pages);
-	stage2_data->used_pages += num;
+	start = el2_data->page_pool_start + STAGE2_PGD_PAGES_SIZE;
+	p_addr = (u64)start + (PAGE_SIZE * el2_data->used_pages);
+	el2_data->used_pages += num;
 
-	stage2_spin_unlock(&stage2_data->page_pool_lock);
+	stage2_spin_unlock(&el2_data->page_pool_lock);
 	return (void *)p_addr;
 }
 
 void * __hyp_text alloc_tmp_page(void)
 {
 	u64 p_addr, start;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	stage2_spin_lock(&stage2_data->tmp_page_pool_lock);
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	stage2_spin_lock(&el2_data->tmp_page_pool_lock);
 
 	/* Check if we're out of memory in the reserved area */
-	if (stage2_data->used_tmp_pages >= STAGE2_NUM_TMP_PAGES) {
+	if (el2_data->used_tmp_pages >= STAGE2_NUM_TMP_PAGES) {
 		print_string("stage2: out of tmp pages\r\n");
-		stage2_data->used_tmp_pages = 0;
+		el2_data->used_tmp_pages = 0;
 	}
 
-	start = stage2_data->page_pool_start + STAGE2_NORM_PAGES_SIZE;
-	p_addr = (u64)start + (PAGE_SIZE * stage2_data->used_tmp_pages);
-	stage2_data->used_tmp_pages++;
+	start = el2_data->page_pool_start + STAGE2_NORM_PAGES_SIZE;
+	p_addr = (u64)start + (PAGE_SIZE * el2_data->used_tmp_pages);
+	el2_data->used_tmp_pages++;
 
-	stage2_spin_unlock(&stage2_data->tmp_page_pool_lock);
+	stage2_spin_unlock(&el2_data->tmp_page_pool_lock);
 	return (void *)p_addr;
 }
 
@@ -165,33 +165,33 @@ void * __hyp_text alloc_tmp_page(void)
 void* __hyp_text alloc_shadow_s2_pgd(unsigned int num)
 {
 	u64 p_addr, start;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 
 	if (!num)
 		return NULL;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	stage2_spin_lock(&stage2_data->page_pool_lock);
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	stage2_spin_lock(&el2_data->page_pool_lock);
 
 	/* Check if we're out of memory in the reserved area */
-	if (stage2_data->used_pgd_pages >= STAGE2_NUM_PGD_PAGES)
+	if (el2_data->used_pgd_pages >= STAGE2_NUM_PGD_PAGES)
 		print_string("stage2: out of pages\r\n");
 
-	start = stage2_data->page_pool_start;
-	p_addr = (u64)start + (PAGE_SIZE * stage2_data->used_pgd_pages);
-	stage2_data->used_pgd_pages += num;
+	start = el2_data->page_pool_start;
+	p_addr = (u64)start + (PAGE_SIZE * el2_data->used_pgd_pages);
+	el2_data->used_pgd_pages += num;
 
-	stage2_spin_unlock(&stage2_data->page_pool_lock);
+	stage2_spin_unlock(&el2_data->page_pool_lock);
 	return (void *)p_addr;
 }
 
 u64 __hyp_text get_shadow_vttbr(struct kvm *kvm)
 {
 	u64 pool_start, ret = kvm->arch.shadow_vttbr;
-	struct stage2_data *stage2_data =
-			kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	struct el2_data *el2_data =
+			kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
-	pool_start = stage2_data->page_pool_start;
+	pool_start = el2_data->page_pool_start;
 	if (ret >= pool_start &&
 	    ret < (pool_start + (STAGE2_NUM_PGD_PAGES << PAGE_SHIFT)))
 		return ret;
@@ -203,14 +203,14 @@ static u32 __hyp_text get_hpa_owner(phys_addr_t addr)
 {
 	u32 ret;
 	unsigned long index;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	index = get_s2_page_index(stage2_data, addr & PAGE_MASK);
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	index = get_s2_page_index(el2_data, addr & PAGE_MASK);
 
-	stage2_spin_lock(&stage2_data->s2pages_lock);
-	ret = stage2_data->s2_pages[index].vmid;
-	stage2_spin_unlock(&stage2_data->s2pages_lock);
+	stage2_spin_lock(&el2_data->s2pages_lock);
+	ret = el2_data->s2_pages[index].vmid;
+	stage2_spin_unlock(&el2_data->s2pages_lock);
 
 	return ret;
 }
@@ -398,14 +398,14 @@ void __hyp_text unmap_image_from_host_s2pt(struct kvm* kvm,
 					   unsigned long pgnum)
 {
 	struct s2_trans result;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	int i = 0;
 	unsigned long addr;
 	u32 vmid;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	kvm = kern_hyp_va(kvm);
-	vmid = el2_get_vmid(stage2_data, kvm);
+	vmid = el2_get_vmid(el2_data, kvm);
 
 	while (i < pgnum) {
 		addr = el2_remap_addr + (i * PAGE_SIZE);
@@ -413,7 +413,7 @@ void __hyp_text unmap_image_from_host_s2pt(struct kvm* kvm,
 		if (!result.level)
 			__hyp_panic();
 		__set_pfn_host(result.output, PAGE_SIZE, 0, PAGE_GUEST);
-		set_pfn_owner(stage2_data, result.output, PAGE_SIZE, vmid);
+		set_pfn_owner(el2_data, result.output, PAGE_SIZE, vmid);
 		__kvm_flush_vm_context();
 
 		i++;
@@ -479,12 +479,12 @@ void __hyp_text __set_pfn_host(phys_addr_t start, u64 size,
 	pgd_t *vttbr;
 	phys_addr_t addr = start, end = start + size;
 	phys_addr_t next;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	stage2_spin_lock(&stage2_data->fault_lock);
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	stage2_spin_lock(&el2_data->fault_lock);
 
-	vttbr = (pgd_t *)stage2_data->host_vttbr;
+	vttbr = (pgd_t *)el2_data->host_vttbr;
 	vttbr = __el2_va(vttbr);
 	pgd = vttbr + stage2_pgd_index(addr);
 
@@ -494,12 +494,12 @@ void __hyp_text __set_pfn_host(phys_addr_t start, u64 size,
 			set_pfn_host_puds(pgd, addr, next, pfn, prot);
 	} while (pgd++, addr = next, addr != end);
 
-	stage2_spin_unlock(&stage2_data->fault_lock);
+	stage2_spin_unlock(&el2_data->fault_lock);
 }
 
 static void __hyp_text handle_host_stage2_trans_fault(unsigned host_lr,
 					phys_addr_t addr,
-					struct stage2_data *stage2_data,
+					struct el2_data *el2_data,
 					pte_t new_pte)
 {
 	pgd_t *pgd;
@@ -511,10 +511,10 @@ static void __hyp_text handle_host_stage2_trans_fault(unsigned host_lr,
 	/* We assume paging is enabled in EL2 at the point we call this
 	 * function.
 	 */
-	vttbr = (pgd_t *)stage2_data->host_vttbr;
+	vttbr = (pgd_t *)el2_data->host_vttbr;
 	BUG_ON(addr >= KVM_PHYS_SIZE);
 
-	stage2_spin_lock(&stage2_data->fault_lock);
+	stage2_spin_lock(&el2_data->fault_lock);
 
 	vttbr = __el2_va(vttbr);
 	pgd = vttbr + stage2_pgd_index(addr);
@@ -538,14 +538,14 @@ static void __hyp_text handle_host_stage2_trans_fault(unsigned host_lr,
 	pte = pte_offset_el2(pmd, addr);
 	kvm_set_pte(pte, new_pte);
 
-	stage2_spin_unlock(&stage2_data->fault_lock);
+	stage2_spin_unlock(&el2_data->fault_lock);
 }
 
-static int __hyp_text stage2_emul_mmio(struct stage2_data *stage2_data,
+static int __hyp_text stage2_emul_mmio(struct el2_data *el2_data,
 				       phys_addr_t addr,
 				       struct s2_host_regs *host_regs)
 {
-	if (stage2_data->smmu.exists && is_smmu_range(stage2_data->smmu, addr)) {
+	if (el2_data->smmu.exists && is_smmu_range(el2_data->smmu, addr)) {
 		handle_host_mmio(addr, host_regs);
 		return 1;
 	}
@@ -566,14 +566,14 @@ static void __hyp_text reject_invalid_mem_access(phys_addr_t addr,
 	stage2_inject_el1_fault(addr);
 }
 
-static pte_t __hyp_text gen_encrypted_pte(struct stage2_data *stage2_data,
+static pte_t __hyp_text gen_encrypted_pte(struct el2_data *el2_data,
                                          phys_addr_t addr)
 {
 	pte_t new_pte;
 	phys_addr_t pa = (phys_addr_t)alloc_tmp_page();
 
 	el2_memcpy(__el2_va(pa), __el2_va(addr), PAGE_SIZE);
-	encrypt_buf(stage2_data, __el2_va(pa), PAGE_SIZE);
+	encrypt_buf(el2_data, __el2_va(pa), PAGE_SIZE);
 	new_pte = pfn_pte(pa >> PAGE_SHIFT, PAGE_S2_KERNEL);
 	__kvm_tlb_flush_vmid_el2();
 	return new_pte;
@@ -586,11 +586,11 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 	phys_addr_t addr;
 	kvm_pfn_t pfn;
 	pte_t new_pte;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 
 	addr = (read_sysreg(hpfar_el2) & HPFAR_MASK) << 8;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	pfn = addr >> PAGE_SHIFT;
 	if (stage2_is_map_memory(addr)) {
@@ -599,23 +599,23 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 			reject_invalid_mem_access(addr, host_lr);
 			goto out;
 		} else if (vmid) {
-			new_pte = gen_encrypted_pte(stage2_data, addr);
+			new_pte = gen_encrypted_pte(el2_data, addr);
 		} else if (!vmid)
 			new_pte = pfn_pte(pfn, PAGE_S2_KERNEL);
-	} else if (!stage2_emul_mmio(stage2_data, addr, host_regs)) {
+	} else if (!stage2_emul_mmio(el2_data, addr, host_regs)) {
 		new_pte = pfn_pte(pfn, PAGE_S2_DEVICE);
 		new_pte = kvm_s2pte_mkwrite(new_pte);
 	} else
 		goto out;
 
-	handle_host_stage2_trans_fault(host_lr, addr, stage2_data, new_pte);
+	handle_host_stage2_trans_fault(host_lr, addr, el2_data, new_pte);
 
 out:
 	return;
 }
 
 static int __hyp_text map_shadow_s2pt_mem(struct kvm *kvm,
-					  struct stage2_data *stage2_data,
+					  struct el2_data *el2_data,
 					  phys_addr_t addr,
 					  struct s2_trans result,
 					  bool exec_fault)
@@ -706,20 +706,20 @@ out:
 int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 {
 	phys_addr_t addr;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct kvm *kvm = kern_hyp_va(vcpu->kvm);
 	struct s2_trans result;
 	int ret = -ENOMEM;
 	u32 vmid, target_vmid;
 	unsigned long remapped_va;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	addr = (hpfar & HPFAR_MASK) << 8;
-	vmid = el2_get_vmid(stage2_data, kvm);
+	vmid = el2_get_vmid(el2_data, kvm);
 
 	remapped_va = get_el2_image_va(kvm, addr);
 	if (remapped_va)
-		result = handle_from_vm_info(kvm, stage2_data,
+		result = handle_from_vm_info(kvm, el2_data,
 					remapped_va, addr);
 	else
 		result = walk_stage2_pgd(kvm, addr, false);
@@ -729,7 +729,7 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 
 	if (stage2_is_map_memory(result.output)) {
 		if (result.output >= __pa(kvm_ksym_ref(stage2_pgs_start)) &&
-			result.output <= __pa(kvm_ksym_ref(stage2_data_end)))
+			result.output <= __pa(kvm_ksym_ref(el2_data_end)))
 				return ret;
 
 		/* Check if a page is owned by EL2 or already belongs to a VM */
@@ -738,15 +738,15 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 			return ret;
 	}
 
-	ret = map_shadow_s2pt_mem(kvm, stage2_data, addr, result,
+	ret = map_shadow_s2pt_mem(kvm, el2_data, addr, result,
 				  kvm_vcpu_trap_is_iabt(vcpu));
 
 	if (result.pfn && (ret > 0) && !is_mmio_gpa(addr)) {
 		if (result.level == 2) {
-			set_pfn_owner(stage2_data, result.output, PMD_SIZE, vmid);
+			set_pfn_owner(el2_data, result.output, PMD_SIZE, vmid);
 			__set_pfn_host(result.output, PMD_SIZE, 0, PAGE_GUEST);
 		} else if (result.level == 3) {
-			set_pfn_owner(stage2_data, result.output, PAGE_SIZE, vmid);
+			set_pfn_owner(el2_data, result.output, PAGE_SIZE, vmid);
 			__set_pfn_host(result.output, PAGE_SIZE, 0, PAGE_GUEST);
 		}
 	}
@@ -817,7 +817,7 @@ void __hyp_text clear_shadow_stage2_range(struct kvm *kvm, phys_addr_t start, u6
 	pgd_t *vttbr;
 	phys_addr_t addr = start, end = start + size;
 	phys_addr_t next;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	arch_spinlock_t *lock;
 
 	vttbr = (pgd_t *)get_shadow_vttbr(kvm);
@@ -825,7 +825,7 @@ void __hyp_text clear_shadow_stage2_range(struct kvm *kvm, phys_addr_t start, u6
 		return;
 	vttbr = __el2_va(vttbr);
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	lock = get_shadow_pt_lock(kvm);
 	stage2_spin_lock(lock);
 
@@ -843,22 +843,22 @@ void __hyp_text clear_shadow_stage2_range(struct kvm *kvm, phys_addr_t start, u6
 static void __hyp_text __clear_vm_stage2_range(struct kvm *kvm,
 			phys_addr_t start, u64 size)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	u32 vmid;
 	kvm = kern_hyp_va(kvm);
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	clear_shadow_stage2_range(kvm, start, size);
 
 	if (size != KVM_PHYS_SIZE)
 		return;
-	vmid = el2_get_vmid(stage2_data, kvm);
-	clear_vm_pfn_owner(stage2_data, vmid);
+	vmid = el2_get_vmid(el2_data, kvm);
+	clear_vm_pfn_owner(el2_data, vmid);
 }
 
 static void __hyp_text protect_el2_pmd_mem(pud_t *pud, unsigned long start,
 				   unsigned long end,
-				   struct stage2_data *stage2_data)
+				   struct el2_data *el2_data)
 {
 	pmd_t *pmd;
 	u64 pte;
@@ -870,15 +870,15 @@ static void __hyp_text protect_el2_pmd_mem(pud_t *pud, unsigned long start,
 		next = pmd_addr_end(addr, end);
 		if (pmd_val(*pmd) & PMD_TYPE_TABLE) {
 			pte = pmd_val(*pmd);
-			index = get_s2_page_index(stage2_data, pte & PAGE_MASK);
-			stage2_data->s2_pages[index].vmid = HYPSEC_VMID;
+			index = get_s2_page_index(el2_data, pte & PAGE_MASK);
+			el2_data->s2_pages[index].vmid = HYPSEC_VMID;
 		}
 	} while (pmd++, addr = next, addr != end);
 }
 
 static void __hyp_text protect_el2_pud_mem(pgd_t *pgd, unsigned long start,
 				   unsigned long end,
-				   struct stage2_data *stage2_data)
+				   struct el2_data *el2_data)
 {
 	pud_t *pud;
 	u64 pmd;
@@ -889,10 +889,10 @@ static void __hyp_text protect_el2_pud_mem(pgd_t *pgd, unsigned long start,
 	do {
 		next = pud_addr_end(addr, end);
 		if (pud_val(*pud) & PUD_TYPE_TABLE) {
-			protect_el2_pmd_mem(pud, addr, next, stage2_data);
+			protect_el2_pmd_mem(pud, addr, next, el2_data);
 			pmd = pud_val(*pud);
-			index = get_s2_page_index(stage2_data, pmd & PAGE_MASK);
-			stage2_data->s2_pages[index].vmid = HYPSEC_VMID;
+			index = get_s2_page_index(el2_data, pmd & PAGE_MASK);
+			el2_data->s2_pages[index].vmid = HYPSEC_VMID;
 		}
 	} while (pud++, addr = next, addr != end);
 }
@@ -906,29 +906,29 @@ void __hyp_text protect_el2_mem(void)
 {
 	pgd_t *pgd, *pgdp;
 	unsigned long addr, next, end, index;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 
 	addr = 0;
 	end = TASK_SIZE_64 - PGDIR_SIZE;
 
-	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	pgdp = (pgd_t *)read_sysreg(ttbr0_el2);
 	pgd = __el2_va(pgdp) + pgd_index(addr);
 	do {
 		next = pgd_addr_end(addr, end);
 		if (!pgd_none(*pgd))
-			protect_el2_pud_mem(pgd, addr, next, stage2_data);
+			protect_el2_pud_mem(pgd, addr, next, el2_data);
 	} while (pgd++, addr = next, addr != end);
 
-	index = get_s2_page_index(stage2_data, read_sysreg(ttbr0_el2) & PAGE_MASK);
-	stage2_data->s2_pages[index].vmid = HYPSEC_VMID;
+	index = get_s2_page_index(el2_data, read_sysreg(ttbr0_el2) & PAGE_MASK);
+	el2_data->s2_pages[index].vmid = HYPSEC_VMID;
 
 	/* Protect stage2 data */
 	addr = __pa(kvm_ksym_ref(stage2_pgs_start));
-	end = __pa(kvm_ksym_ref(stage2_data_end));
+	end = __pa(kvm_ksym_ref(el2_data_end));
 	do {
-		index = get_s2_page_index(stage2_data, addr);
-		stage2_data->s2_pages[index].vmid = HYPSEC_VMID;
+		index = get_s2_page_index(el2_data, addr);
+		el2_data->s2_pages[index].vmid = HYPSEC_VMID;
 		addr += PAGE_SIZE;
 	} while (addr < end);
 }
@@ -936,11 +936,11 @@ void __hyp_text protect_el2_mem(void)
 void __hyp_text __el2_protect_stack_page(phys_addr_t addr)
 {
 	unsigned long index;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 
-	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	index = get_s2_page_index(stage2_data, addr & PAGE_MASK);
-	stage2_data->s2_pages[index].vmid = HYPSEC_VMID;
+	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	index = get_s2_page_index(el2_data, addr & PAGE_MASK);
+	el2_data->s2_pages[index].vmid = HYPSEC_VMID;
 }
 
 static void __hyp_text map_el2_pte_mem(pmd_t *pmd, unsigned long start,
@@ -1051,7 +1051,7 @@ out:
 	return err;
 }
 
-void __hyp_text load_image_to_shadow_s2pt(struct kvm *kvm, struct stage2_data *stage2_data,
+void __hyp_text load_image_to_shadow_s2pt(struct kvm *kvm, struct el2_data *el2_data,
 				unsigned long target_addr, unsigned long el2_remap_addr,
 				unsigned long pgnum)
 {
@@ -1073,13 +1073,13 @@ void __hyp_text load_image_to_shadow_s2pt(struct kvm *kvm, struct stage2_data *s
 		result.pfn = result.output >> PAGE_SHIFT;
 		result.writable = true;
 		result.level = 2;
-		map_shadow_s2pt_mem(kvm, stage2_data, ipa, result, true);
+		map_shadow_s2pt_mem(kvm, el2_data, ipa, result, true);
 
 		i += (PMD_SIZE >> PAGE_SHIFT);
 	}
 }
 
-struct s2_trans __hyp_text handle_from_vm_info(struct kvm *kvm, struct stage2_data *stage2_data,
+struct s2_trans __hyp_text handle_from_vm_info(struct kvm *kvm, struct el2_data *el2_data,
 				unsigned long el2_va, unsigned long addr)
 {
 	struct s2_trans result;
@@ -1102,12 +1102,12 @@ out:
 
 void __hyp_text __el2_register_smmu(void)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct el2_arm_smmu_device el2_smmu;
 	u64 start, end;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	el2_smmu = stage2_data->smmu;
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	el2_smmu = el2_data->smmu;
 	start = el2_smmu.phys_base;
 	end = start + el2_smmu.size;
 	map_el2_mem(start, end, start >> PAGE_SHIFT, PAGE_HYP_DEVICE);
@@ -1126,30 +1126,30 @@ void __hyp_text __alloc_shadow_vttbr(struct kvm *kvm)
 
 void __hyp_text __el2_encrypt_buf(void *buf, uint32_t len)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	phys_addr_t pa, addr = (phys_addr_t)buf;
 	pte_t new_pte;
 
-	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	pa = (phys_addr_t)alloc_tmp_page();
 	el2_memcpy(__el2_va(pa), __el2_va(addr), len);
 
-	encrypt_buf(stage2_data, __el2_va(pa), len);
+	encrypt_buf(el2_data, __el2_va(pa), len);
 	new_pte = pfn_pte(pa >> PAGE_SHIFT, PAGE_S2_KERNEL);
 
-	handle_host_stage2_trans_fault(0, addr, stage2_data, new_pte);
+	handle_host_stage2_trans_fault(0, addr, el2_data, new_pte);
 	__kvm_tlb_flush_vmid_el2();
 }
 
 void __hyp_text __el2_decrypt_buf(void *buf, uint32_t len)
 {
-	struct stage2_data *stage2_data;
-	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	struct el2_data *el2_data;
+	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	/* Unmap the decrypted page now so the host can not get access to it. */
 	__set_pfn_host((phys_addr_t)buf, PAGE_SIZE, 0, PAGE_NONE);
-	decrypt_buf(stage2_data, __el2_va(buf), len);
+	decrypt_buf(el2_data, __el2_va(buf), len);
 }
 
 void el2_protect_stack_page(phys_addr_t addr)

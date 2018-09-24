@@ -42,35 +42,35 @@ static void __hyp_text put_crypt_buf(__u64 *buf,
 	 kvm_regs->spsr[4] = buf[7];
 }
 
-static void __hyp_text encrypt_kvm_regs(struct stage2_data *stage2_data,
+static void __hyp_text encrypt_kvm_regs(struct el2_data *el2_data,
 					struct kvm_regs *kvm_regs)
 {
 	struct user_pt_regs *regs = &kvm_regs->regs;
 	__u64 buf[8];
 
-	encrypt_buf(stage2_data, regs, sizeof(__u64) * 32);
+	encrypt_buf(el2_data, regs, sizeof(__u64) * 32);
 
 	get_crypt_buf(buf, kvm_regs);
-	encrypt_buf(stage2_data, buf, sizeof(__u64) * 8);
+	encrypt_buf(el2_data, buf, sizeof(__u64) * 8);
 	put_crypt_buf(buf, kvm_regs);
 
-	encrypt_buf(stage2_data, &kvm_regs->fp_regs, sizeof(struct user_fpsimd_state));
+	encrypt_buf(el2_data, &kvm_regs->fp_regs, sizeof(struct user_fpsimd_state));
 }
 
-static void __hyp_text decrypt_kvm_regs(struct stage2_data *stage2_data,
+static void __hyp_text decrypt_kvm_regs(struct el2_data *el2_data,
 					struct kvm_regs *kvm_regs)
 {
 	struct user_pt_regs *regs = &kvm_regs->regs;
 	__u64 buf[8];
 
 	// sizeof(regs[31] + sp + pc), all in __u64
-	decrypt_buf(stage2_data, regs, sizeof(__u64) * 32);
+	decrypt_buf(el2_data, regs, sizeof(__u64) * 32);
 
 	get_crypt_buf(buf, kvm_regs);
-	decrypt_buf(stage2_data, buf, sizeof(__u64) * 8);
+	decrypt_buf(el2_data, buf, sizeof(__u64) * 8);
 	put_crypt_buf(buf, kvm_regs);
 
-	decrypt_buf(stage2_data, &kvm_regs->fp_regs, sizeof(struct user_fpsimd_state));
+	decrypt_buf(el2_data, &kvm_regs->fp_regs, sizeof(struct user_fpsimd_state));
 }
 
 static void __hyp_text prep_noop(struct kvm_vcpu *vcpu)
@@ -252,7 +252,7 @@ static u64 __hyp_text el2_reset_mpidr(struct kvm_vcpu *vcpu)
 
 static void __hyp_text el2_reset_sysregs(struct kvm_vcpu *vcpu,
 					 struct shadow_vcpu_context *shadow_ctxt,
-					 struct stage2_data *stage2_data)
+					 struct el2_data *el2_data)
 {
 	int i;
 	u64 val;
@@ -263,7 +263,7 @@ static void __hyp_text el2_reset_sysregs(struct kvm_vcpu *vcpu,
 		else if (i == ACTLR_EL1)
 			val = read_sysreg(actlr_el1);
 		else
-			val = stage2_data->s2_sys_reg_descs[i].val;
+			val = el2_data->s2_sys_reg_descs[i].val;
 
 		shadow_ctxt->sys_regs[i] = val;
 	}
@@ -275,9 +275,9 @@ static void __hyp_text el2_reset_gp_regs(struct kvm_vcpu *vcpu,
 	struct kvm_regs *kvm_regs = &vcpu->arch.ctxt.gp_regs;
 	struct el2_load_info li;
 	__u64 pc = kvm_regs->regs.pc;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	el2_memset(&shadow_ctxt->gp_regs, 0, sizeof(struct kvm_regs));
 	shadow_ctxt->gp_regs.regs.pstate = kvm_regs->regs.pstate;
@@ -307,7 +307,7 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 	struct shadow_vcpu_context *shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
 	u64 ec;
 	size_t shadow_sys_regs_len = sizeof(u64) * (SHADOW_SYS_REGS_SIZE + 1);
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct kvm *kvm = kern_hyp_va(vcpu->kvm);
 
 	/*
@@ -315,10 +315,10 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 	 * guest for the first time..
 	 */
 	if (shadow_ctxt->dirty == -1) {
-		stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-		if (el2_use_inc_exe(kvm, stage2_data)) {
-			decrypt_kvm_regs(stage2_data, &vcpu->arch.ctxt.gp_regs);
-			decrypt_buf(stage2_data, &vcpu->arch.ctxt.sys_regs,
+		el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+		if (el2_use_inc_exe(kvm, el2_data)) {
+			decrypt_kvm_regs(el2_data, &vcpu->arch.ctxt.gp_regs);
+			decrypt_buf(el2_data, &vcpu->arch.ctxt.sys_regs,
 					shadow_sys_regs_len);
 			el2_memcpy(&shadow_ctxt->sys_regs, &vcpu->arch.ctxt.sys_regs,
 					shadow_sys_regs_len);
@@ -328,7 +328,7 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 			el2_memset(&vcpu->arch.ctxt.gp_regs, 0, sizeof(struct kvm_regs));
 		} else {
 			el2_reset_gp_regs(vcpu, shadow_ctxt);
-			el2_reset_sysregs(vcpu, shadow_ctxt, stage2_data);
+			el2_reset_sysregs(vcpu, shadow_ctxt, el2_data);
 		}
 
 		el2_save_sys_regs_32(vcpu, shadow_ctxt);
@@ -364,21 +364,21 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 
 static void __hyp_text __save_encrypted_vcpu(struct kvm_vcpu *vcpu)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct shadow_vcpu_context *shadow_ctxt;
 	size_t shadow_sys_regs_len = sizeof(u64) * (SHADOW_SYS_REGS_SIZE + 1);
 	struct kvm_regs gp_local;
 	u64 sr_local[SHADOW_SYS_REGS_SIZE + 1];
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	vcpu = kern_hyp_va(vcpu);
 	shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
 
 	el2_memcpy(&gp_local, &shadow_ctxt->gp_regs, sizeof(struct kvm_regs));
 	el2_memcpy(sr_local, &shadow_ctxt->sys_regs, shadow_sys_regs_len);
 
-	encrypt_kvm_regs(stage2_data, &gp_local);
-	encrypt_buf(stage2_data, sr_local, shadow_sys_regs_len);
+	encrypt_kvm_regs(el2_data, &gp_local);
+	encrypt_buf(el2_data, sr_local, shadow_sys_regs_len);
 	gp_local.regs.pstate = *shadow_vcpu_cpsr(vcpu);
 
 	el2_memcpy(&vcpu->arch.ctxt.gp_regs, &gp_local,

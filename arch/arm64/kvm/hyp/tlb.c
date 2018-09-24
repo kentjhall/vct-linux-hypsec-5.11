@@ -66,9 +66,9 @@ static void __hyp_text __tlb_switch_to_host_nvhe(struct kvm *kvm)
 #ifndef CONFIG_STAGE2_KERNEL
 	write_sysreg(0, vttbr_el2);
 #else
-	struct stage2_data *stage2_data;
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	write_sysreg(stage2_data->host_vttbr, vttbr_el2);
+	struct el2_data *el2_data;
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	write_sysreg(el2_data->host_vttbr, vttbr_el2);
 #endif
 }
 

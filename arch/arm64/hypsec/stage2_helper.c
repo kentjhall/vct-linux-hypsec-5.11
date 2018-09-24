@@ -23,10 +23,10 @@
 static inline unsigned long __hyp_text waituart(void)
 {
 	unsigned long ret, base, REG_FR;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 
-	stage2_data = (void *)kvm_ksym_ref(stage2_data_start);
-	base = stage2_data->pl011_base;
+	el2_data = (void *)kvm_ksym_ref(el2_data_start);
+	base = el2_data->pl011_base;
 	REG_FR = UART01x_FR;
 
 	asm volatile (
@@ -44,10 +44,10 @@ static inline unsigned long __hyp_text waituart(void)
 static inline void __hyp_text senduart(char word)
 {
 	unsigned long base;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 
-	stage2_data = (void *)kvm_ksym_ref(stage2_data_start);
-	base = stage2_data->pl011_base;
+	el2_data = (void *)kvm_ksym_ref(el2_data_start);
+	base = el2_data->pl011_base;
 
 	while (waituart() & UART01x_FR_TXFF)
 		cpu_relax();
@@ -130,21 +130,21 @@ int __hyp_text el2_memcmp(void *dest, void *src, size_t len)
 	return 0;
 }
 
-void __hyp_text encrypt_buf(struct stage2_data *stage2_data,
+void __hyp_text encrypt_buf(struct el2_data *el2_data,
 			    void *buf,
 			    uint32_t len)
 {
 	struct AES_ctx ctx;
-	AES_init_ctx_iv(&ctx, stage2_data->key, stage2_data->iv);
+	AES_init_ctx_iv(&ctx, el2_data->key, el2_data->iv);
 	AES_CBC_encrypt_buffer(&ctx, (uint8_t *)buf, len);
 }
 
-void __hyp_text decrypt_buf(struct stage2_data *stage2_data,
+void __hyp_text decrypt_buf(struct el2_data *el2_data,
 			    void *buf,
 			    uint32_t len)
 {
 	struct AES_ctx ctx;
-	AES_init_ctx_iv(&ctx, stage2_data->key, stage2_data->iv);
+	AES_init_ctx_iv(&ctx, el2_data->key, el2_data->iv);
 	AES_CBC_decrypt_buffer(&ctx, (uint8_t *)buf, len);
 }
 

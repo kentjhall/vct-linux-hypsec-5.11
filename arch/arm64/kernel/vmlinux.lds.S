@@ -247,10 +247,10 @@ SECTIONS
 	stage2_tmp_pgs_end = .;
 
 	. = ALIGN(PAGE_SIZE);
-	stage2_data_start = .;
+	el2_data_start = .;
 
 	. += PAGE_SIZE * (PAGE_SIZE * 12);
-	stage2_data_end = .;
+	el2_data_end = .;
 #endif
 
 	__pecoff_data_size = ABSOLUTE(. - __initdata_begin);

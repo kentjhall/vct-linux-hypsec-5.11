@@ -2047,15 +2047,15 @@ static void arm_smmu_bus_init(void)
 static void s2_smmu_probe(struct arm_smmu_device *smmu,
 			  u64 base, u64 size)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct el2_arm_smmu_device *el2_smmu;
 	u64 smmu_start, smmu_end;
 	int err;
 
 	BUG_ON(!smmu);
 
-	stage2_data = (void *)kvm_ksym_ref(stage2_data_start);
-	el2_smmu = &stage2_data->smmu;
+	el2_data = (void *)kvm_ksym_ref(el2_data_start);
+	el2_smmu = &el2_data->smmu;
 	el2_smmu->phys_base = base;
 	el2_smmu->size = size;
 

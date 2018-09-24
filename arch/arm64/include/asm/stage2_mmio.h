@@ -47,8 +47,8 @@ struct el2_smmu_cfg {
 	u64 hw_ttbr;
 };
 
-struct el2_smmu_cfg* get_smmu_cfg(struct stage2_data *stage2_data, unsigned long addr);
-struct el2_smmu_cfg* alloc_smmu_cfg(struct stage2_data *stage2_data);
+struct el2_smmu_cfg* get_smmu_cfg(struct el2_data *el2_data, unsigned long addr);
+struct el2_smmu_cfg* alloc_smmu_cfg(struct el2_data *el2_data);
 void handle_host_mmio(phys_addr_t addr, struct s2_host_regs *host_regs);
 
 #endif /* __ARM_STAGE2_MMIO__ */

@@ -108,11 +108,11 @@ int kvm_arch_vcpu_should_kick(struct kvm_vcpu *vcpu)
 #ifdef CONFIG_STAGE2_KERNEL
 static void install_el2_runtime(void *discard)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	unsigned long stack_page;
 
-	stage2_data = (void *)kvm_ksym_ref(stage2_data_start);
-	enable_stage2_translation(stage2_data->host_vttbr);
+	el2_data = (void *)kvm_ksym_ref(el2_data_start);
+	enable_stage2_translation(el2_data->host_vttbr);
 
 	stack_page = __this_cpu_read(kvm_arm_hyp_stack_page);
 	el2_protect_stack_page(__pa(stack_page));
@@ -1615,10 +1615,10 @@ static int init_hyp_mode(void)
 		goto out_err;
 	}
 
-	init_stage2_data_page();
+	init_el2_data_page();
 
-	err = create_hyp_mappings((void *)kvm_ksym_ref(stage2_data_start),
-			(void *)kvm_ksym_ref(stage2_data_end),
+	err = create_hyp_mappings((void *)kvm_ksym_ref(el2_data_start),
+			(void *)kvm_ksym_ref(el2_data_end),
 			PAGE_HYP);
 	if (err) {
 		kvm_err("Cannot map stage 2 data pages\n");

@@ -110,21 +110,21 @@ typedef u64 arm_lpae_iopte;
 #define	get_cbndx(offset, base)		(offset - base) >> 2
 
 static struct el2_smmu_cfg* __hyp_text get_smmu_cfg_ttbr(
-				struct stage2_data *stage2_data,
+				struct el2_data *el2_data,
 				unsigned long addr)
 {
 	int i;
 	for_each_smmu_cfg(i) {
-		if (stage2_data->smmu_cfg[i].ttbr == addr)
-			return &stage2_data->smmu_cfg[i];
+		if (el2_data->smmu_cfg[i].ttbr == addr)
+			return &el2_data->smmu_cfg[i];
 	};
 	return NULL;
 }
 
 static inline struct el2_smmu_cfg* __hyp_text get_smmu_cfg_cbndx(int cbndx,
-					struct stage2_data *stage2_data)
+					struct el2_data *el2_data)
 {
-	return &stage2_data->smmu_cfg[cbndx];
+	return &el2_data->smmu_cfg[cbndx];
 }
 
 u32 __hyp_text stage2_get_cb_offset(struct el2_arm_smmu_device smmu,
@@ -172,10 +172,10 @@ bool __hyp_text handle_smmu_global_access(u32 hsr, u64 fault_ipa,
 {
 	int n;
 	u32 gr1_base, data;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct el2_smmu_cfg *smmu_cfg;
 
-	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	/* We don't care if it's read accesses */
 	if (!is_write)
@@ -220,7 +220,7 @@ bool __hyp_text handle_smmu_global_access(u32 hsr, u64 fault_ipa,
 			print_string("\rhandle_smmu_global_access: invalid data\n");
 			return false;
 		}
-		smmu_cfg = get_smmu_cfg_cbndx(n, stage2_data);
+		smmu_cfg = get_smmu_cfg_cbndx(n, el2_data);
 		if (!smmu_cfg->vmid)
 			smmu_cfg->vmid = (data & CBAR_VMID_MASK);
 		else {
@@ -237,7 +237,7 @@ bool __hyp_text handle_smmu_cb_access(u32 hsr, u64 fault_ipa,
 				     u32 offset, u64 *val, bool is_write,
 				     struct el2_arm_smmu_device smmu)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct el2_smmu_cfg *smmu_cfg;
 	u32 cb_offset;
 	u8 cbndx;
@@ -245,7 +245,7 @@ bool __hyp_text handle_smmu_cb_access(u32 hsr, u64 fault_ipa,
 	if (!is_write)
 		goto out;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	cb_offset = stage2_get_cb_offset(smmu, offset, &cbndx);
 	if (cbndx >= smmu.num_context_banks) {
 		print_string("\rhandle_smmu_cb_access: invalid cbndx\n");
@@ -254,7 +254,7 @@ bool __hyp_text handle_smmu_cb_access(u32 hsr, u64 fault_ipa,
 
 	switch (cb_offset) {
 		case ARM_SMMU_CB_TTBR0:
-			smmu_cfg = get_smmu_cfg_cbndx((int)cbndx, stage2_data);
+			smmu_cfg = get_smmu_cfg_cbndx((int)cbndx, el2_data);
 			/* We write hw_ttbr to CB_TTBR0 */
 			*val = smmu_cfg->hw_ttbr;
 			break;
@@ -364,14 +364,14 @@ void __hyp_text handle_host_mmio(phys_addr_t addr, struct s2_host_regs *host_reg
 	u32 hsr = read_sysreg(esr_el2);
 	bool is_write = host_dabt_is_write(hsr);
 	int len = host_dabt_get_as(hsr);
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	if (is_write) {
-		handle_smmu_write(hsr, fault_ipa, len, host_regs, stage2_data->smmu);
+		handle_smmu_write(hsr, fault_ipa, len, host_regs, el2_data->smmu);
 	} else {
-		handle_smmu_read(hsr, fault_ipa, len, host_regs, stage2_data->smmu);
+		handle_smmu_read(hsr, fault_ipa, len, host_regs, el2_data->smmu);
 	}
 	host_skip_instr();
 
@@ -381,11 +381,11 @@ void __hyp_text handle_host_mmio(phys_addr_t addr, struct s2_host_regs *host_reg
 /* TODO: how do we make sure it's ok to free now? */
 void __hyp_text  __el2_free_smmu_pgd(unsigned long addr)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct el2_smmu_cfg *smmu_cfg;
 
-	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	smmu_cfg = get_smmu_cfg_ttbr(stage2_data, addr);
+	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	smmu_cfg = get_smmu_cfg_ttbr(el2_data, addr);
 	if (!smmu_cfg) {
 		print_string("\rcannot find smmu_cfg for ttbr\n");
 		printhex_ul(addr);
@@ -396,16 +396,16 @@ void __hyp_text  __el2_free_smmu_pgd(unsigned long addr)
 
 void __hyp_text  __el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct el2_smmu_cfg *smmu_cfg;
 
-	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	if (cbndx >= stage2_data->smmu.num_context_banks) {
+	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	if (cbndx >= el2_data->smmu.num_context_banks) {
 		print_string("\r__el2_alloc_smmu_pgd: invalid cbndx\n");
 		return;
 	}
 
-	smmu_cfg = get_smmu_cfg_cbndx((int)cbndx, stage2_data);
+	smmu_cfg = get_smmu_cfg_cbndx((int)cbndx, el2_data);
 	if (!smmu_cfg->vmid) {
 		smmu_cfg->vmid = vmid;
 	}
@@ -482,7 +482,7 @@ void __hyp_text __el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
 				   size_t size, u64 prot, u64 ttbr)
 {
 	struct el2_smmu_cfg *smmu_cfg;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct s2_page *s2_pages;
 	pgd_t *pgd, *pgdp;
 	pud_t *pud;
@@ -492,8 +492,8 @@ void __hyp_text __el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
 	if (paddr == 0)
 		goto skip_check;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	smmu_cfg = get_smmu_cfg_ttbr(stage2_data, ttbr);
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	smmu_cfg = get_smmu_cfg_ttbr(el2_data, ttbr);
 	if (!smmu_cfg) {
 		print_string("\rinvalid vttbr in smmu\n");
 		return;
@@ -502,8 +502,8 @@ void __hyp_text __el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
 	vmid = smmu_cfg->vmid;
 	ttbr = smmu_cfg->hw_ttbr;
 
-	index = get_s2_page_index(stage2_data, paddr);
-	s2_pages = stage2_data->s2_pages;
+	index = get_s2_page_index(el2_data, paddr);
+	s2_pages = el2_data->s2_pages;
 
 	while (s < size) {
 		if (!stage2_is_map_memory(paddr + s)) {
@@ -511,7 +511,7 @@ void __hyp_text __el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
 			continue;
 		}
 
-		index = get_s2_page_index(stage2_data, paddr + s);
+		index = get_s2_page_index(el2_data, paddr + s);
 
 		if (s2_pages[index].vmid != vmid &&
 		    s2_pages[index].vmid != 0) {
@@ -541,11 +541,11 @@ skip_check:
 phys_addr_t __hyp_text __el2_arm_lpae_iova_to_phys(unsigned long iova, u64 ttbr)
 {
 	struct el2_smmu_cfg *smmu_cfg;
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	arm_lpae_iopte pte, *ptep;
 
-	stage2_data = (void *)kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	smmu_cfg = get_smmu_cfg_ttbr(stage2_data, ttbr);
+	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	smmu_cfg = get_smmu_cfg_ttbr(el2_data, ttbr);
 	if (!smmu_cfg) {
 		print_string("\rinvalid vttbr in smmu\n");
 		return 0;

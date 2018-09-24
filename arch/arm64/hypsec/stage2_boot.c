@@ -17,51 +17,51 @@
 
 #include "ed25519/ed25519.h"
 
-static int __hyp_text hypsec_gen_vmid(struct stage2_data *stage2_data)
+static int __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
 {
 	int vmid;
-	stage2_spin_lock(&stage2_data->vmid_lock);
-	vmid = stage2_data->next_vmid++;
-	stage2_spin_unlock(&stage2_data->vmid_lock);
+	stage2_spin_lock(&el2_data->vmid_lock);
+	vmid = el2_data->next_vmid++;
+	stage2_spin_unlock(&el2_data->vmid_lock);
 	return vmid;
 }
 
 static int __hyp_text __alloc_vm_info(struct kvm* kvm)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	int count;
 
 	kvm = kern_hyp_va(kvm);
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	count = stage2_data->used_vm_info++;
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	count = el2_data->used_vm_info++;
 
-	stage2_data->used_vm_info %= EL2_VM_INFO_SIZE;
-	stage2_data->vm_info[count].is_valid_vm = false;
-	stage2_data->vm_info[count].inc_exe = false;
-	stage2_data->vm_info[count].vmid = hypsec_gen_vmid(stage2_data);
-	stage2_data->vm_info[count].shadow_pt_lock =
+	el2_data->used_vm_info %= EL2_VM_INFO_SIZE;
+	el2_data->vm_info[count].is_valid_vm = false;
+	el2_data->vm_info[count].inc_exe = false;
+	el2_data->vm_info[count].vmid = hypsec_gen_vmid(el2_data);
+	el2_data->vm_info[count].shadow_pt_lock =
 		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	stage2_data->vm_info[count].boot_lock =
+	el2_data->vm_info[count].boot_lock =
 		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	kvm->arch.vm_info = &stage2_data->vm_info[count];
-	return stage2_data->vm_info[count].vmid;
+	kvm->arch.vm_info = &el2_data->vm_info[count];
+	return el2_data->vm_info[count].vmid;
 }
 
 static unsigned long __hyp_text alloc_remap_addr(unsigned long size)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	unsigned long ret, page_count;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	ret = EL2_REMAP_START + stage2_data->last_remap_ptr;
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	ret = EL2_REMAP_START + el2_data->last_remap_ptr;
 	page_count = (size >> PAGE_SHIFT) + ((size & (PAGE_SIZE - 1)) ? 1 : 0);
 
-	stage2_data->last_remap_ptr += (page_count * PAGE_SIZE);
+	el2_data->last_remap_ptr += (page_count * PAGE_SIZE);
 
 	return ret;
 }
 
-static inline struct el2_vm_info* get_vm_info(struct stage2_data *stage2_data,
+static inline struct el2_vm_info* get_vm_info(struct el2_data *el2_data,
 					      struct kvm *kvm)
 {
 	u64 pool_start, len;
@@ -71,7 +71,7 @@ static inline struct el2_vm_info* get_vm_info(struct stage2_data *stage2_data,
 		goto out_panic;
 
 	ret = kvm->arch.vm_info;
-	pool_start = (u64)&stage2_data->vm_info;
+	pool_start = (u64)&el2_data->vm_info;
 	len = sizeof(struct el2_vm_info) * EL2_VM_INFO_SIZE;
 	/* Check if vm_info was allocated from the pool */
 	if ((u64)ret < pool_start && (u64)ret >= (pool_start + len))
@@ -86,29 +86,29 @@ out_panic:
 arch_spinlock_t* __hyp_text get_shadow_pt_lock(struct kvm *kvm)
 {
 	struct el2_vm_info *vm_info;
-	struct stage2_data *stage2_data;
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	vm_info = get_vm_info(stage2_data, kvm);
+	struct el2_data *el2_data;
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	vm_info = get_vm_info(el2_data, kvm);
 	return &vm_info->shadow_pt_lock;
 }
 
-int __hyp_text el2_get_vmid(struct stage2_data *stage2_data,
+int __hyp_text el2_get_vmid(struct el2_data *el2_data,
 			     struct kvm *kvm)
 {
-	struct el2_vm_info *vm_info = get_vm_info(stage2_data, kvm);
+	struct el2_vm_info *vm_info = get_vm_info(el2_data, kvm);
 	return vm_info->vmid;
 }
 
 int __hyp_text __el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
 				unsigned long size, int image_type)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct el2_vm_info *vm_info;
 	int load_count;
 
 	kvm = kern_hyp_va(kvm);
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	vm_info = get_vm_info(stage2_data, kvm);
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	vm_info = get_vm_info(el2_data, kvm);
 
 	load_count = vm_info->load_info_cnt;
 	vm_info->load_info[load_count].load_addr = load_addr;
@@ -121,23 +121,23 @@ int __hyp_text __el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
 
 void __hyp_text __el2_remap_vm_image(struct kvm *kvm, unsigned long pfn)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct el2_vm_info *vm_info;
 	struct el2_load_info *load_info;
 	int count;
 	unsigned long target;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	kvm = kern_hyp_va(kvm);
 
-	vm_info = get_vm_info(stage2_data, kvm);
+	vm_info = get_vm_info(el2_data, kvm);
 	count = vm_info->load_info_cnt;
 	load_info = &vm_info->load_info[count];
 
 	target = load_info->el2_remap_addr + (load_info->el2_mapped_pages * PAGE_SIZE);
 	map_el2_mem(target, target + PAGE_SIZE, pfn, PAGE_HYP);
 
-	if ((stage2_data->last_remap_ptr + EL2_REMAP_START) == (target + PAGE_SIZE))
+	if ((el2_data->last_remap_ptr + EL2_REMAP_START) == (target + PAGE_SIZE))
 		vm_info->load_info_cnt++;
 
 	load_info->el2_mapped_pages++; 
@@ -145,7 +145,7 @@ void __hyp_text __el2_remap_vm_image(struct kvm *kvm, unsigned long pfn)
 
 bool __hyp_text __el2_verify_and_load_images(struct kvm *kvm)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct el2_vm_info *vm_info;
 	struct el2_load_info load_info;
 	int i;
@@ -156,9 +156,9 @@ bool __hyp_text __el2_verify_and_load_images(struct kvm *kvm)
 	unsigned char *public_key_hex = "25f2d889403a586265eeff77d54687971301c280a02a4b5e7a416449be2ab239";
 	arch_spinlock_t *lock;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	kvm = kern_hyp_va(kvm);
-	vm_info = get_vm_info(stage2_data, kvm);
+	vm_info = get_vm_info(el2_data, kvm);
 
 	lock = &vm_info->boot_lock;
 	stage2_spin_lock(lock);
@@ -185,7 +185,7 @@ bool __hyp_text __el2_verify_and_load_images(struct kvm *kvm)
 		 * Desirably, we'd like to map verified images only, but
 		 * now we map all images to VM memory anyway.
 		 */
-		load_image_to_shadow_s2pt(kvm, stage2_data, load_info.load_addr,
+		load_image_to_shadow_s2pt(kvm, el2_data, load_info.load_addr,
 			load_info.el2_remap_addr, load_info.el2_mapped_pages);
 	}
 
@@ -197,12 +197,12 @@ out:
 }
 
 unsigned long __hyp_text search_load_info(struct kvm *kvm,
-					  struct stage2_data *stage2_data,
+					  struct el2_data *el2_data,
 					  unsigned long addr)
 {
 	struct el2_load_info li;
 	int i;
-	struct el2_vm_info *vm_info = get_vm_info(stage2_data, kvm);
+	struct el2_vm_info *vm_info = get_vm_info(el2_data, kvm);
 	unsigned long el2_va = 0;
 
 	for (i = 0; i < vm_info->load_info_cnt; i++) {
@@ -217,31 +217,31 @@ unsigned long __hyp_text search_load_info(struct kvm *kvm,
 
 unsigned long __hyp_text get_el2_image_va(struct kvm *kvm, unsigned long addr)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	unsigned long ret = 0;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
-	ret = search_load_info(kvm, stage2_data, addr);
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	ret = search_load_info(kvm, el2_data, addr);
 	return ret;
 }
 
 bool __hyp_text el2_use_inc_exe(struct kvm *kvm,
-			        struct stage2_data *stage2_data)
+			        struct el2_data *el2_data)
 {
 	struct el2_vm_info *vm_info;
 
-	vm_info = get_vm_info(stage2_data, kvm);
+	vm_info = get_vm_info(el2_data, kvm);
 	return vm_info->inc_exe;
 }
 
 void __hyp_text __el2_boot_from_inc_exe(struct kvm *kvm)
 {
-	struct stage2_data *stage2_data;
+	struct el2_data *el2_data;
 	struct el2_vm_info *vm_info;
 
-	stage2_data = kern_hyp_va(kvm_ksym_ref(stage2_data_start));
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	kvm = kern_hyp_va(kvm);
-	vm_info = get_vm_info(stage2_data, kvm);
+	vm_info = get_vm_info(el2_data, kvm);
 	vm_info->inc_exe = true;
 }
 
