@@ -16,9 +16,6 @@
 #include <asm/hypsec_host.h>
 #include <asm/spinlock_types.h>
 
-extern void set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,
-				size_t len, u32 vmid);
-
 void __hyp_text set_stage2_vring_gpa(struct kvm_vcpu *vcpu)
 {
 	struct el2_data *el2_data;

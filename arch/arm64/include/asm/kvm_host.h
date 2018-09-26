@@ -235,11 +235,13 @@ struct shadow_vcpu_context {
 #endif
 
 struct kvm_vcpu_arch {
-	struct kvm_cpu_context ctxt;
 #ifdef CONFIG_STAGE2_KERNEL
 	struct shadow_vcpu_context *shadow_vcpu_ctxt;
+	char	filler[PAGE_SIZE];
 	u64 tpidr_el2;
 #endif
+	struct kvm_cpu_context ctxt;
+
 	/* HYP configuration */
 	u64 hcr_el2;
 	u32 mdcr_el2;

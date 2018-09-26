@@ -216,6 +216,9 @@ struct kvm_mmio_fragment {
 };
 
 struct kvm_vcpu {
+#ifdef CONFIG_STAGE2_KERNEL
+	struct kvm_vcpu_arch arch;
+#endif
 	struct kvm *kvm;
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 	struct preempt_notifier preempt_notifier;
@@ -273,7 +276,9 @@ struct kvm_vcpu {
 	} spin_loop;
 #endif
 	bool preempted;
+#ifndef CONFIG_STAGE2_KERNEL
 	struct kvm_vcpu_arch arch;
+#endif
 	struct dentry *debugfs_dentry;
 };
 

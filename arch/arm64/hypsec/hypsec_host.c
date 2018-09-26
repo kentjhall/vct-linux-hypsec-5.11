@@ -206,10 +206,13 @@ static int __hyp_text alloc_shadow_vcpu_ctxt(struct kvm_vcpu *vcpu)
 {
 	struct el2_data *el2_data;
 	struct shadow_vcpu_context *new_ctxt = NULL;
-	int index, ret = 0;
+	int index, ret = 0, vmid;
+	unsigned long addr = __pa(vcpu);
 	arch_spinlock_t *lock;
+	struct kvm *kvm;
 
 	vcpu = kern_hyp_va(vcpu);
+	kvm = kern_hyp_va(vcpu->kvm);
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	lock = &el2_data->shadow_vcpu_ctxt_lock;
 	stage2_spin_lock(lock);
@@ -224,6 +227,18 @@ static int __hyp_text alloc_shadow_vcpu_ctxt(struct kvm_vcpu *vcpu)
 
 err_unlock:
 	stage2_spin_unlock(lock);
+
+	/*
+	 *Make the shadow structures in VCPU RO, We now move vcpu_arch
+	 * as we moved it to the start of the vcpu structure.
+	 */
+	__set_pfn_host(addr, PAGE_SIZE, addr >> PAGE_SHIFT, PAGE_S2);
+	vmid = el2_get_vmid(el2_data, kvm);
+	/*
+	 * Make the page that contains shadow structure a guest page,
+	 * so it can be cleaned up later on when VM terminates.
+	,*/
+	set_pfn_owner(el2_data, addr, PAGE_SIZE, vmid);
 	vcpu->arch.shadow_vcpu_ctxt = new_ctxt;
 
 	return ret;
