@@ -74,7 +74,7 @@ static inline struct el2_vm_info* get_vm_info(struct el2_data *el2_data,
 	pool_start = (u64)&el2_data->vm_info;
 	len = sizeof(struct el2_vm_info) * EL2_VM_INFO_SIZE;
 	/* Check if vm_info was allocated from the pool */
-	if ((u64)ret < pool_start && (u64)ret >= (pool_start + len))
+	if ((u64)ret < pool_start || (u64)ret >= (pool_start + len))
 		goto out_panic;
 
 	return ret;
