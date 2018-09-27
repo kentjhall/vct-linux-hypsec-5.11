@@ -260,10 +260,11 @@ void __hyp_text hvc_enable_s2_trans(void)
 	protect_el2_mem();
 }
 
-void __hyp_text handle_host_hvc(u64 x0, u64 x1, u64 x2,
-				u64 x3, u64 x4, u64 x5)
+void __hyp_text handle_host_hvc(struct s2_host_regs *host_regs)
 {
-	switch (x0) {
+	u64 callno = host_regs->regs[0];
+
+	switch (callno) {
 	case HVC_ENABLE_S2_TRANS:
 		hvc_enable_s2_trans();
 		break;
