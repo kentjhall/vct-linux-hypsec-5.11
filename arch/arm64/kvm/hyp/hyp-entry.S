@@ -70,7 +70,9 @@
 
 .macro  handle_dabt
 	save_callee_saved_regs
-	bl      handle_host_stage2_fault
+	mov	x1, sp
+	mov	x0, lr
+	bl	handle_host_stage2_fault
 	restore_callee_saved_regs
 	eret
 .endm
