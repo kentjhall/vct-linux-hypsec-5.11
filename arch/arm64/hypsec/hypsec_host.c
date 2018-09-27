@@ -244,6 +244,32 @@ err_unlock:
 	return ret;
 }
 
+void __hyp_text hvc_enable_s2_trans(void)
+{
+	struct el2_data *el2_data;
+
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	write_sysreg(el2_data->host_vttbr, vttbr_el2);
+	write_sysreg(HCR_HOST_NVHE_FLAGS, hcr_el2);
+	asm volatile(
+		"tlbi	vmalle1is\n\t"
+		"dsb	sy\n\t"
+		"ic	ialluis\n\t"
+	);
+
+	protect_el2_mem();
+}
+
+void __hyp_text handle_host_hvc(u64 x0, u64 x1, u64 x2,
+				u64 x3, u64 x4, u64 x5)
+{
+	switch (x0) {
+	case HVC_ENABLE_S2_TRANS:
+		hvc_enable_s2_trans();
+		break;
+	};
+}
+
 int el2_alloc_shadow_ctxt(struct kvm_vcpu *vcpu)
 {
 	return kvm_call_hyp(alloc_shadow_vcpu_ctxt, vcpu);

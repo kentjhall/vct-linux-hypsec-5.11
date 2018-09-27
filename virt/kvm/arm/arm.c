@@ -112,7 +112,7 @@ static void install_el2_runtime(void *discard)
 	unsigned long stack_page;
 
 	el2_data = (void *)kvm_ksym_ref(el2_data_start);
-	enable_stage2_translation(el2_data->host_vttbr);
+	kvm_call_core((void *)HVC_ENABLE_S2_TRANS);
 
 	stack_page = __this_cpu_read(kvm_arm_hyp_stack_page);
 	el2_protect_stack_page(__pa(stack_page));

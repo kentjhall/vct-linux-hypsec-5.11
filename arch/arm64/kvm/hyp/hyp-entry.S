@@ -185,8 +185,7 @@ el1_sync:				// Guest trapped into EL2
 	cmp	x0, #HVC_ENABLE_S2_TRANS
 	b.ne	3f
 	save_callee_saved_regs
-	enable_stage2_trans x0, x1
-	bl	protect_el2_mem
+	bl	handle_host_hvc
 	restore_callee_saved_regs
 	eret
 3:
