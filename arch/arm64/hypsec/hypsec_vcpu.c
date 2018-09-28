@@ -362,7 +362,7 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 	shadow_ctxt->hpfar = 0;
 }
 
-static void __hyp_text __save_encrypted_vcpu(struct kvm_vcpu *vcpu)
+void __hyp_text __save_encrypted_vcpu(struct kvm_vcpu *vcpu)
 {
 	struct el2_data *el2_data;
 	struct shadow_vcpu_context *shadow_ctxt;
@@ -389,5 +389,5 @@ static void __hyp_text __save_encrypted_vcpu(struct kvm_vcpu *vcpu)
 
 void save_encrypted_vcpu(struct kvm_vcpu *vcpu)
 {
-	kvm_call_hyp(__save_encrypted_vcpu, vcpu);
+	kvm_call_core((void *)HVC_SAVE_CRYPT_VCPU, vcpu);
 }

@@ -692,22 +692,22 @@ static int __hyp_text el2_smmu_cfg_probe(struct el2_arm_smmu_device *smmu)
 /* DMA Protection */
 void el2_free_smmu_pgd(unsigned long addr)
 {
-	kvm_call_hyp(__el2_free_smmu_pgd, addr);
+	kvm_call_core(HVC_FREE_SMMU_PGD, addr);
 }
 
 void el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid)
 {
-	kvm_call_hyp(__el2_alloc_smmu_pgd, addr, cbndx, vmid);
+	kvm_call_core(HVC_ALLOC_SMMU_PGD, addr, cbndx, vmid);
 }
 
 /* TODO: we need to verify if the map is legit */
 void el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
 		      size_t size, u64 prot, u64 ttbr)
 {
-	kvm_call_hyp(__el2_arm_lpae_map, iova, paddr, size, prot, ttbr);
+	kvm_call_core(HVC_SMMU_LPAE_MAP, iova, paddr, size, prot, ttbr);
 }
 
 phys_addr_t el2_arm_lpae_iova_to_phys(unsigned long iova, u64 ttbr)
 {
-	return kvm_call_hyp(__el2_arm_lpae_iova_to_phys, iova, ttbr);
+	return kvm_call_core(HVC_SMMU_LPAE_IOVA_TO_PHYS, iova, ttbr);
 }

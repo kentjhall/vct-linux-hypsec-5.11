@@ -67,12 +67,20 @@ static bool memslot_is_logging(struct kvm_memory_slot *memslot)
  */
 void kvm_flush_remote_tlbs(struct kvm *kvm)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	kvm_call_hyp(__kvm_tlb_flush_vmid, kvm);
+#else
+	kvm_call_core(HVC_TLB_FLUSH_VMID, kvm);
+#endif
 }
 
 static void kvm_tlb_flush_vmid_ipa(struct kvm *kvm, phys_addr_t ipa)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	kvm_call_hyp(__kvm_tlb_flush_vmid_ipa, kvm, ipa);
+#else
+	kvm_call_core(HVC_TLB_FLUSH_VMID_IPA, kvm, ipa);
+#endif
 }
 
 /*

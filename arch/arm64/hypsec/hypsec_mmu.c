@@ -840,7 +840,7 @@ void __hyp_text clear_shadow_stage2_range(struct kvm *kvm, phys_addr_t start, u6
 	stage2_spin_unlock(lock);
 }
 
-static void __hyp_text __clear_vm_stage2_range(struct kvm *kvm,
+void __hyp_text __clear_vm_stage2_range(struct kvm *kvm,
 			phys_addr_t start, u64 size)
 {
 	struct el2_data *el2_data;
@@ -1154,46 +1154,46 @@ void __hyp_text __el2_decrypt_buf(void *buf, uint32_t len)
 
 void el2_protect_stack_page(phys_addr_t addr)
 {
-	kvm_call_hyp(__el2_protect_stack_page, addr);
+	kvm_call_core(HVC_PROT_EL2_STACK, addr);
 }
 
 void el2_flush_dcache_to_poc(void *addr, size_t size)
 {
-	kvm_call_hyp(__flush_dcache_area, __el2_va(__pa(addr)), size);
+	kvm_call_core(HVC_FLUSH_DCACHE_AREA, __el2_va(__pa(addr)), size);
 }
 
 void el2_flush_icache_range(unsigned long start, unsigned long end)
 {
-	kvm_call_hyp(flush_icache_range, __el2_va(__pa(start)), __el2_va(__pa(end)));
+	kvm_call_core(HVC_FLUSH_ICACHE_RANGE, __el2_va(__pa(start)), __el2_va(__pa(end)));
 }
 
 int el2_create_hyp_mapping(unsigned long start, unsigned long end,
 			    unsigned long pfn, pgprot_t prot)
 {
-	return kvm_call_hyp(map_el2_mem, start, end, pfn, prot);
+	return kvm_call_core(HVC_MAP_TO_EL2, start, end, pfn, prot);
 }
 
 void alloc_shadow_vttbr(struct kvm *kvm)
 {
-	kvm_call_hyp(__alloc_shadow_vttbr, kvm);
+	kvm_call_core(HVC_ALLOC_SHADOW_VTTBR, kvm);
 }
 
 void clear_vm_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size)
 {
-	kvm_call_hyp(__clear_vm_stage2_range, kvm, start, size);
+	kvm_call_core(HVC_CLEAR_VM_S2_RANGE, kvm, start, size);
 }
 
 void el2_register_smmu(void)
 {
-	kvm_call_hyp(__el2_register_smmu);
+	kvm_call_core(HVC_REGISTER_SMMU);
 }
 
 void el2_encrypt_buf(void *buf, uint32_t len)
 {
-	kvm_call_hyp(__el2_encrypt_buf, buf, len);
+	kvm_call_core(HVC_ENCRYPT_BUF, buf, len);
 }
 
 void el2_decrypt_buf(void *buf, uint32_t len)
 {
-	kvm_call_hyp(__el2_decrypt_buf, buf, len);
+	kvm_call_core(HVC_DECRYPT_BUF, buf, len);
 }

@@ -403,7 +403,7 @@ void kvm_arm_resume_guest(struct kvm *kvm);
 u64 __kvm_call_hyp(void *hypfn, ...);
 #define kvm_call_hyp(f, ...) __kvm_call_hyp(kvm_ksym_ref(f), ##__VA_ARGS__)
 #ifdef CONFIG_STAGE2_KERNEL
-#define kvm_call_core(n, ...) __kvm_call_hyp(n, ##__VA_ARGS__)
+#define kvm_call_core(n, ...) __kvm_call_hyp((void *)n, ##__VA_ARGS__)
 #endif
 
 void force_vm_exit(const cpumask_t *mask);
@@ -493,10 +493,12 @@ int kvm_arm_vcpu_arch_has_attr(struct kvm_vcpu *vcpu,
 
 static inline void __cpu_init_stage2(void)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	u32 parange = kvm_call_hyp(__init_stage2_translation);
 
 	WARN_ONCE(parange < 40,
 		  "PARange is %d bits, unsupported configuration!", parange);
+#endif
 }
 
 /* Guest/host FPSIMD coordination helpers */

@@ -51,4 +51,9 @@ struct el2_smmu_cfg* get_smmu_cfg(struct el2_data *el2_data, unsigned long addr)
 struct el2_smmu_cfg* alloc_smmu_cfg(struct el2_data *el2_data);
 void handle_host_mmio(phys_addr_t addr, struct s2_host_regs *host_regs);
 
+void   __el2_free_smmu_pgd(unsigned long addr);
+void   __el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid);
+void  __el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
+				   size_t size, u64 prot, u64 ttbr);
+phys_addr_t __el2_arm_lpae_iova_to_phys(unsigned long iova, u64 ttbr);
 #endif /* __ARM_STAGE2_MMIO__ */

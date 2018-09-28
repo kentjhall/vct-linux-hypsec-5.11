@@ -104,10 +104,6 @@
 	mov	x0, x1
 	mov	x1, x2
 	mov	x2, x3
-#ifdef CONFIG_STAGE2_KERNEL
-	mov	x3, x4
-	mov	x4, x5
-#endif
 	blr	lr
 	ldr	lr, [sp], #16
 .endm
@@ -184,15 +180,12 @@ el1_sync:				// Guest trapped into EL2
 
 1:
 #ifdef CONFIG_STAGE2_KERNEL
-	cmp	x0, #HVC_ENABLE_S2_TRANS
-	b.ne	3f
 	save_callee_saved_regs
 	mov	x0, sp
 	bl	handle_host_hvc
 	restore_callee_saved_regs
 	eret
-3:
-#endif
+#else
 	/*
 	 * Perform the EL2 call
 	 */
@@ -200,6 +193,7 @@ el1_sync:				// Guest trapped into EL2
 	do_el2_call
 
 	eret
+#endif
 
 el1_hvc_guest:
 	/*

@@ -202,7 +202,7 @@ out:
 	return ret;
 }
 
-static int __hyp_text alloc_shadow_vcpu_ctxt(struct kvm_vcpu *vcpu)
+int __hyp_text alloc_shadow_vcpu_ctxt(struct kvm_vcpu *vcpu)
 {
 	struct el2_data *el2_data;
 	struct shadow_vcpu_context *new_ctxt = NULL;
@@ -249,29 +249,125 @@ void __hyp_text hvc_enable_s2_trans(void)
 	struct el2_data *el2_data;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+
+	__init_stage2_translation();
+
 	write_sysreg(el2_data->host_vttbr, vttbr_el2);
 	write_sysreg(HCR_HOST_NVHE_FLAGS, hcr_el2);
-	asm volatile(
-		"tlbi	vmalle1is\n\t"
-		"dsb	sy\n\t"
-		"ic	ialluis\n\t"
-	);
+	__kvm_flush_vm_context();
 
 	protect_el2_mem();
 }
 
-void __hyp_text handle_host_hvc(struct s2_host_regs *host_regs)
+void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 {
-	u64 callno = host_regs->regs[0];
+	u64 ret, callno = hr->regs[0];
 
 	switch (callno) {
 	case HVC_ENABLE_S2_TRANS:
 		hvc_enable_s2_trans();
 		break;
+	case HVC_VCPU_RUN:
+		ret = (u64)__kvm_vcpu_run_nvhe((struct kvm_vcpu*)hr->regs[1]);
+		hr->regs[0] = (u64)ret;
+		break;
+	case HVC_TIMER_SET_CNTVOFF:
+		__kvm_timer_set_cntvoff((u32)hr->regs[1], (u32)hr->regs[2]);
+		break;
+	case HVC_FLUSH_DCACHE_AREA:
+		__flush_dcache_area((void*)hr->regs[1], hr->regs[2]);
+		break;
+	case HVC_FLUSH_ICACHE_RANGE:
+		flush_icache_range(hr->regs[1], hr->regs[2]);
+		break;
+	case HVC_TLB_FLUSH_VMID:
+		__kvm_tlb_flush_vmid((struct kvm*)hr->regs[1]);
+		break;
+	case HVC_TLB_FLUSH_VMID_IPA:
+		__kvm_tlb_flush_vmid_ipa((struct kvm*)hr->regs[1],
+					 (phys_addr_t)hr->regs[2]);
+		break;
+	case HVC_TLB_FLUSH_LOCAL_VMID:
+		__kvm_tlb_flush_local_vmid((struct kvm_vcpu*)hr->regs[1]);
+		break;
+	case HVC_ALLOC_SHADOW_VTTBR:
+		__alloc_shadow_vttbr((struct kvm*)hr->regs[1]);
+		break;
+	case HVC_ALLOC_SHADOW_VCPU_CTXT:
+		ret = (u64)alloc_shadow_vcpu_ctxt((struct kvm_vcpu*)hr->regs[1]);
+		hr->regs[0] = ret;
+		break;
+	case HVC_ALLOC_VMINFO:
+		ret = (u64)__alloc_vm_info((struct kvm*)hr->regs[1]);
+		hr->regs[0] = ret;
+		break;
+	case HVC_UPDATE_EXPT_FLAG:
+		__update_exception_shadow_flag((struct kvm_vcpu*)hr->regs[1],
+						(int)hr->regs[2]);
+		break;
+	case HVC_FLUSH_VM_CTXT:
+		__kvm_flush_vm_context();
+		break;
+	case HVC_PROT_EL2_STACK:
+		__el2_protect_stack_page((phys_addr_t)hr->regs[1]);
+		break;
+	case HVC_MAP_TO_EL2:
+		//map_el2_mem(hr->regs[1], hr->regs[2], hr->regs[3], (pgprot_t)hr->regs[4]);
+		break;
+	case HVC_CLEAR_VM_S2_RANGE:
+		__clear_vm_stage2_range((struct kvm*)hr->regs[1],
+					(phys_addr_t)hr->regs[2], (u64)hr->regs[3]);
+		break;
+	case HVC_SET_BOOT_INFO:
+		ret = (u64)__el2_set_boot_info(
+				(struct kvm *)hr->regs[1], (unsigned long)hr->regs[2],
+				(unsigned long)hr->regs[3], (int)hr->regs[4]);
+		hr->regs[0] = ret;
+		break;
+	case HVC_REMAP_VM_IMAGE:
+		__el2_remap_vm_image((struct kvm*)hr->regs[1], (unsigned long)hr->regs[2]);
+		break;
+	case HVC_VERIFY_VM_IMAGES:
+		ret = (u64)__el2_verify_and_load_images((struct kvm*)hr->regs[1]);
+		hr->regs[0] = ret;
+		break;
+	case HVC_REGISTER_SMMU:
+		__el2_register_smmu();
+		break;
+	case HVC_FREE_SMMU_PGD:
+		__el2_free_smmu_pgd((unsigned long)hr->regs[1]);
+		break;
+	case HVC_ALLOC_SMMU_PGD:
+		__el2_alloc_smmu_pgd((unsigned long)hr->regs[1], (u8)hr->regs[2],
+					(u32)hr->regs[3]);
+		break;
+	case HVC_SMMU_LPAE_MAP:
+		__el2_arm_lpae_map((unsigned long)hr->regs[1], hr->regs[2],
+					hr->regs[3], hr->regs[4], hr->regs[5]);
+		break;
+	case HVC_SMMU_LPAE_IOVA_TO_PHYS:
+		ret = (u64)el2_arm_lpae_iova_to_phys((unsigned long)hr->regs[1],
+							(u64)hr->regs[2]);
+		hr->regs[0] = ret;
+		break;
+	case HVC_BOOT_FROM_SAVED_VM:
+		__el2_boot_from_inc_exe((struct kvm*)hr->regs[1]);
+		break;
+	case HVC_ENCRYPT_BUF:
+		__el2_encrypt_buf((void*)hr->regs[1], (uint32_t)hr->regs[2]);
+		break;
+	case HVC_DECRYPT_BUF:
+		__el2_decrypt_buf((void*)hr->regs[1], (uint32_t)hr->regs[2]);
+		break;
+	case HVC_SAVE_CRYPT_VCPU:
+		__save_encrypted_vcpu((struct kvm_vcpu*)hr->regs[1]);
+		break;
+	default:
+		__hyp_panic();
 	};
 }
 
 int el2_alloc_shadow_ctxt(struct kvm_vcpu *vcpu)
 {
-	return kvm_call_hyp(alloc_shadow_vcpu_ctxt, vcpu);
+	return kvm_call_core((void *)HVC_ALLOC_SHADOW_VCPU_CTXT, vcpu);
 }

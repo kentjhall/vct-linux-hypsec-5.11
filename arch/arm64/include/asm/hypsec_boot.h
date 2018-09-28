@@ -47,4 +47,12 @@ extern int el2_remap_vm_image(struct kvm *kvm, unsigned long pfn);
 extern int el2_verify_and_load_images(struct kvm *kvm);
 extern bool is_valid_vm(struct kvm_vcpu *vcpu);
 extern arch_spinlock_t* get_shadow_pt_lock(struct kvm *kvm);
+
+
+int __alloc_vm_info(struct kvm* kvm);
+int __el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
+				unsigned long size, int image_type);
+void __el2_remap_vm_image(struct kvm *kvm, unsigned long pfn);
+bool __el2_verify_and_load_images(struct kvm *kvm);
+void __el2_boot_from_inc_exe(struct kvm *kvm);
 #endif /* __ARM_STAGE2_BOOT__ */

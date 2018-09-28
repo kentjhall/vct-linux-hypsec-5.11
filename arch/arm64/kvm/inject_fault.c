@@ -123,8 +123,7 @@ void __hyp_text update_exception_gp_regs(struct kvm_vcpu *vcpu)
 	shadow_ctxt->sys_regs[ESR_EL1] = esr;
 }
 
-static void __hyp_text __update_exception_shadow_flag(struct kvm_vcpu *vcpu,
-						      int exp)
+void __hyp_text __update_exception_shadow_flag(struct kvm_vcpu *vcpu, int exp)
 {
 	struct shadow_vcpu_context *shadow_ctxt;
 
@@ -143,7 +142,7 @@ static void __hyp_text __update_exception_shadow_flag(struct kvm_vcpu *vcpu,
 
 static unsigned long el2_update_exception_gp_regs(struct kvm_vcpu *vcpu, int exp)
 {
-	return kvm_call_hyp(__update_exception_shadow_flag, vcpu, exp);
+	return kvm_call_core((void *)HVC_UPDATE_EXPT_FLAG, vcpu, exp);
 }
 #endif
 

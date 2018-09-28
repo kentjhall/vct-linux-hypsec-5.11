@@ -112,7 +112,7 @@ static void install_el2_runtime(void *discard)
 	unsigned long stack_page;
 
 	el2_data = (void *)kvm_ksym_ref(el2_data_start);
-	kvm_call_core((void *)HVC_ENABLE_S2_TRANS);
+	kvm_call_core(HVC_ENABLE_S2_TRANS);
 
 	stack_page = __this_cpu_read(kvm_arm_hyp_stack_page);
 	el2_protect_stack_page(__pa(stack_page));
@@ -402,7 +402,11 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 	 * over-invalidation doesn't affect correctness.
 	 */
 	if (*last_ran != vcpu->vcpu_id) {
+#ifndef CONFIG_STAGE2_KERNEL
 		kvm_call_hyp(__kvm_tlb_flush_local_vmid, vcpu);
+#else
+		kvm_call_core(HVC_TLB_FLUSH_LOCAL_VMID, vcpu);
+#endif
 		*last_ran = vcpu->vcpu_id;
 	}
 
@@ -562,7 +566,11 @@ static void update_vttbr(struct kvm *kvm)
 		 * shareable domain to make sure all data structures are
 		 * clean.
 		 */
+#ifndef CONFIG_STAGE2_KERNEL
 		kvm_call_hyp(__kvm_flush_vm_context);
+#else
+		kvm_call_core(HVC_FLUSH_VM_CTXT);
+#endif
 	}
 
 	kvm->arch.vmid_gen = atomic64_read(&kvm_vmid_gen);
@@ -807,8 +815,10 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *run)
 		} else {
 #ifdef CONFIG_STAGE2_KERNEL
 			vcpu->arch.tpidr_el2 = get_tpidr_el2();
-#endif
+			ret = kvm_call_core(HVC_VCPU_RUN, vcpu);
+#else
 			ret = kvm_call_hyp(__kvm_vcpu_run_nvhe, vcpu);
+#endif
 		}
 
 		vcpu->mode = OUTSIDE_GUEST_MODE;

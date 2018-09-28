@@ -26,7 +26,7 @@ static int __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
 	return vmid;
 }
 
-static int __hyp_text __alloc_vm_info(struct kvm* kvm)
+int __hyp_text __alloc_vm_info(struct kvm* kvm)
 {
 	struct el2_data *el2_data;
 	int count;
@@ -247,27 +247,27 @@ void __hyp_text __el2_boot_from_inc_exe(struct kvm *kvm)
 
 int el2_alloc_vm_info(struct kvm *kvm)
 {
-	return kvm_call_hyp(__alloc_vm_info, kvm);
+	return kvm_call_core(HVC_ALLOC_VMINFO, kvm);
 }
 
 int el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
 			unsigned long size, int type)
 {
-	return kvm_call_hyp(__el2_set_boot_info, kvm, load_addr,
+	return kvm_call_core(HVC_SET_BOOT_INFO, kvm, load_addr,
 						 size, type);
 }
 
 int el2_remap_vm_image(struct kvm *kvm, unsigned long pfn)
 {
-	return kvm_call_hyp(__el2_remap_vm_image, kvm, pfn);
+	return kvm_call_core(HVC_REMAP_VM_IMAGE, kvm, pfn);
 }
 
 int el2_verify_and_load_images(struct kvm *kvm)
 {
-	return kvm_call_hyp(__el2_verify_and_load_images, kvm);
+	return kvm_call_core(HVC_VERIFY_VM_IMAGES, kvm);
 }
 
 void el2_boot_from_inc_exe(struct kvm *kvm)
 {
-	kvm_call_hyp(__el2_boot_from_inc_exe, kvm);
+	kvm_call_core(HVC_BOOT_FROM_SAVED_VM, kvm);
 }

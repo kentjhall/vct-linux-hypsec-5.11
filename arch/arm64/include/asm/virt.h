@@ -49,11 +49,46 @@
 /* Max number of HYP stub hypercalls */
 #define HVC_STUB_HCALL_NR 3
 
-#ifdef CONFIG_STAGE2_KERNEL
-#define HVC_ENABLE_S2_TRANS 4
-#endif
-
 #define HVC_GET_VECTORS	5
+
+#ifdef CONFIG_STAGE2_KERNEL
+#define HVC_ENABLE_S2_TRANS 6
+#define INIT_S2_TRANSLATION 7
+#define HVC_VCPU_RUN 8
+#define HVC_TIMER_SET_CNTVOFF 9
+
+#define HVC_FLUSH_DCACHE_AREA 10
+#define HVC_FLUSH_ICACHE_RANGE 11
+#define HVC_TLB_FLUSH_VMID 12
+#define HVC_TLB_FLUSH_VMID_IPA 13
+#define HVC_TLB_FLUSH_LOCAL_VMID 14
+
+#define HVC_ALLOC_SHADOW_VTTBR 15
+#define HVC_ALLOC_SHADOW_VCPU_CTXT 16
+#define HVC_ALLOC_VMINFO 17
+#define HVC_UPDATE_EXPT_FLAG 18
+
+#define HVC_FLUSH_VM_CTXT 19
+#define HVC_PROT_EL2_STACK 20
+#define HVC_MAP_TO_EL2 21
+#define HVC_CLEAR_VM_S2_RANGE 22
+
+#define HVC_SET_BOOT_INFO 23
+#define HVC_REMAP_VM_IMAGE 24
+#define HVC_VERIFY_VM_IMAGES 25
+/* SMMU */
+#define HVC_REGISTER_SMMU 26
+#define HVC_FREE_SMMU_PGD 27
+#define HVC_ALLOC_SMMU_PGD 28
+#define HVC_SMMU_LPAE_MAP 29
+#define HVC_SMMU_LPAE_IOVA_TO_PHYS 30
+/* VM MGMT */
+#define HVC_BOOT_FROM_SAVED_VM 31
+#define HVC_ENCRYPT_BUF 32
+#define HVC_DECRYPT_BUF 33
+#define HVC_SAVE_CRYPT_VCPU 34
+
+#endif
 
 /* Error returned when an invalid stub number is passed into x0 */
 #define HVC_STUB_ERR	0xbadca11
