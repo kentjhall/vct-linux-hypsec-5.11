@@ -261,15 +261,16 @@ void __hyp_text hvc_enable_s2_trans(void)
 
 void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 {
-	u64 ret, callno = hr->regs[0];
+	u64 ret = 0, callno = hr->regs[0];
 
+	/* FIXME: we write return val to reg[31] as this will be restored to x0 */
 	switch (callno) {
 	case HVC_ENABLE_S2_TRANS:
 		hvc_enable_s2_trans();
 		break;
 	case HVC_VCPU_RUN:
 		ret = (u64)__kvm_vcpu_run_nvhe((struct kvm_vcpu*)hr->regs[1]);
-		hr->regs[0] = (u64)ret;
+		hr->regs[31] = ret;
 		break;
 	case HVC_TIMER_SET_CNTVOFF:
 		__kvm_timer_set_cntvoff((u32)hr->regs[1], (u32)hr->regs[2]);
@@ -295,11 +296,11 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		break;
 	case HVC_ALLOC_SHADOW_VCPU_CTXT:
 		ret = (u64)alloc_shadow_vcpu_ctxt((struct kvm_vcpu*)hr->regs[1]);
-		hr->regs[0] = ret;
+		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_ALLOC_VMINFO:
 		ret = (u64)__alloc_vm_info((struct kvm*)hr->regs[1]);
-		hr->regs[0] = ret;
+		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_UPDATE_EXPT_FLAG:
 		__update_exception_shadow_flag((struct kvm_vcpu*)hr->regs[1],
@@ -312,7 +313,10 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		__el2_protect_stack_page((phys_addr_t)hr->regs[1]);
 		break;
 	case HVC_MAP_TO_EL2:
-		//map_el2_mem(hr->regs[1], hr->regs[2], hr->regs[3], (pgprot_t)hr->regs[4]);
+		ret = (int)check_and_map_el2_mem((unsigned long)hr->regs[1],
+						 (unsigned long)hr->regs[2],
+						 (unsigned long)hr->regs[3]);
+		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_CLEAR_VM_S2_RANGE:
 		__clear_vm_stage2_range((struct kvm*)hr->regs[1],
@@ -322,14 +326,14 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		ret = (u64)__el2_set_boot_info(
 				(struct kvm *)hr->regs[1], (unsigned long)hr->regs[2],
 				(unsigned long)hr->regs[3], (int)hr->regs[4]);
-		hr->regs[0] = ret;
+		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_REMAP_VM_IMAGE:
 		__el2_remap_vm_image((struct kvm*)hr->regs[1], (unsigned long)hr->regs[2]);
 		break;
 	case HVC_VERIFY_VM_IMAGES:
 		ret = (u64)__el2_verify_and_load_images((struct kvm*)hr->regs[1]);
-		hr->regs[0] = ret;
+		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_REGISTER_SMMU:
 		__el2_register_smmu();
@@ -348,7 +352,7 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 	case HVC_SMMU_LPAE_IOVA_TO_PHYS:
 		ret = (u64)el2_arm_lpae_iova_to_phys((unsigned long)hr->regs[1],
 							(u64)hr->regs[2]);
-		hr->regs[0] = ret;
+		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_BOOT_FROM_SAVED_VM:
 		__el2_boot_from_inc_exe((struct kvm*)hr->regs[1]);

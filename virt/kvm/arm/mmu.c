@@ -945,8 +945,7 @@ int el2_create_hyp_mappings(void *from, void *to, pgprot_t prot)
 		phys_addr = kvm_kaddr_to_phys(from + virt_addr - start);
 		err = el2_create_hyp_mapping(virt_addr,
 					    virt_addr + PAGE_SIZE,
-					    __phys_to_pfn(phys_addr),
-					    prot);
+					    __phys_to_pfn(phys_addr));
 		if (err)
 			return err;
 	}

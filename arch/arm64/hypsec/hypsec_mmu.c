@@ -703,6 +703,34 @@ out:
 	return ret;
 }
 
+static __hyp_text bool is_within_range(u64 ss, u64 se,
+				       u64 ts, u64 te)
+{
+	if (se > te) {
+		if (ss > ts)
+			return true;
+	} else {
+		if (se > te || ss >= te)
+			return true;
+	}
+	return false;
+}
+
+static __hyp_text bool is_hypsec_pa_range(unsigned long hpa, size_t len)
+{
+	u64 s = hpa, e = hpa + len;
+	if (is_within_range(s, e, (u64)__pa(kvm_ksym_ref(stage2_pgs_start)),
+	    (u64)__pa(kvm_ksym_ref(stage2_pgs_start))))
+		return true;
+	return false;
+}
+
+static __hyp_text bool is_hypsec_va_range(unsigned long s, unsigned long e)
+{
+	/* Check if VA is valid */
+	return false;
+}
+
 int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 {
 	phys_addr_t addr;
@@ -728,9 +756,8 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 		return ret;
 
 	if (stage2_is_map_memory(result.output)) {
-		if (result.output >= __pa(kvm_ksym_ref(stage2_pgs_start)) &&
-			result.output <= __pa(kvm_ksym_ref(el2_data_end)))
-				return ret;
+		if (is_hypsec_pa_range(result.output, PAGE_SIZE))
+			return ret;
 
 		/* Check if a page is owned by EL2 or already belongs to a VM */
 		target_vmid = get_hpa_owner(result.output);
@@ -1051,6 +1078,27 @@ out:
 	return err;
 }
 
+int __hyp_text check_and_map_el2_mem(unsigned long start,
+				      unsigned long end, unsigned long pfn)
+{
+	unsigned hpa = pfn << PAGE_SHIFT;
+	int i = 0, pgnum = (end - start) >> PAGE_SHIFT;
+
+	if (is_hypsec_va_range(start, end))
+		return -EINVAL;
+
+	do {
+		if (is_hypsec_pa_range(hpa, PAGE_SIZE)) {
+			print_string("Attempted to overwrite data in EL2\n");
+			return -EINVAL;
+		}
+		hpa += PAGE_SIZE;
+		i++;
+	} while (i < pgnum);
+
+	return map_el2_mem(start, end, pfn, PAGE_HYP);
+}
+
 void __hyp_text load_image_to_shadow_s2pt(struct kvm *kvm, struct el2_data *el2_data,
 				unsigned long target_addr, unsigned long el2_remap_addr,
 				unsigned long pgnum)
@@ -1168,9 +1216,9 @@ void el2_flush_icache_range(unsigned long start, unsigned long end)
 }
 
 int el2_create_hyp_mapping(unsigned long start, unsigned long end,
-			    unsigned long pfn, pgprot_t prot)
+			    unsigned long pfn)
 {
-	return kvm_call_core(HVC_MAP_TO_EL2, start, end, pfn, prot);
+	return kvm_call_core(HVC_MAP_TO_EL2, start, end, pfn);
 }
 
 void alloc_shadow_vttbr(struct kvm *kvm)

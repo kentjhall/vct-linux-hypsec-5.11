@@ -59,7 +59,7 @@ void __set_pfn_host(phys_addr_t start, u64 size, kvm_pfn_t pfn, pgprot_t prot);
 
 void clear_vm_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size);
 int el2_create_hyp_mapping(unsigned long start, unsigned long end,
-			    unsigned long pfn, pgprot_t prot);
+			    unsigned long pfn);
 
 
 extern void el2_flush_dcache_to_poc(void *addr, size_t size);
@@ -124,5 +124,7 @@ void  __clear_vm_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size);
 void  __el2_register_smmu(void);
 void  __el2_encrypt_buf(void *buf, uint32_t len);
 void  __el2_decrypt_buf(void *buf, uint32_t len);
+int check_and_map_el2_mem(unsigned long start, unsigned long end,
+			  unsigned long pfn);
 #endif /* __ARM_STAGE2_MMU__ */
 
