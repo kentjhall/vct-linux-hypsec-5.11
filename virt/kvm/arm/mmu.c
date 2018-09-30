@@ -917,7 +917,7 @@ int create_hypsec_io_mappings(phys_addr_t phys_addr, size_t size,
 	ret = __create_hyp_private_mapping(phys_addr, size,
 					   &addr, PAGE_HYP_DEVICE);
 	if (ret) {
-		*haddr = NULL;
+		*haddr = 0;
 		return ret;
 	}
 

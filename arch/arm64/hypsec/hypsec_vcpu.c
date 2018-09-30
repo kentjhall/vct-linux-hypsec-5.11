@@ -273,7 +273,6 @@ static void __hyp_text el2_reset_gp_regs(struct kvm_vcpu *vcpu,
 					 struct shadow_vcpu_context *shadow_ctxt)
 {
 	struct kvm_regs *kvm_regs = &vcpu->arch.ctxt.gp_regs;
-	struct el2_load_info li;
 	__u64 pc = kvm_regs->regs.pc;
 	struct el2_data *el2_data;
 

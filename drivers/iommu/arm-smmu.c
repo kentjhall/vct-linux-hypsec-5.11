@@ -2050,7 +2050,6 @@ static void s2_smmu_probe(struct arm_smmu_device *smmu,
 	struct el2_data *el2_data;
 	struct el2_arm_smmu_device *el2_smmu;
 	u64 smmu_start, smmu_end;
-	int err;
 
 	BUG_ON(!smmu);
 
