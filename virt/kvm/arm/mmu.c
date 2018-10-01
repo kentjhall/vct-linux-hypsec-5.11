@@ -761,6 +761,7 @@ static phys_addr_t kvm_kaddr_to_phys(void *kaddr)
  */
 int create_hyp_mappings(void *from, void *to, pgprot_t prot)
 {
+	int err;
 	phys_addr_t phys_addr;
 	unsigned long virt_addr;
 #ifndef CONFIG_STAGE2_KERNEL
@@ -778,11 +779,15 @@ int create_hyp_mappings(void *from, void *to, pgprot_t prot)
 	if (is_kernel_in_hyp_mode())
 		return 0;
 
+#ifdef CONFIG_STAGE2_KERNEL
+	err = add_hyp_va_region(start, end);
+	if (err)
+		return err;
+#endif
 	start = start & PAGE_MASK;
 	end = PAGE_ALIGN(end);
 
 	for (virt_addr = start; virt_addr < end; virt_addr += PAGE_SIZE) {
-		int err;
 
 		phys_addr = kvm_kaddr_to_phys(from + virt_addr - start);
 		err = __create_hyp_mappings(hyp_pgd, PTRS_PER_PGD,

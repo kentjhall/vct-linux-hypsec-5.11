@@ -13,11 +13,13 @@
 #define SHADOW_32BIT_REGS_SIZE		3
 #define SHADOW_SYS_REGS_DESC_SIZE	(SHADOW_SYS_REGS_SIZE + SHADOW_32BIT_REGS_SIZE)
 #define NUM_SHADOW_VCPU_CTXT		128
+#define NUM_HYP_VA_REGIONS		128
 
 struct el2_data {
 	struct memblock_region regions[32];
 	struct s2_memblock_info s2_memblock_info[32];
 	struct s2_cpu_arch arch;
+	struct hyp_va_region va_regions[NUM_HYP_VA_REGIONS];
 
 	int regions_cnt;
 	u64 page_pool_start;

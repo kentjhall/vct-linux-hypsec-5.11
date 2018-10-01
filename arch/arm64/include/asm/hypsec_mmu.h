@@ -54,6 +54,11 @@ struct s2_unmapped_ipa {
 	int count;
 };
 
+struct hyp_va_region {
+	unsigned long from;
+	unsigned long to;
+};
+
 extern u64 get_shadow_vttbr(struct kvm *kvm);
 void __set_pfn_host(phys_addr_t start, u64 size, kvm_pfn_t pfn, pgprot_t prot);
 
@@ -126,5 +131,6 @@ void  __el2_encrypt_buf(void *buf, uint32_t len);
 void  __el2_decrypt_buf(void *buf, uint32_t len);
 int check_and_map_el2_mem(unsigned long start, unsigned long end,
 			  unsigned long pfn);
+int add_hyp_va_region(unsigned long from, unsigned long to);
 #endif /* __ARM_STAGE2_MMU__ */
 

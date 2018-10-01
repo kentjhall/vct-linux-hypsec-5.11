@@ -176,8 +176,33 @@ void init_el2_data_page(void)
 
 	stage2_init_aes(el2_data);
 
+	memset(el2_data->va_regions, 0,
+		sizeof(struct hyp_va_region) * NUM_HYP_VA_REGIONS);
 out_err:
 	return;
+}
+
+int add_hyp_va_region(unsigned long from, unsigned long to)
+{
+	struct el2_data *el2_data;
+	int i, ret = 0;
+
+	el2_data = (void *)kvm_ksym_ref(el2_data_start);
+	for (i = 0; i < NUM_HYP_VA_REGIONS; i++) {
+		if (el2_data->va_regions[i].from &&
+		    el2_data->va_regions[i].to)
+			continue;
+		else {
+			el2_data->va_regions[i].from = from;
+			el2_data->va_regions[i].to = to;
+			break;
+		}
+	}
+
+	if (unlikely(i == NUM_HYP_VA_REGIONS))
+		ret = -EINVAL;
+
+	return ret;
 }
 
 unsigned long __hyp_text get_s2_page_index(struct el2_data *el2_data,

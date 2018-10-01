@@ -1582,6 +1582,7 @@ static int init_hyp_mode(void)
 	}
 
 #ifdef CONFIG_STAGE2_KERNEL
+	init_el2_data_page();
 	/* Map the entire memblocks to EL2's address space */
 	map_mem_el2();
 #endif
@@ -1624,8 +1625,6 @@ static int init_hyp_mode(void)
 		kvm_err("Cannot map pages for stage 2 tables\n");
 		goto out_err;
 	}
-
-	init_el2_data_page();
 
 	err = create_hyp_mappings((void *)kvm_ksym_ref(el2_data_start),
 			(void *)kvm_ksym_ref(el2_data_end),

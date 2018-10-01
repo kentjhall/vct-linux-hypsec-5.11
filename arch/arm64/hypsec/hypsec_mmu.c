@@ -706,13 +706,12 @@ out:
 static __hyp_text bool is_within_range(u64 ss, u64 se,
 				       u64 ts, u64 te)
 {
-	if (se > te) {
-		if (ss > ts)
-			return true;
-	} else {
-		if (se > te || ss >= te)
-			return true;
-	}
+	if (se >= te && te >= ss)
+		return true;
+	else if (se > ts && ts >= ss)
+		return true;
+	else if (te >= se && ss >= ts)
+		return true;
 	return false;
 }
 
@@ -728,6 +727,18 @@ static __hyp_text bool is_hypsec_pa_range(unsigned long hpa, size_t len)
 static __hyp_text bool is_hypsec_va_range(unsigned long s, unsigned long e)
 {
 	/* Check if VA is valid */
+	struct el2_data *el2_data;
+	struct hyp_va_region *va_regions;
+	int i;
+
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	va_regions = el2_data->va_regions;
+	for (i = 0; i < NUM_HYP_VA_REGIONS; i++) {
+		if (!va_regions[i].from && !va_regions[i].to)
+			break;
+		if (is_within_range(s, e, va_regions[i].from, va_regions[i].to))
+			return true;
+	}
 	return false;
 }
 
@@ -1084,8 +1095,10 @@ int __hyp_text check_and_map_el2_mem(unsigned long start,
 	unsigned hpa = pfn << PAGE_SHIFT;
 	int i = 0, pgnum = (end - start) >> PAGE_SHIFT;
 
-	if (is_hypsec_va_range(start, end))
+	if (is_hypsec_va_range(start, end)) {
+		print_string("\nmap to invalid hyp va\n");
 		return -EINVAL;
+	}
 
 	do {
 		if (is_hypsec_pa_range(hpa, PAGE_SIZE)) {
