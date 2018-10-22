@@ -88,6 +88,7 @@
 #define HVC_DECRYPT_BUF 33
 #define HVC_SAVE_CRYPT_VCPU 34
 
+#define HVC_GET_MDCR_EL2 35
 #endif
 
 /* Error returned when an invalid stub number is passed into x0 */

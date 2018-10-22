@@ -391,6 +391,10 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 	case HVC_SAVE_CRYPT_VCPU:
 		__save_encrypted_vcpu((struct kvm_vcpu*)hr->regs[1]);
 		break;
+	case HVC_GET_MDCR_EL2:
+		ret = (u64)__kvm_get_mdcr_el2();
+		hr->regs[31] = (u64)ret;
+		break;
 	default:
 		__hyp_panic();
 	};
