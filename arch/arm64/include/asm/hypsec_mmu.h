@@ -35,7 +35,6 @@ struct s2_memblock_info {
 struct s2_trans {
         kvm_pfn_t pfn;
         phys_addr_t output;
-        phys_addr_t block_size;
         bool writable;
         bool readable;
         int level;
