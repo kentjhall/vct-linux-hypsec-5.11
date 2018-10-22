@@ -85,9 +85,10 @@ static void __hyp_text free_s2pages_vmid(struct el2_data *el2_data,
 
 	stage2_spin_lock(&el2_data->s2pages_lock);
 	if (vmid == s2_pages[index].vmid) {
+		/* Scrub VM memory before we reset the ownership. */
+		el2_memset((void *)__el2_va(addr), 0, PAGE_SIZE);
 		s2_pages[index].vmid = 0;
 		s2_pages[index].count = 0;
-		el2_memset((void *)__el2_va(addr), 0, PAGE_SIZE);
 		is_vm_page = true;
 	}
 	stage2_spin_unlock(&el2_data->s2pages_lock);
