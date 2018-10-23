@@ -84,9 +84,7 @@ void __hyp_text __kvm_tlb_flush_vmid_ipa(struct kvm *kvm, phys_addr_t ipa)
 	/* Switch to requested VMID */
 	kvm = kern_hyp_va(kvm);
 	__tlb_switch_to_guest()(kvm);
-#ifdef CONFIG_STAGE2_KERNEL
-	clear_shadow_stage2_range(kvm, ipa & PMD_MASK, PMD_SIZE);
-#endif
+
 	/*
 	 * We could do so much better if we had the VA as well.
 	 * Instead, we invalidate Stage-2 for this IPA, and the
