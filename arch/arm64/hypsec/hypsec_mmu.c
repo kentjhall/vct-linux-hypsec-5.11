@@ -615,7 +615,7 @@ out:
 	return;
 }
 
-static int __hyp_text map_shadow_s2pt_mem(struct kvm *kvm,
+static void __hyp_text map_shadow_s2pt_mem(struct kvm *kvm,
 					  struct el2_data *el2_data,
 					  phys_addr_t addr,
 					  struct s2_trans result,
@@ -629,7 +629,6 @@ static int __hyp_text map_shadow_s2pt_mem(struct kvm *kvm,
 	pte_t new_pte;
 	kvm_pfn_t pfn;
 	arch_spinlock_t *lock;
-	int ret = -ENOMEM;
 
 	lock = get_shadow_pt_lock(kvm);
 
@@ -660,14 +659,12 @@ static int __hyp_text map_shadow_s2pt_mem(struct kvm *kvm,
 			new_pmd = kvm_s2pmd_mkexec(new_pmd);
 		old_pmd = pmd;
 		if (pmd_present(*old_pmd)) {
-			ret = 1;
 			goto out;
 		}
 		//new_pmd.pmd = result.desc;
 		kvm_set_pmd(pmd, new_pmd);
 		__kvm_tlb_flush_vmid_ipa_shadow(addr);
 
-		ret = 1;
 		goto out;
 	}
 
@@ -679,7 +676,6 @@ static int __hyp_text map_shadow_s2pt_mem(struct kvm *kvm,
 
 	pte = pte_offset_el2(pmd, addr);
 	if (!pte_none(*pte)) {
-		ret = 1;
 		goto out;
 	}
 
@@ -688,6 +684,8 @@ static int __hyp_text map_shadow_s2pt_mem(struct kvm *kvm,
 		new_pte = pfn_pte(pfn, PAGE_S2);
 		if (result.writable)
 			new_pte = kvm_s2pte_mkwrite(new_pte);
+		if (exec_fault)
+			new_pte = kvm_s2pte_mkexec(new_pte);
 	} else {
 		new_pte = pfn_pte(pfn, PAGE_S2_DEVICE);
 		new_pte = kvm_s2pte_mkwrite(new_pte);
@@ -695,13 +693,8 @@ static int __hyp_text map_shadow_s2pt_mem(struct kvm *kvm,
 
 	kvm_set_pte(pte, new_pte);
 	__kvm_tlb_flush_vmid_ipa_shadow(addr);
-
-	ret = 1;
-
 out:
 	stage2_spin_unlock(lock);
-
-	return ret;
 }
 
 static __hyp_text bool is_within_range(u64 ss, u64 se,
@@ -777,10 +770,11 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 			return ret;
 	}
 
-	ret = map_shadow_s2pt_mem(kvm, el2_data, addr, result,
-				  kvm_vcpu_trap_is_iabt(vcpu));
+	map_shadow_s2pt_mem(kvm, el2_data, addr, result,
+			    kvm_vcpu_trap_is_iabt(vcpu));
+	ret = 1;
 
-	if (result.pfn && (ret > 0) && !is_mmio_gpa(addr)) {
+	if (result.pfn && !is_mmio_gpa(addr)) {
 		if (result.level == 2) {
 			set_pfn_owner(el2_data, result.output, PMD_SIZE, vmid);
 			__set_pfn_host(result.output, PMD_SIZE, 0, PAGE_GUEST);

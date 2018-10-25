@@ -330,6 +330,11 @@ static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu)
 	if (kvm_vcpu_trap_get_fault_type(vcpu) == FSC_FAULT) {
 		if (handle_shadow_s2pt_fault(vcpu, hpfar) > 0)
 			return false;
+		/*
+		 * Here we'd like to avoid calling handle_shadow_s2pt_fault
+		 * twice if it's GPA belongs to MMIO region. Since no mapping
+		 * should be built anyway.
+		 */
 		else if (!is_mmio_gpa((hpfar & HPFAR_MASK) << 8))
 			vcpu->arch.shadow_vcpu_ctxt->hpfar = hpfar;
 	}
