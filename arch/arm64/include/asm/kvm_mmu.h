@@ -100,11 +100,6 @@ alternative_cb_end
 #include <asm/mmu_context.h>
 #include <asm/pgtable.h>
 
-#ifdef CONFIG_STAGE2_KERNEL
-void el2_flush_dcache_to_poc(void *addr, size_t size);
-void el2_flush_icache_range(unsigned long start, unsigned long end);
-#endif
-
 void kvm_update_va_mask(struct alt_instr *alt,
 			__le32 *origptr, __le32 *updptr, int nr_inst);
 
@@ -275,11 +270,9 @@ static inline bool vcpu_has_cache_enabled(struct kvm_vcpu *vcpu)
 
 static inline void __clean_dcache_guest_page(kvm_pfn_t pfn, unsigned long size)
 {
-	void *va = page_address(pfn_to_page(pfn));
 #ifndef CONFIG_STAGE2_KERNEL
+	void *va = page_address(pfn_to_page(pfn));
 	kvm_flush_dcache_to_poc(va, size);
-#else
-	el2_flush_dcache_to_poc(va, size);
 #endif
 }
 
@@ -292,43 +285,32 @@ static inline void __invalidate_icache_guest_page(kvm_pfn_t pfn,
 	} else if (is_kernel_in_hyp_mode() || !icache_is_vpipt()) {
 		/* PIPT or VPIPT at EL2 (see comment in __kvm_tlb_flush_vmid_ipa) */
 		void *va = page_address(pfn_to_page(pfn));
-#ifndef CONFIG_STAGE2_KERNEL
 		invalidate_icache_range((unsigned long)va,
 					(unsigned long)va + size);
-#else
-		el2_flush_icache_range((unsigned long)va,
-					(unsigned long)va + size);
-#endif
 	}
 }
 
 static inline void __kvm_flush_dcache_pte(pte_t pte)
 {
-	struct page *page = pte_page(pte);
 #ifndef CONFIG_STAGE2_KERNEL
+	struct page *page = pte_page(pte);
 	kvm_flush_dcache_to_poc(page_address(page), PAGE_SIZE);
-#else
-	el2_flush_dcache_to_poc(page_address(page), PAGE_SIZE);
 #endif
 }
 
 static inline void __kvm_flush_dcache_pmd(pmd_t pmd)
 {
-	struct page *page = pmd_page(pmd);
 #ifndef CONFIG_STAGE2_KERNEL
+	struct page *page = pmd_page(pmd);
 	kvm_flush_dcache_to_poc(page_address(page), PMD_SIZE);
-#else
-	el2_flush_dcache_to_poc(page_address(page), PMD_SIZE);
 #endif
 }
 
 static inline void __kvm_flush_dcache_pud(pud_t pud)
 {
-	struct page *page = pud_page(pud);
 #ifndef CONFIG_STAGE2_KERNEL
+	struct page *page = pud_page(pud);
 	kvm_flush_dcache_to_poc(page_address(page), PUD_SIZE);
-#else
-	el2_flush_dcache_to_poc(page_address(page), PUD_SIZE);
 #endif
 }
 

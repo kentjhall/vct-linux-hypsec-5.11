@@ -1213,16 +1213,6 @@ void el2_protect_stack_page(phys_addr_t addr)
 	kvm_call_core(HVC_PROT_EL2_STACK, addr);
 }
 
-void el2_flush_dcache_to_poc(void *addr, size_t size)
-{
-	kvm_call_core(HVC_FLUSH_DCACHE_AREA, __el2_va(__pa(addr)), size);
-}
-
-void el2_flush_icache_range(unsigned long start, unsigned long end)
-{
-	kvm_call_core(HVC_FLUSH_ICACHE_RANGE, __el2_va(__pa(start)), __el2_va(__pa(end)));
-}
-
 int el2_create_hyp_mapping(unsigned long start, unsigned long end,
 			    unsigned long pfn)
 {

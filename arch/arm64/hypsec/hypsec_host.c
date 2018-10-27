@@ -300,12 +300,12 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 	case HVC_TIMER_SET_CNTVOFF:
 		__kvm_timer_set_cntvoff((u32)hr->regs[1], (u32)hr->regs[2]);
 		break;
-	case HVC_FLUSH_DCACHE_AREA:
+	/*case HVC_FLUSH_DCACHE_AREA:
 		__flush_dcache_area((void*)hr->regs[1], hr->regs[2]);
 		break;
 	case HVC_FLUSH_ICACHE_RANGE:
 		flush_icache_range(hr->regs[1], hr->regs[2]);
-		break;
+		break;*/
 	case HVC_TLB_FLUSH_VMID:
 		__kvm_tlb_flush_vmid((struct kvm*)hr->regs[1]);
 		break;
