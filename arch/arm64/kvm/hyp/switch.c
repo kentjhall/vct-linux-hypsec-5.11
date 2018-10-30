@@ -456,6 +456,7 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 #else
 		esr_el2 = read_sysreg_el2(esr);
 		vcpu->arch.fault.esr_el2 = esr_el2;
+		vcpu->arch.shadow_vcpu_ctxt->esr = esr_el2;
 #endif
 	}
 

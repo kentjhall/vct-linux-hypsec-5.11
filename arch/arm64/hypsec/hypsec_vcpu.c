@@ -117,12 +117,11 @@ static void __hyp_text prep_wfx(struct kvm_vcpu *vcpu)
 	shadow_ctxt->dirty |= DIRTY_PC_FLAG;
 }
 
-static void __hyp_text prep_sys_reg(struct kvm_vcpu *vcpu)
+static void __hyp_text prep_sys_reg(struct kvm_vcpu *vcpu, u32 esr)
 {
 	struct shadow_vcpu_context *shadow_ctxt =
 		vcpu->arch.shadow_vcpu_ctxt;
 	struct kvm_regs *gp_regs = &shadow_ctxt->gp_regs;
-	unsigned long esr = kvm_vcpu_get_hsr(vcpu);
 	int Rt = (esr >> 5) & 0x1f, ret;
 	bool is_write = !(esr & 1);
 
@@ -178,9 +177,8 @@ static void __hyp_text sync_dirty_to_shadow(struct kvm_vcpu *vcpu)
 			gp_regs->regs.regs[i] = vcpu_get_reg(vcpu, i);
 }
 
-static void __hyp_text el2_prepare_exit_ctxt(struct kvm_vcpu *vcpu)
+static void __hyp_text el2_prepare_exit_ctxt(struct kvm_vcpu *vcpu, u32 hsr)
 {
-	u32 hsr = kvm_vcpu_get_hsr(vcpu);
 	u8 hsr_ec = ESR_ELx_EC(hsr);
 
 	switch (hsr_ec) {
@@ -206,7 +204,7 @@ static void __hyp_text el2_prepare_exit_ctxt(struct kvm_vcpu *vcpu)
 			prep_hvc(vcpu);
 			break;
 		case ESR_ELx_EC_SYS64:
-			prep_sys_reg(vcpu);
+			prep_sys_reg(vcpu, hsr);
 			break;
 		case ESR_ELx_EC_IABT_LOW:
 		case ESR_ELx_EC_DABT_LOW:
@@ -292,7 +290,7 @@ void __hyp_text __save_shadow_kvm_regs(struct kvm_vcpu *vcpu, u64 ec)
 
 	switch (ec) {
 		case ARM_EXCEPTION_TRAP:
-			el2_prepare_exit_ctxt(vcpu);
+			el2_prepare_exit_ctxt(vcpu, shadow_ctxt->esr);
 			break;
 		case ARM_EXCEPTION_IRQ:
 		case ARM_EXCEPTION_EL1_SERROR:
