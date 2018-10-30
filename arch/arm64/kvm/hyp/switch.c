@@ -333,7 +333,7 @@ static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu, u64 esr)
 	vcpu->arch.fault.far_el2 = far;
 	vcpu->arch.fault.hpfar_el2 = hpfar;
 #ifdef CONFIG_STAGE2_KERNEL
-	if (kvm_vcpu_trap_get_fault_type(vcpu) == FSC_FAULT) {
+	if ((esr & ESR_ELx_FSC_TYPE) == FSC_FAULT) {
 		if (handle_shadow_s2pt_fault(vcpu, hpfar) > 0)
 			return false;
 		/*
