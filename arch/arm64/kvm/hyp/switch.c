@@ -291,13 +291,19 @@ static bool __hyp_text __translate_far_to_hpfar(u64 far, u64 *hpfar)
 	return true;
 }
 
+#ifndef CONFIG_STAGE2_KERNEL
 static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu)
+#else
+static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu, u64 esr)
+#endif
 {
 	u8 ec;
-	u64 esr;
 	u64 hpfar, far;
+#ifndef CONFIG_STAGE2_KERNEL
+	u64 esr;
 
 	esr = vcpu->arch.fault.esr_el2;
+#endif
 	ec = ESR_ELx_EC(esr);
 
 	if (ec != ESR_ELx_EC_DABT_LOW && ec != ESR_ELx_EC_IABT_LOW)
@@ -441,8 +447,17 @@ static bool __hyp_text __hyp_switch_fpsimd(struct kvm_vcpu *vcpu)
  */
 static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 {
-	if (ARM_EXCEPTION_CODE(*exit_code) != ARM_EXCEPTION_IRQ)
+#ifdef CONFIG_STAGE2_KERNEL
+	u32 esr_el2 = 0;
+#endif
+	if (ARM_EXCEPTION_CODE(*exit_code) != ARM_EXCEPTION_IRQ) {
+#ifndef CONFIG_STAGE2_KERNEL
 		vcpu->arch.fault.esr_el2 = read_sysreg_el2(esr);
+#else
+		esr_el2 = read_sysreg_el2(esr);
+		vcpu->arch.fault.esr_el2 = esr_el2;
+#endif
+	}
 
 	/*
 	 * We're using the raw exception code in order to only process
@@ -460,15 +475,23 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 	 * undefined instruction exception to the guest.
 	 */
 	if (system_supports_fpsimd() &&
+#ifndef CONFIG_STAGE2_KERNEL
 	    kvm_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_FP_ASIMD)
+#else
+	    hypsec_vcpu_trap_get_class(esr_el2) == ESR_ELx_EC_FP_ASIMD)
+#endif
 		return __hyp_switch_fpsimd(vcpu);
 
+#ifndef CONFIG_STAGE2_KERNEL
 	if (!__populate_fault_info(vcpu))
+#else
+	if (!__populate_fault_info(vcpu, esr_el2))
+#endif
 		return true;
 
 #ifdef CONFIG_STAGE2_KERNEL
 	if (*exit_code == ARM_EXCEPTION_TRAP &&
-	    kvm_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_HVC64) {
+	   hypsec_vcpu_trap_get_class(esr_el2) == ESR_ELx_EC_HVC64) {
 		if (handle_pvops(vcpu) > 0)
 			return true;
 	}
@@ -477,11 +500,15 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 	if (static_branch_unlikely(&vgic_v2_cpuif_trap)) {
 		bool valid;
 
+#ifndef CONFIG_STAGE2_KERNEL
 		valid = kvm_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_DABT_LOW &&
 			kvm_vcpu_trap_get_fault_type(vcpu) == FSC_FAULT &&
 			kvm_vcpu_dabt_isvalid(vcpu) &&
 			!kvm_vcpu_dabt_isextabt(vcpu) &&
 			!kvm_vcpu_dabt_iss1tw(vcpu);
+#else
+		valid = hypsec_is_vgic_v2_cpuif_trap(vcpu, esr_el2);
+#endif
 
 		if (valid) {
 			int ret = __vgic_v2_perform_cpuif_access(vcpu);
@@ -510,8 +537,13 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 	}
 
 	if (static_branch_unlikely(&vgic_v3_cpuif_trap) &&
+#ifndef CONFIG_STAGE2_KERNEL
 	    (kvm_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_SYS64 ||
 	     kvm_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_CP15_32)) {
+#else
+	    (hypsec_vcpu_trap_get_class(esr_el2) == ESR_ELx_EC_SYS64 ||
+	     hypsec_vcpu_trap_get_class(esr_el2) == ESR_ELx_EC_CP15_32)) {
+#endif
 		int ret = __vgic_v3_perform_cpuif_access(vcpu);
 
 		if (ret == 1 && __skip_instr(vcpu))
