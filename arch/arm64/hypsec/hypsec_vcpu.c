@@ -150,7 +150,7 @@ static void __hyp_text prep_abort(struct kvm_vcpu *vcpu)
 		vcpu->arch.shadow_vcpu_ctxt;
 	struct kvm_regs *gp_regs = &shadow_ctxt->gp_regs;
 	int Rd = kvm_vcpu_dabt_get_rd(vcpu);
-	phys_addr_t fault_ipa = kvm_vcpu_get_fault_ipa(vcpu);
+	phys_addr_t fault_ipa = (read_sysreg(hpfar_el2) & HPFAR_MASK) << 8;
 
 	/* We only have to care about regiters if it's MMIO */
 	if (!is_mmio_gpa(fault_ipa))
