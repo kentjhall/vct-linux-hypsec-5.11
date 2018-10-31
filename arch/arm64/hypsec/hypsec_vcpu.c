@@ -279,7 +279,12 @@ static void __hyp_text el2_reset_gp_regs(struct kvm_vcpu *vcpu,
 
 	el2_memset(&shadow_ctxt->gp_regs, 0, sizeof(struct kvm_regs));
 	shadow_ctxt->gp_regs.regs.pstate = kvm_regs->regs.pstate;
-	shadow_ctxt->gp_regs.regs.pc = pc;
+
+	if (search_load_info(kern_hyp_va(vcpu->kvm), el2_data, pc))
+		shadow_ctxt->gp_regs.regs.pc = pc;
+	else
+		__hyp_panic();
+
 	el2_memcpy(&shadow_ctxt->gp_regs.fp_regs, &kvm_regs->fp_regs,
 					sizeof(struct user_fpsimd_state));
 }
