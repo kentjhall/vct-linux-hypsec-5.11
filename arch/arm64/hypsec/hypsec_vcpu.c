@@ -135,6 +135,7 @@ static void __hyp_text prep_sys_reg(struct kvm_vcpu *vcpu, u32 esr)
 	if (!is_write) {
 		if (ret > 0)
 			gp_regs->regs.regs[Rt] = shadow_ctxt->sys_regs[ret];
+		/* The guest can trap on accessing id, debug, pmu registers */
 		else
 			shadow_ctxt->dirty |= (1UL << Rt);
 	} else {
