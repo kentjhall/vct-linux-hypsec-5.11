@@ -713,7 +713,7 @@ static __hyp_text bool is_hypsec_pa_range(unsigned long hpa, size_t len)
 {
 	u64 s = hpa, e = hpa + len;
 	if (is_within_range(s, e, (u64)__pa(kvm_ksym_ref(stage2_pgs_start)),
-	    (u64)__pa(kvm_ksym_ref(stage2_pgs_start))))
+	    (u64)__pa(kvm_ksym_ref(el2_data_end))))
 		return true;
 	return false;
 }
@@ -761,9 +761,6 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 		return ret;
 
 	if (stage2_is_map_memory(result.output)) {
-		if (is_hypsec_pa_range(result.output, PAGE_SIZE))
-			return ret;
-
 		/* Check if a page is owned by EL2 or already belongs to a VM */
 		target_vmid = get_hpa_owner(result.output);
 		if (target_vmid == HYPSEC_VMID || (target_vmid && target_vmid != vmid))
