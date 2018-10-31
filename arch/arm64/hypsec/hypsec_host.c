@@ -348,10 +348,8 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 					(phys_addr_t)hr->regs[2], (u64)hr->regs[3]);
 		break;
 	case HVC_SET_BOOT_INFO:
-		ret = (u64)__el2_set_boot_info(
-				(struct kvm *)hr->regs[1], (unsigned long)hr->regs[2],
-				(unsigned long)hr->regs[3], (int)hr->regs[4]);
-		hr->regs[31] = (u64)ret;
+		__el2_set_boot_info((struct kvm *)hr->regs[1], (unsigned long)hr->regs[2],
+				    (unsigned long)hr->regs[3], (int)hr->regs[4]);
 		break;
 	case HVC_REMAP_VM_IMAGE:
 		__el2_remap_vm_image((struct kvm*)hr->regs[1], (unsigned long)hr->regs[2]);

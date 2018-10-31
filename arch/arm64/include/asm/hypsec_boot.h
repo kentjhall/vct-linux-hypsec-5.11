@@ -41,7 +41,7 @@ struct el2_vm_info {
 	arch_spinlock_t boot_lock;
 };
 
-extern int el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
+extern void el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
 			unsigned long size, int image_type);
 extern int el2_remap_vm_image(struct kvm *kvm, unsigned long pfn);
 extern int el2_verify_and_load_images(struct kvm *kvm);
@@ -50,8 +50,8 @@ extern arch_spinlock_t* get_shadow_pt_lock(struct kvm *kvm);
 
 
 int __alloc_vm_info(struct kvm* kvm);
-int __el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
-				unsigned long size, int image_type);
+void __el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
+			 unsigned long size, int image_type);
 void __el2_remap_vm_image(struct kvm *kvm, unsigned long pfn);
 bool __el2_verify_and_load_images(struct kvm *kvm);
 void __el2_boot_from_inc_exe(struct kvm *kvm);

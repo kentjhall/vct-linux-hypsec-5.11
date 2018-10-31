@@ -99,7 +99,7 @@ int __hyp_text el2_get_vmid(struct el2_data *el2_data,
 	return vm_info->vmid;
 }
 
-int __hyp_text __el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
+void __hyp_text __el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
 				unsigned long size, int image_type)
 {
 	struct el2_data *el2_data;
@@ -110,13 +110,21 @@ int __hyp_text __el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	vm_info = get_vm_info(el2_data, kvm);
 
+	stage2_spin_lock(&vm_info->boot_lock);
+	/*
+	 * If we have validated the images then the host is not
+	 * allowed to add stuff to boot_info.
+	 */
+	if (vm_info->is_valid_vm)
+		goto out;
+
 	load_count = vm_info->load_info_cnt;
 	vm_info->load_info[load_count].load_addr = load_addr;
 	vm_info->load_info[load_count].size = size;
 	vm_info->load_info[load_count].el2_remap_addr = alloc_remap_addr(size);
 	vm_info->load_info[load_count].el2_mapped_pages = 0;
-
-	return 0;
+out:
+	stage2_spin_unlock(&vm_info->boot_lock);
 }
 
 void __hyp_text __el2_remap_vm_image(struct kvm *kvm, unsigned long pfn)
@@ -250,11 +258,10 @@ int el2_alloc_vm_info(struct kvm *kvm)
 	return kvm_call_core(HVC_ALLOC_VMINFO, kvm);
 }
 
-int el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
+void el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
 			unsigned long size, int type)
 {
-	return kvm_call_core(HVC_SET_BOOT_INFO, kvm, load_addr,
-						 size, type);
+	kvm_call_core(HVC_SET_BOOT_INFO, kvm, load_addr, size, type);
 }
 
 int el2_remap_vm_image(struct kvm *kvm, unsigned long pfn)
