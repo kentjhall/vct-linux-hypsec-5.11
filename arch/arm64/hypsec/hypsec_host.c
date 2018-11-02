@@ -238,6 +238,12 @@ int __hyp_text alloc_shadow_vcpu_ctxt(struct kvm_vcpu *vcpu)
 
 	vcpu = kern_hyp_va(vcpu);
 	kvm = kern_hyp_va(vcpu->kvm);
+	/*
+	 * We cannot protect shadow ctxt if vcpu isn't aligned
+	 * to PAGE_SIZE so we just bailed if it's the case.
+	 */
+	if ((u64)vcpu & (PAGE_SIZE -1))
+		return ret;
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	lock = &el2_data->shadow_vcpu_ctxt_lock;
 	stage2_spin_lock(lock);
