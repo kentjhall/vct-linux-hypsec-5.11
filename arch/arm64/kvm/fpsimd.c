@@ -25,6 +25,7 @@
  * such that on entering hyp the relevant parts of current are already
  * mapped.
  */
+#ifndef CONFIG_STAGE2_KERNEL
 int kvm_arch_vcpu_run_map_fp(struct kvm_vcpu *vcpu)
 {
 	int ret;
@@ -36,19 +37,11 @@ int kvm_arch_vcpu_run_map_fp(struct kvm_vcpu *vcpu)
 	 * Make sure the host task thread flags and fpsimd state are
 	 * visible to hyp:
 	 */
-#ifndef CONFIG_STAGE2_KERNEL
 	ret = create_hyp_mappings(ti, ti + 1, PAGE_HYP);
-#else
-	ret = el2_create_hyp_mappings(ti, ti + 1, PAGE_HYP);
-#endif
 	if (ret)
 		goto error;
 
-#ifndef CONFIG_STAGE2_KERNEL
 	ret = create_hyp_mappings(fpsimd, fpsimd + 1, PAGE_HYP);
-#else
-	ret = el2_create_hyp_mappings(fpsimd, fpsimd + 1, PAGE_HYP);
-#endif
 	if (ret)
 		goto error;
 
@@ -57,6 +50,12 @@ int kvm_arch_vcpu_run_map_fp(struct kvm_vcpu *vcpu)
 error:
 	return ret;
 }
+#else
+int kvm_arch_vcpu_run_map_fp(struct kvm_vcpu *vcpu)
+{
+	return 0;
+}
+#endif
 
 /*
  * Prepare vcpu for saving the host's FPSIMD state and loading the guest's.

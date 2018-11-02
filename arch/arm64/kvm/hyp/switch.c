@@ -39,9 +39,11 @@
 /* Check whether the FP regs were dirtied while in the host-side run loop: */
 static bool __hyp_text update_fp_enabled(struct kvm_vcpu *vcpu)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	if (vcpu->arch.host_thread_info->flags & _TIF_FOREIGN_FPSTATE)
 		vcpu->arch.flags &= ~(KVM_ARM64_FP_ENABLED |
 				      KVM_ARM64_FP_HOST);
+#endif
 
 	return !!(vcpu->arch.flags & KVM_ARM64_FP_ENABLED);
 }
@@ -392,7 +394,12 @@ static bool __hyp_text __skip_instr(struct kvm_vcpu *vcpu)
 
 static bool __hyp_text __hyp_switch_fpsimd(struct kvm_vcpu *vcpu)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	struct user_fpsimd_state *host_fpsimd = vcpu->arch.host_fpsimd_state;
+#else
+	struct kvm_cpu_context *host_ctxt = kern_hyp_va(vcpu->arch.host_cpu_context);
+	struct user_fpsimd_state *host_fpsimd = &host_ctxt->gp_regs.fp_regs;
+#endif
 
 	if (has_vhe())
 		write_sysreg(read_sysreg(cpacr_el1) | CPACR_EL1_FPEN,
