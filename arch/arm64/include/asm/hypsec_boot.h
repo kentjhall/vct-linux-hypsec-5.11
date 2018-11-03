@@ -41,6 +41,7 @@ struct el2_vm_info {
 	arch_spinlock_t shadow_pt_lock;
 	arch_spinlock_t boot_lock;
 	struct kvm *kvm;
+	struct kvm_vcpu *vcpus[32];
 };
 
 extern void el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,

@@ -227,26 +227,38 @@ out:
 	return ret;
 }
 
-int __hyp_text alloc_shadow_vcpu_ctxt(struct kvm_vcpu *vcpu)
+static int __hyp_text __hypsec_register_vcpu(u32 vmid, struct kvm_vcpu *vcpu)
 {
 	struct el2_data *el2_data;
 	struct shadow_vcpu_context *new_ctxt = NULL;
-	int index, ret = 0, vmid;
-	unsigned long addr = __pa(vcpu);
-	arch_spinlock_t *lock;
+	struct el2_vm_info *vm_info;
 	struct kvm *kvm;
+	int index, ret = 0;
+	/* TODO: this is potentially buggy? */
+	unsigned long addr = __pa(vcpu);
 
 	vcpu = kern_hyp_va(vcpu);
 	kvm = kern_hyp_va(vcpu->kvm);
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	/*
 	 * We cannot protect shadow ctxt if vcpu isn't aligned
 	 * to PAGE_SIZE so we just bailed if it's the case.
 	 */
 	if ((u64)vcpu & (PAGE_SIZE -1))
 		return ret;
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	lock = &el2_data->shadow_vcpu_ctxt_lock;
-	stage2_spin_lock(lock);
+
+	if (vmid >= EL2_VM_INFO_SIZE)
+		return ret;
+
+	vm_info = &el2_data->vm_info[vmid];
+	if (vm_info->kvm != kvm)
+		return ret;
+	else {
+		vcpu->arch.vmid = vmid;
+		vm_info->vcpus[vcpu->vcpu_id] = vcpu;
+	}
+
+	stage2_spin_lock(&el2_data->shadow_vcpu_ctxt_lock);
 
 	index = el2_data->used_shadow_vcpu_ctxt++;
 	if (index > NUM_SHADOW_VCPU_CTXT)
@@ -257,18 +269,17 @@ int __hyp_text alloc_shadow_vcpu_ctxt(struct kvm_vcpu *vcpu)
 	new_ctxt = &el2_data->shadow_vcpu_ctxt[index];
 
 err_unlock:
-	stage2_spin_unlock(lock);
+	stage2_spin_unlock(&el2_data->shadow_vcpu_ctxt_lock);
 
 	/*
 	 *Make the shadow structures in VCPU RO, We now move vcpu_arch
 	 * as we moved it to the start of the vcpu structure.
 	 */
 	__set_pfn_host(addr, PAGE_SIZE, addr >> PAGE_SHIFT, PAGE_S2);
-	vmid = el2_get_vmid(el2_data, kvm);
 	/*
 	 * Make the page that contains shadow structure a guest page,
 	 * so it can be cleaned up later on when VM terminates.
-	,*/
+	 */
 	set_pfn_owner(el2_data, addr, PAGE_SIZE, vmid);
 	vcpu->arch.shadow_vcpu_ctxt = new_ctxt;
 
@@ -327,8 +338,9 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		ret = (int)__hypsec_register_vm((struct kvm*)hr->regs[1]);
 		hr->regs[31] = (u64)ret;
 		break;
-	case HVC_ALLOC_SHADOW_VCPU_CTXT:
-		ret = (u64)alloc_shadow_vcpu_ctxt((struct kvm_vcpu*)hr->regs[1]);
+	case HVC_REGISTER_VCPU:
+		ret = (u64)__hypsec_register_vcpu((u32)hr->regs[1],
+						  (struct kvm_vcpu*)hr->regs[2]);
 		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_UPDATE_EXPT_FLAG:
@@ -407,7 +419,7 @@ int hypsec_register_vm(struct kvm *kvm)
 	return kvm_call_core(HVC_REGISTER_VM, kvm);
 }
 
-int el2_alloc_shadow_ctxt(struct kvm_vcpu *vcpu)
+int hypsec_register_vcpu(u32 vmid, struct kvm_vcpu *vcpu)
 {
-	return kvm_call_core((void *)HVC_ALLOC_SHADOW_VCPU_CTXT, vcpu);
+	return kvm_call_core((void *)HVC_REGISTER_VCPU, vmid, vcpu);
 }

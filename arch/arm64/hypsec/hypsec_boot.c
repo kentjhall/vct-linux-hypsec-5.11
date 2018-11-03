@@ -257,6 +257,7 @@ int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 	el2_data->vm_info[vmid].kvm = kvm;
 
 	kvm->arch.vm_info = &el2_data->vm_info[vmid];
+	kvm->arch.vmid = vmid;
 	kvm->arch.shadow_vttbr = (u64)alloc_shadow_s2_pgd(S2_PGD_PAGES_NUM);
 
 	return 0;

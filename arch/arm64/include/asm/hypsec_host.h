@@ -103,10 +103,10 @@ extern int el2_alloc_vm_info(struct kvm *kvm);
 extern int el2_get_vmid(struct el2_data *el2_data, struct kvm *kvm);
 
 int handle_pvops(struct kvm_vcpu *vcpu);
-int el2_alloc_shadow_ctxt(struct kvm_vcpu *vcpu);
 void save_encrypted_vcpu(struct kvm_vcpu *vcpu);
 
 extern void set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,
 				size_t len, u32 vmid);
 extern int hypsec_register_vm(struct kvm *kvm);
+int hypsec_register_vcpu(u32 vmid, struct kvm_vcpu *vcpu);
 #endif /* __ARM_STAGE2_H__ */

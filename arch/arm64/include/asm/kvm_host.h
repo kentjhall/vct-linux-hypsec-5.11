@@ -238,6 +238,7 @@ struct shadow_vcpu_context {
 struct kvm_vcpu_arch {
 #ifdef CONFIG_STAGE2_KERNEL
 	struct shadow_vcpu_context *shadow_vcpu_ctxt;
+	u32 vmid;
 	char	filler[PAGE_SIZE];
 	u64 tpidr_el2;
 #endif
