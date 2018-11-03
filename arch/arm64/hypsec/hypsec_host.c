@@ -290,6 +290,7 @@ void __hyp_text hvc_enable_s2_trans(void)
 	protect_el2_mem();
 }
 
+extern int __hypsec_register_vm(struct kvm *kvm);
 void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 {
 	u64 ret = 0, callno = hr->regs[0];
@@ -322,15 +323,12 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 	case HVC_TLB_FLUSH_LOCAL_VMID:
 		__kvm_tlb_flush_local_vmid((struct kvm_vcpu*)hr->regs[1]);
 		break;
-	case HVC_ALLOC_SHADOW_VTTBR:
-		__alloc_shadow_vttbr((struct kvm*)hr->regs[1]);
+	case HVC_REGISTER_VM:
+		ret = (int)__hypsec_register_vm((struct kvm*)hr->regs[1]);
+		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_ALLOC_SHADOW_VCPU_CTXT:
 		ret = (u64)alloc_shadow_vcpu_ctxt((struct kvm_vcpu*)hr->regs[1]);
-		hr->regs[31] = (u64)ret;
-		break;
-	case HVC_ALLOC_VMINFO:
-		ret = (u64)__alloc_vm_info((struct kvm*)hr->regs[1]);
 		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_UPDATE_EXPT_FLAG:
@@ -402,6 +400,11 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 	default:
 		__hyp_panic();
 	};
+}
+
+int hypsec_register_vm(struct kvm *kvm)
+{
+	return kvm_call_core(HVC_REGISTER_VM, kvm);
 }
 
 int el2_alloc_shadow_ctxt(struct kvm_vcpu *vcpu)

@@ -16,6 +16,8 @@
 					(EL2_PAGE_OFFSET - 1)) | EL2_PAGE_OFFSET)
 #define	HYPSEC_VMID			0xffffffff
 
+#define S2_PGD_PAGES_NUM	(PTRS_PER_S2_PGD * sizeof(pgd_t)) / PAGE_SIZE
+
 struct el2_data;
 
 struct vring_data {
@@ -88,7 +90,6 @@ unsigned long get_s2_page_index(struct el2_data *el2_data, phys_addr_t addr);
 int handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar);
 
 extern void clear_shadow_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size);
-extern void alloc_shadow_vttbr(struct kvm *kvm);
 extern void __kvm_tlb_flush_vmid_el2(void);
 
 extern int map_el2_mem(unsigned long start, unsigned long end,

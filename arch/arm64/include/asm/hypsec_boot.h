@@ -4,7 +4,8 @@
 #define VM_LOADER_START		0x40000000
 #define KERNEL64_LOAD_ADDR	0x00080000
 
-#define EL2_VM_INFO_SIZE	40
+#define EL2_MAX_VMID		256
+#define EL2_VM_INFO_SIZE	EL2_MAX_VMID
 
 /* Below is copied from QEMU  */
 typedef enum {
@@ -39,6 +40,7 @@ struct el2_vm_info {
 	struct el2_load_info load_info[5];
 	arch_spinlock_t shadow_pt_lock;
 	arch_spinlock_t boot_lock;
+	struct kvm *kvm;
 };
 
 extern void el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
@@ -48,8 +50,6 @@ extern int el2_verify_and_load_images(struct kvm *kvm);
 extern bool is_valid_vm(struct kvm_vcpu *vcpu);
 extern arch_spinlock_t* get_shadow_pt_lock(struct kvm *kvm);
 
-
-int __alloc_vm_info(struct kvm* kvm);
 void __el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
 			 unsigned long size, int image_type);
 void __el2_remap_vm_image(struct kvm *kvm, unsigned long pfn);

@@ -168,8 +168,9 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 	/* Mark the initial VMID generation invalid */
 	kvm->arch.vmid_gen = 0;
 #ifdef CONFIG_STAGE2_KERNEL
-	alloc_shadow_vttbr(kvm);
-	update_vttbr(kvm);
+	ret = hypsec_register_vm(kvm);
+	if (ret)
+		goto out_free_stage2_pgd;
 #endif
 
 	/* The maximum number of VCPUs is limited by the host's GIC model */
@@ -578,9 +579,6 @@ static void update_vttbr(struct kvm *kvm)
 	kvm->arch.vmid = kvm_next_vmid;
 	kvm_next_vmid++;
 	kvm_next_vmid &= (1 << kvm_vmid_bits) - 1;
-#else
-	/* Ask the corevisor to allocate vmid for us. */
-	kvm->arch.vmid = el2_alloc_vm_info(kvm);
 #endif
 
 	/* update vttbr to be used with the new vmid */

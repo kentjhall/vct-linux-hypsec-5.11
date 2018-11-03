@@ -23,28 +23,11 @@ static int __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
 	stage2_spin_lock(&el2_data->vmid_lock);
 	vmid = el2_data->next_vmid++;
 	stage2_spin_unlock(&el2_data->vmid_lock);
-	return vmid;
-}
 
-int __hyp_text __alloc_vm_info(struct kvm* kvm)
-{
-	struct el2_data *el2_data;
-	int count;
-
-	kvm = kern_hyp_va(kvm);
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	count = el2_data->used_vm_info++;
-
-	el2_data->used_vm_info %= EL2_VM_INFO_SIZE;
-	el2_data->vm_info[count].is_valid_vm = false;
-	el2_data->vm_info[count].inc_exe = false;
-	el2_data->vm_info[count].vmid = hypsec_gen_vmid(el2_data);
-	el2_data->vm_info[count].shadow_pt_lock =
-		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->vm_info[count].boot_lock =
-		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	kvm->arch.vm_info = &el2_data->vm_info[count];
-	return el2_data->vm_info[count].vmid;
+	if (vmid < EL2_MAX_VMID)
+		return vmid;
+	else
+		return -1;
 }
 
 static unsigned long __hyp_text alloc_remap_addr(unsigned long size)
@@ -253,9 +236,30 @@ void __hyp_text __el2_boot_from_inc_exe(struct kvm *kvm)
 	vm_info->inc_exe = true;
 }
 
-int el2_alloc_vm_info(struct kvm *kvm)
+int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 {
-	return kvm_call_core(HVC_ALLOC_VMINFO, kvm);
+	int vmid;
+	struct el2_data *el2_data;
+
+	kvm = kern_hyp_va(kvm);
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	vmid = hypsec_gen_vmid(el2_data);
+	if (vmid < 0)
+		return -EINVAL;
+
+	el2_data->vm_info[vmid].is_valid_vm = false;
+	el2_data->vm_info[vmid].inc_exe = false;
+	el2_data->vm_info[vmid].vmid = vmid;
+	el2_data->vm_info[vmid].shadow_pt_lock =
+		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->vm_info[vmid].boot_lock =
+		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->vm_info[vmid].kvm = kvm;
+
+	kvm->arch.vm_info = &el2_data->vm_info[vmid];
+	kvm->arch.shadow_vttbr = (u64)alloc_shadow_s2_pgd(S2_PGD_PAGES_NUM);
+
+	return 0;
 }
 
 void el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,

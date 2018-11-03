@@ -1168,7 +1168,6 @@ void __hyp_text __el2_register_smmu(void)
 	__set_pfn_host(start, end - start, 0, PAGE_NONE);
 }
 
-#define S2_PGD_PAGES_NUM	(PTRS_PER_S2_PGD * sizeof(pgd_t)) / PAGE_SIZE
 void __hyp_text __alloc_shadow_vttbr(struct kvm *kvm)
 {
 	struct kvm *kvm_el2 = kern_hyp_va(kvm);
@@ -1214,11 +1213,6 @@ int el2_create_hyp_mapping(unsigned long start, unsigned long end,
 			    unsigned long pfn)
 {
 	return kvm_call_core(HVC_MAP_TO_EL2, start, end, pfn);
-}
-
-void alloc_shadow_vttbr(struct kvm *kvm)
-{
-	kvm_call_core(HVC_ALLOC_SHADOW_VTTBR, kvm);
 }
 
 void clear_vm_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size)
