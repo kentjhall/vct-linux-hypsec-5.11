@@ -370,13 +370,11 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 					(phys_addr_t)hr->regs[2], (u64)hr->regs[3]);
 		break;
 	case HVC_SET_BOOT_INFO:
-		kvm = hypsec_vmid_to_kvm((u32)hr->regs[1]);
-		__el2_set_boot_info(kvm, (unsigned long)hr->regs[2],
+		__el2_set_boot_info((u32)hr->regs[1], (unsigned long)hr->regs[2],
 				    (unsigned long)hr->regs[3], (int)hr->regs[4]);
 		break;
 	case HVC_REMAP_VM_IMAGE:
-		kvm = hypsec_vmid_to_kvm((u32)hr->regs[1]);
-		__el2_remap_vm_image(kvm, (unsigned long)hr->regs[2]);
+		__el2_remap_vm_image((u32)hr->regs[1], (unsigned long)hr->regs[2]);
 		break;
 	case HVC_VERIFY_VM_IMAGES:
 		kvm = hypsec_vmid_to_kvm((u32)hr->regs[1]);
@@ -403,8 +401,7 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_BOOT_FROM_SAVED_VM:
-		kvm = hypsec_vmid_to_kvm((u32)hr->regs[1]);
-		__el2_boot_from_inc_exe(kvm);
+		__el2_boot_from_inc_exe((u32)hr->regs[1]);
 		break;
 	case HVC_ENCRYPT_BUF:
 		__el2_encrypt_buf((void*)hr->regs[1], (uint32_t)hr->regs[2]);

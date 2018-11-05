@@ -66,6 +66,17 @@ out_panic:
 	__hyp_panic();
 }
 
+static inline struct el2_vm_info* vmid_to_vm_info(u32 vmid)
+{
+	struct el2_data *el2_data;
+
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	if (vmid < EL2_MAX_VMID)
+		return &el2_data->vm_info[vmid];
+	else
+		__hyp_panic();
+}
+
 arch_spinlock_t* __hyp_text get_shadow_pt_lock(struct kvm *kvm)
 {
 	struct el2_vm_info *vm_info;
@@ -82,17 +93,13 @@ int __hyp_text el2_get_vmid(struct el2_data *el2_data,
 	return vm_info->vmid;
 }
 
-void __hyp_text __el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
+void __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 				unsigned long size, int image_type)
 {
-	struct el2_data *el2_data;
 	struct el2_vm_info *vm_info;
 	int load_count;
 
-	kvm = kern_hyp_va(kvm);
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	vm_info = get_vm_info(el2_data, kvm);
-
+	vm_info = vmid_to_vm_info(vmid);
 	stage2_spin_lock(&vm_info->boot_lock);
 	/*
 	 * If we have validated the images then the host is not
@@ -110,18 +117,16 @@ out:
 	stage2_spin_unlock(&vm_info->boot_lock);
 }
 
-void __hyp_text __el2_remap_vm_image(struct kvm *kvm, unsigned long pfn)
+void __hyp_text __el2_remap_vm_image(u32 vmid, unsigned long pfn)
 {
-	struct el2_data *el2_data;
 	struct el2_vm_info *vm_info;
 	struct el2_load_info *load_info;
+	struct el2_data *el2_data;
 	int count;
 	unsigned long target;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	kvm = kern_hyp_va(kvm);
-
-	vm_info = get_vm_info(el2_data, kvm);
+	vm_info = vmid_to_vm_info(vmid);
 	count = vm_info->load_info_cnt;
 	load_info = &vm_info->load_info[count];
 
@@ -225,14 +230,9 @@ bool __hyp_text el2_use_inc_exe(struct kvm *kvm,
 	return vm_info->inc_exe;
 }
 
-void __hyp_text __el2_boot_from_inc_exe(struct kvm *kvm)
+void __hyp_text __el2_boot_from_inc_exe(u32 vmid)
 {
-	struct el2_data *el2_data;
-	struct el2_vm_info *vm_info;
-
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	kvm = kern_hyp_va(kvm);
-	vm_info = get_vm_info(el2_data, kvm);
+	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
 	vm_info->inc_exe = true;
 }
 
@@ -261,17 +261,6 @@ int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 	kvm->arch.shadow_vttbr = (u64)alloc_shadow_s2_pgd(S2_PGD_PAGES_NUM);
 
 	return 0;
-}
-
-static inline struct el2_vm_info* vmid_to_vm_info(u32 vmid)
-{
-	struct el2_data *el2_data;
-
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	if (vmid < EL2_MAX_VMID)
-		return &el2_data->vm_info[vmid];
-	else
-		__hyp_panic();
 }
 
 struct kvm* __hyp_text hypsec_vmid_to_kvm(u32 vmid)
