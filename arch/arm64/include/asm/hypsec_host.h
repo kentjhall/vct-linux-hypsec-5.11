@@ -94,7 +94,7 @@ extern phys_addr_t el2_arm_lpae_iova_to_phys(unsigned long iova, u64 ttbr);
 void encrypt_buf(struct el2_data *el2_data, void *buf, uint32_t len);
 void decrypt_buf(struct el2_data *el2_data, void *buf, uint32_t len);
 
-extern void el2_boot_from_inc_exe(struct kvm *kvm);
+extern void el2_boot_from_inc_exe(u32 vmid);
 extern bool el2_use_inc_exe(struct kvm *kvm, struct el2_data *el2_data);
 extern unsigned long search_load_info(struct kvm *kvm, struct el2_data *el2_data,
 				      unsigned long addr);

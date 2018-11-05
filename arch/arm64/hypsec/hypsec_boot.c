@@ -263,23 +263,47 @@ int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 	return 0;
 }
 
-void el2_set_boot_info(struct kvm *kvm, unsigned long load_addr,
+static inline struct el2_vm_info* vmid_to_vm_info(u32 vmid)
+{
+	struct el2_data *el2_data;
+
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	if (vmid < EL2_MAX_VMID)
+		return &el2_data->vm_info[vmid];
+	else
+		__hyp_panic();
+}
+
+struct kvm* __hyp_text hypsec_vmid_to_kvm(u32 vmid)
+{
+	struct kvm *kvm = NULL;
+	struct el2_vm_info *vm_info;
+
+	vm_info = vmid_to_vm_info(vmid);
+	kvm = vm_info->kvm;
+	if (!kvm)
+		__hyp_panic();
+	else
+		return kvm;
+}
+
+void el2_set_boot_info(u32 vmid, unsigned long load_addr,
 			unsigned long size, int type)
 {
-	kvm_call_core(HVC_SET_BOOT_INFO, kvm, load_addr, size, type);
+	kvm_call_core(HVC_SET_BOOT_INFO, vmid, load_addr, size, type);
 }
 
-int el2_remap_vm_image(struct kvm *kvm, unsigned long pfn)
+int el2_remap_vm_image(u32 vmid, unsigned long pfn)
 {
-	return kvm_call_core(HVC_REMAP_VM_IMAGE, kvm, pfn);
+	return kvm_call_core(HVC_REMAP_VM_IMAGE, vmid, pfn);
 }
 
-int el2_verify_and_load_images(struct kvm *kvm)
+int el2_verify_and_load_images(u32 vmid)
 {
-	return kvm_call_core(HVC_VERIFY_VM_IMAGES, kvm);
+	return kvm_call_core(HVC_VERIFY_VM_IMAGES, vmid);
 }
 
-void el2_boot_from_inc_exe(struct kvm *kvm)
+void el2_boot_from_inc_exe(u32 vmid)
 {
-	kvm_call_core(HVC_BOOT_FROM_SAVED_VM, kvm);
+	kvm_call_core(HVC_BOOT_FROM_SAVED_VM, vmid);
 }

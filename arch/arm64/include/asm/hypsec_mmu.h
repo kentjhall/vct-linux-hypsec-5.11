@@ -63,7 +63,7 @@ struct hyp_va_region {
 extern u64 get_shadow_vttbr(struct kvm *kvm);
 void __set_pfn_host(phys_addr_t start, u64 size, kvm_pfn_t pfn, pgprot_t prot);
 
-void clear_vm_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size);
+void clear_vm_stage2_range(u32 vmid, phys_addr_t start, u64 size);
 int el2_create_hyp_mapping(unsigned long start, unsigned long end,
 			    unsigned long pfn);
 

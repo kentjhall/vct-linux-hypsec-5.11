@@ -1215,9 +1215,9 @@ int el2_create_hyp_mapping(unsigned long start, unsigned long end,
 	return kvm_call_core(HVC_MAP_TO_EL2, start, end, pfn);
 }
 
-void clear_vm_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size)
+void clear_vm_stage2_range(u32 vmid, phys_addr_t start, u64 size)
 {
-	kvm_call_core(HVC_CLEAR_VM_S2_RANGE, kvm, start, size);
+	kvm_call_core(HVC_CLEAR_VM_S2_RANGE, vmid, start, size);
 }
 
 void el2_register_smmu(void)

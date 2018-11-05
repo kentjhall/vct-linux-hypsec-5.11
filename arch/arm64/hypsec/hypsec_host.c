@@ -305,6 +305,7 @@ extern int __hypsec_register_vm(struct kvm *kvm);
 void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 {
 	u64 ret = 0, callno = hr->regs[0];
+	struct kvm *kvm;
 
 	/* FIXME: we write return val to reg[31] as this will be restored to x0 */
 	switch (callno) {
@@ -325,11 +326,12 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		flush_icache_range(hr->regs[1], hr->regs[2]);
 		break;*/
 	case HVC_TLB_FLUSH_VMID:
-		__kvm_tlb_flush_vmid((struct kvm*)hr->regs[1]);
+		kvm = hypsec_vmid_to_kvm((u32)hr->regs[1]);
+		__kvm_tlb_flush_vmid(kvm);
 		break;
 	case HVC_TLB_FLUSH_VMID_IPA:
-		__kvm_tlb_flush_vmid_ipa((struct kvm*)hr->regs[1],
-					 (phys_addr_t)hr->regs[2]);
+		kvm = hypsec_vmid_to_kvm((u32)hr->regs[1]);
+		__kvm_tlb_flush_vmid_ipa(kvm, (phys_addr_t)hr->regs[2]);
 		break;
 	case HVC_TLB_FLUSH_LOCAL_VMID:
 		__kvm_tlb_flush_local_vmid((struct kvm_vcpu*)hr->regs[1]);
@@ -360,18 +362,22 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_CLEAR_VM_S2_RANGE:
-		__clear_vm_stage2_range((struct kvm*)hr->regs[1],
+		kvm = hypsec_vmid_to_kvm((u32)hr->regs[1]);
+		__clear_vm_stage2_range(kvm,
 					(phys_addr_t)hr->regs[2], (u64)hr->regs[3]);
 		break;
 	case HVC_SET_BOOT_INFO:
-		__el2_set_boot_info((struct kvm *)hr->regs[1], (unsigned long)hr->regs[2],
+		kvm = hypsec_vmid_to_kvm((u32)hr->regs[1]);
+		__el2_set_boot_info(kvm, (unsigned long)hr->regs[2],
 				    (unsigned long)hr->regs[3], (int)hr->regs[4]);
 		break;
 	case HVC_REMAP_VM_IMAGE:
-		__el2_remap_vm_image((struct kvm*)hr->regs[1], (unsigned long)hr->regs[2]);
+		kvm = hypsec_vmid_to_kvm((u32)hr->regs[1]);
+		__el2_remap_vm_image(kvm, (unsigned long)hr->regs[2]);
 		break;
 	case HVC_VERIFY_VM_IMAGES:
-		ret = (u64)__el2_verify_and_load_images((struct kvm*)hr->regs[1]);
+		kvm = hypsec_vmid_to_kvm((u32)hr->regs[1]);
+		ret = (u64)__el2_verify_and_load_images(kvm);
 		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_REGISTER_SMMU:
@@ -394,7 +400,8 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_BOOT_FROM_SAVED_VM:
-		__el2_boot_from_inc_exe((struct kvm*)hr->regs[1]);
+		kvm = hypsec_vmid_to_kvm((u32)hr->regs[1]);
+		__el2_boot_from_inc_exe(kvm);
 		break;
 	case HVC_ENCRYPT_BUF:
 		__el2_encrypt_buf((void*)hr->regs[1], (uint32_t)hr->regs[2]);

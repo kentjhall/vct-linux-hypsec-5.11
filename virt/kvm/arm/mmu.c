@@ -70,7 +70,7 @@ void kvm_flush_remote_tlbs(struct kvm *kvm)
 #ifndef CONFIG_STAGE2_KERNEL
 	kvm_call_hyp(__kvm_tlb_flush_vmid, kvm);
 #else
-	kvm_call_core(HVC_TLB_FLUSH_VMID, kvm);
+	kvm_call_core(HVC_TLB_FLUSH_VMID, kvm->arch.vmid);
 #endif
 }
 
@@ -79,7 +79,7 @@ static void kvm_tlb_flush_vmid_ipa(struct kvm *kvm, phys_addr_t ipa)
 #ifndef CONFIG_STAGE2_KERNEL
 	kvm_call_hyp(__kvm_tlb_flush_vmid_ipa, kvm, ipa);
 #else
-	kvm_call_core(HVC_TLB_FLUSH_VMID_IPA, kvm, ipa);
+	kvm_call_core(HVC_TLB_FLUSH_VMID_IPA, kvm->arch.vmid, ipa);
 #endif
 }
 
@@ -331,7 +331,7 @@ static void unmap_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size)
 	} while (pgd++, addr = next, addr != end);
 
 #ifdef CONFIG_STAGE2_KERNEL
-	clear_vm_stage2_range(kvm, start, size);
+	clear_vm_stage2_range(kvm->arch.vmid, start, size);
 #endif
 }
 
@@ -1443,7 +1443,7 @@ static void stage2_wp_range(struct kvm *kvm, phys_addr_t addr, phys_addr_t end)
 	} while (pgd++, addr = next, addr != end);
 
 #ifdef CONFIG_STAGE2_KERNEL
-	clear_vm_stage2_range(kvm, start, size);
+	clear_vm_stage2_range(kvm->arch.vmid, start, size);
 #endif
 }
 
