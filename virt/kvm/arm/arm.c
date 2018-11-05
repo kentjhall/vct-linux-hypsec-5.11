@@ -406,7 +406,8 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 #ifndef CONFIG_STAGE2_KERNEL
 		kvm_call_hyp(__kvm_tlb_flush_local_vmid, vcpu);
 #else
-		kvm_call_core(HVC_TLB_FLUSH_LOCAL_VMID, vcpu);
+		kvm_call_core(HVC_TLB_FLUSH_LOCAL_VMID,
+				vcpu->kvm->arch.vmid, vcpu->vcpu_id);
 #endif
 		*last_ran = vcpu->vcpu_id;
 	}
@@ -813,7 +814,8 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *run)
 		} else {
 #ifdef CONFIG_STAGE2_KERNEL
 			vcpu->arch.tpidr_el2 = get_tpidr_el2();
-			ret = kvm_call_core(HVC_VCPU_RUN, vcpu);
+			ret = kvm_call_core(HVC_VCPU_RUN,
+					vcpu->arch.vmid, vcpu->vcpu_id);
 #else
 			ret = kvm_call_hyp(__kvm_vcpu_run_nvhe, vcpu);
 #endif

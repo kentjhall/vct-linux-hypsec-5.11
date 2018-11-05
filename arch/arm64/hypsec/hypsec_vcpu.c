@@ -392,5 +392,6 @@ void __hyp_text __save_encrypted_vcpu(struct kvm_vcpu *vcpu)
 
 void save_encrypted_vcpu(struct kvm_vcpu *vcpu)
 {
-	kvm_call_core((void *)HVC_SAVE_CRYPT_VCPU, vcpu);
+	kvm_call_core((void *)HVC_SAVE_CRYPT_VCPU,
+			vcpu->kvm->arch.vmid, vcpu->vcpu_id);
 }

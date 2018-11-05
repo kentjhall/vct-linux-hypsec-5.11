@@ -60,4 +60,5 @@ bool __el2_verify_and_load_images(struct kvm *kvm);
 void __el2_boot_from_inc_exe(struct kvm *kvm);
 
 struct kvm* hypsec_vmid_to_kvm(u32 vmid);
+struct kvm_vcpu* hypsec_vcpu_id_to_vcpu(u32 vmid, int vcpu_id);
 #endif /* __ARM_STAGE2_BOOT__ */

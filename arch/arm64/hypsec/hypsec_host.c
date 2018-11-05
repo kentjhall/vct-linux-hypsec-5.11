@@ -306,6 +306,7 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 {
 	u64 ret = 0, callno = hr->regs[0];
 	struct kvm *kvm;
+	struct kvm_vcpu *vcpu;
 
 	/* FIXME: we write return val to reg[31] as this will be restored to x0 */
 	switch (callno) {
@@ -313,7 +314,8 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		hvc_enable_s2_trans();
 		break;
 	case HVC_VCPU_RUN:
-		ret = (u64)__kvm_vcpu_run_nvhe((struct kvm_vcpu*)hr->regs[1]);
+		vcpu = hypsec_vcpu_id_to_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
+		ret = (u64)__kvm_vcpu_run_nvhe(vcpu);
 		hr->regs[31] = ret;
 		break;
 	case HVC_TIMER_SET_CNTVOFF:
@@ -334,7 +336,8 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		__kvm_tlb_flush_vmid_ipa(kvm, (phys_addr_t)hr->regs[2]);
 		break;
 	case HVC_TLB_FLUSH_LOCAL_VMID:
-		__kvm_tlb_flush_local_vmid((struct kvm_vcpu*)hr->regs[1]);
+		vcpu = hypsec_vcpu_id_to_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
+		__kvm_tlb_flush_local_vmid(vcpu);
 		break;
 	case HVC_REGISTER_VM:
 		ret = (int)__hypsec_register_vm((struct kvm*)hr->regs[1]);
@@ -346,8 +349,8 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_UPDATE_EXPT_FLAG:
-		__update_exception_shadow_flag((struct kvm_vcpu*)hr->regs[1],
-						(int)hr->regs[2]);
+		vcpu = hypsec_vcpu_id_to_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
+		__update_exception_shadow_flag(vcpu, (int)hr->regs[3]);
 		break;
 	case HVC_FLUSH_VM_CTXT:
 		__kvm_flush_vm_context();
@@ -410,7 +413,8 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		__el2_decrypt_buf((void*)hr->regs[1], (uint32_t)hr->regs[2]);
 		break;
 	case HVC_SAVE_CRYPT_VCPU:
-		__save_encrypted_vcpu((struct kvm_vcpu*)hr->regs[1]);
+		vcpu = hypsec_vcpu_id_to_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
+		__save_encrypted_vcpu(vcpu);
 		break;
 	case HVC_GET_MDCR_EL2:
 		ret = (u64)__kvm_get_mdcr_el2();

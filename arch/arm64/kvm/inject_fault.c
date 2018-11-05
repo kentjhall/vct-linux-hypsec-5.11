@@ -142,7 +142,8 @@ void __hyp_text __update_exception_shadow_flag(struct kvm_vcpu *vcpu, int exp)
 
 static unsigned long el2_update_exception_gp_regs(struct kvm_vcpu *vcpu, int exp)
 {
-	return kvm_call_core((void *)HVC_UPDATE_EXPT_FLAG, vcpu, exp);
+	return kvm_call_core((void *)HVC_UPDATE_EXPT_FLAG,
+				vcpu->kvm->arch.vmid, vcpu->vcpu_id, exp);
 }
 #endif
 

@@ -287,6 +287,22 @@ struct kvm* __hyp_text hypsec_vmid_to_kvm(u32 vmid)
 		return kvm;
 }
 
+struct kvm_vcpu* __hyp_text hypsec_vcpu_id_to_vcpu(u32 vmid, int vcpu_id)
+{
+	struct kvm_vcpu *vcpu = NULL;
+	struct el2_vm_info *vm_info;
+
+	if (vcpu_id >= HYPSEC_MAX_VCPUS)
+		__hyp_panic();
+
+	vm_info = vmid_to_vm_info(vmid);
+	vcpu = vm_info->vcpus[vcpu_id];
+	if (!vcpu)
+		__hyp_panic();
+	else
+		return vcpu;
+}
+
 void el2_set_boot_info(u32 vmid, unsigned long load_addr,
 			unsigned long size, int type)
 {
