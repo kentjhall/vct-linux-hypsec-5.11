@@ -1168,10 +1168,9 @@ void __hyp_text __el2_register_smmu(void)
 
 void __hyp_text __alloc_shadow_vttbr(struct kvm *kvm)
 {
-	struct kvm *kvm_el2 = kern_hyp_va(kvm);
-
+	kvm = kern_hyp_va(kvm);
 	/* Allocates a 8KB page for stage 2 pgd */
-	kvm_el2->arch.shadow_vttbr = (u64)alloc_shadow_s2_pgd(S2_PGD_PAGES_NUM);
+	kvm->arch.shadow_vttbr = (u64)alloc_shadow_s2_pgd(S2_PGD_PAGES_NUM);
 }
 
 void __hyp_text __el2_encrypt_buf(void *buf, uint32_t len)
