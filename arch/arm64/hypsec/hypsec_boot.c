@@ -221,12 +221,9 @@ unsigned long __hyp_text get_el2_image_va(u32 vmid, unsigned long addr)
 	return ret;
 }
 
-bool __hyp_text el2_use_inc_exe(struct kvm *kvm,
-			        struct el2_data *el2_data)
+bool __hyp_text el2_use_inc_exe(u32 vmid)
 {
-	struct el2_vm_info *vm_info;
-
-	vm_info = get_vm_info(el2_data, kvm);
+	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
 	return vm_info->inc_exe;
 }
 

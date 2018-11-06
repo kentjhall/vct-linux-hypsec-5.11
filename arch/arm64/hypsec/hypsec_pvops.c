@@ -22,7 +22,7 @@ void __hyp_text set_stage2_vring_gpa(struct kvm_vcpu *vcpu)
 	unsigned long addr, npages, index;
 	size_t size_in_bytes;
 	int i;
-	struct kvm *kvm = (void *)kern_hyp_va(vcpu->kvm);
+	struct kvm *kvm = hypsec_vmid_to_kvm(vcpu->arch.vmid);
 	struct s2_trans result;
 
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -47,7 +47,7 @@ void __hyp_text set_stage2_vring_gpa(struct kvm_vcpu *vcpu)
 
 void __hyp_text set_balloon_pfn(struct kvm_vcpu *vcpu)
 {
-	struct kvm *kvm = (void *)kern_hyp_va(vcpu->kvm);
+	struct kvm *kvm = hypsec_vmid_to_kvm(vcpu->arch.vmid);
 	struct s2_trans result;
 	struct el2_data *el2_data;
 	unsigned long gpa = shadow_vcpu_get_reg(vcpu, 1);
@@ -113,7 +113,7 @@ void __hyp_text grant_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 	struct el2_data *el2_data;
 	unsigned long addr;
 	int len;
-	struct kvm *kvm = (void *)kern_hyp_va(vcpu->kvm);
+	struct kvm *kvm = hypsec_vmid_to_kvm(vcpu->arch.vmid);
 	int writable;
 	pgprot_t mem_type = PAGE_S2;
 
@@ -135,13 +135,13 @@ void __hyp_text grant_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 
 static void __hyp_text __revoke_stage2_sg_gpa(struct kvm *kvm,
 				      struct el2_data *el2_data,
-				      unsigned long addr)
+				      unsigned long addr,
+				      u32 vmid)
 {
 	struct s2_trans result;
 	struct s2_page *s2_pages;
 	unsigned long index;
 	int count = -EINVAL;
-	u32 vmid;
 	kvm_pfn_t pfn;
 
 	s2_pages = el2_data->s2_pages;
@@ -164,7 +164,6 @@ out:
 
 	if (pfn && !count) {
 		__set_pfn_host(pfn << PAGE_SHIFT, PAGE_SIZE, 0, PAGE_GUEST);
-		vmid = el2_get_vmid(el2_data, kvm);
 		set_pfn_owner(el2_data, pfn << PAGE_SHIFT, PAGE_SIZE, vmid);
 	}
 }
@@ -174,7 +173,7 @@ void __hyp_text revoke_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 	struct el2_data *el2_data;
 	unsigned long addr;
 	int len;
-	struct kvm *kvm = (void *)kern_hyp_va(vcpu->kvm);
+	struct kvm *kvm = hypsec_vmid_to_kvm(vcpu->arch.vmid);
 
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
@@ -182,7 +181,7 @@ void __hyp_text revoke_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 	len = shadow_vcpu_get_reg(vcpu, 2) >> PAGE_SHIFT;
 
 	do {
-		__revoke_stage2_sg_gpa(kvm, el2_data, addr);
+		__revoke_stage2_sg_gpa(kvm, el2_data, addr, vcpu->arch.vmid);
 		addr += PAGE_SIZE;
 		len--;
 	} while (len > 0);

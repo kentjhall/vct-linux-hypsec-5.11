@@ -311,7 +311,6 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 	u64 ec;
 	size_t shadow_sys_regs_len = sizeof(u64) * (SHADOW_SYS_REGS_SIZE + 1);
 	struct el2_data *el2_data;
-	struct kvm *kvm = kern_hyp_va(vcpu->kvm);
 
 	/*
 	 * We don't have anything to restore when entering the
@@ -319,7 +318,7 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 	 */
 	if (shadow_ctxt->dirty == -1) {
 		el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-		if (el2_use_inc_exe(kvm, el2_data)) {
+		if (el2_use_inc_exe(vcpu->arch.vmid)) {
 			decrypt_kvm_regs(el2_data, &vcpu->arch.ctxt.gp_regs);
 			decrypt_buf(el2_data, &vcpu->arch.ctxt.sys_regs,
 					shadow_sys_regs_len);

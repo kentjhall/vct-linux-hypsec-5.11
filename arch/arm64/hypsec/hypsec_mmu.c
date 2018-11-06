@@ -738,17 +738,16 @@ static __hyp_text bool is_hypsec_va_range(unsigned long s, unsigned long e)
 
 int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 {
+	u32 vmid = vcpu->arch.vmid, target_vmid;
 	phys_addr_t addr;
 	struct el2_data *el2_data;
-	struct kvm *kvm = kern_hyp_va(vcpu->kvm);
+	struct kvm *kvm = hypsec_vmid_to_kvm(vmid);
 	struct s2_trans result;
 	int ret = -ENOMEM;
-	u32 vmid, target_vmid;
 	unsigned long remapped_va;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	addr = (hpfar & HPFAR_MASK) << 8;
-	vmid = vcpu->arch.vmid;
 
 	remapped_va = get_el2_image_va(vmid, addr);
 	if (remapped_va)
