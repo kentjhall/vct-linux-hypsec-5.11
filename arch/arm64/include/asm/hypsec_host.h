@@ -100,7 +100,6 @@ extern unsigned long search_load_info(u32 vmid, struct el2_data *el2_data,
 				      unsigned long addr);
 
 extern int el2_alloc_vm_info(struct kvm *kvm);
-extern int el2_get_vmid(struct el2_data *el2_data, struct kvm *kvm);
 
 int handle_pvops(struct kvm_vcpu *vcpu);
 void save_encrypted_vcpu(struct kvm_vcpu *vcpu);

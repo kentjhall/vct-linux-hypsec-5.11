@@ -86,13 +86,6 @@ arch_spinlock_t* __hyp_text get_shadow_pt_lock(struct kvm *kvm)
 	return &vm_info->shadow_pt_lock;
 }
 
-int __hyp_text el2_get_vmid(struct el2_data *el2_data,
-			     struct kvm *kvm)
-{
-	struct el2_vm_info *vm_info = get_vm_info(el2_data, kvm);
-	return vm_info->vmid;
-}
-
 void __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 				unsigned long size, int image_type)
 {
@@ -139,11 +132,12 @@ void __hyp_text __el2_remap_vm_image(u32 vmid, unsigned long pfn)
 	load_info->el2_mapped_pages++; 
 }
 
-bool __hyp_text __el2_verify_and_load_images(struct kvm *kvm)
+bool __hyp_text __el2_verify_and_load_images(u32 vmid)
 {
 	struct el2_data *el2_data;
 	struct el2_vm_info *vm_info;
 	struct el2_load_info load_info;
+	struct kvm *kvm = hypsec_vmid_to_kvm(vmid);
 	int i;
 	bool res = true;
 	unsigned char signature[64];
@@ -153,8 +147,7 @@ bool __hyp_text __el2_verify_and_load_images(struct kvm *kvm)
 	arch_spinlock_t *lock;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	kvm = kern_hyp_va(kvm);
-	vm_info = get_vm_info(el2_data, kvm);
+	vm_info = vmid_to_vm_info(vmid);
 
 	lock = &vm_info->boot_lock;
 	stage2_spin_lock(lock);
@@ -168,7 +161,7 @@ bool __hyp_text __el2_verify_and_load_images(struct kvm *kvm)
 		int verify_res = 0;
 
 		load_info = vm_info->load_info[i];
-		unmap_image_from_host_s2pt(kvm, load_info.el2_remap_addr,
+		unmap_image_from_host_s2pt(vmid, load_info.el2_remap_addr,
 			load_info.el2_mapped_pages);
 
 		el2_hex2bin(signature, signature_hex, 64);

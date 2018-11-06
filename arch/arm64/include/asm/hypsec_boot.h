@@ -56,7 +56,7 @@ extern arch_spinlock_t* get_shadow_pt_lock(struct kvm *kvm);
 void __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 			 unsigned long size, int image_type);
 void __el2_remap_vm_image(u32 vmid, unsigned long pfn);
-bool __el2_verify_and_load_images(struct kvm *kvm);
+bool __el2_verify_and_load_images(u32 vmid);
 void __el2_boot_from_inc_exe(u32 vmid);
 
 struct kvm* hypsec_vmid_to_kvm(u32 vmid);

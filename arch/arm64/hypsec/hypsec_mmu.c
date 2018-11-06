@@ -394,7 +394,7 @@ void __hyp_text walk_el2_pgd(unsigned long addr, struct s2_trans *result)
 	return;
 }
 
-void __hyp_text unmap_image_from_host_s2pt(struct kvm* kvm,
+void __hyp_text unmap_image_from_host_s2pt(u32 vmid,
 					   unsigned long el2_remap_addr,
 					   unsigned long pgnum)
 {
@@ -402,12 +402,8 @@ void __hyp_text unmap_image_from_host_s2pt(struct kvm* kvm,
 	struct el2_data *el2_data;
 	int i = 0;
 	unsigned long addr;
-	u32 vmid;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	kvm = kern_hyp_va(kvm);
-	vmid = el2_get_vmid(el2_data, kvm);
-
 	while (i < pgnum) {
 		addr = el2_remap_addr + (i * PAGE_SIZE);
 		walk_el2_pgd(addr, &result);
@@ -868,19 +864,17 @@ void __hyp_text clear_shadow_stage2_range(struct kvm *kvm, phys_addr_t start, u6
 	stage2_spin_unlock(lock);
 }
 
-void __hyp_text __clear_vm_stage2_range(struct kvm *kvm,
+void __hyp_text __clear_vm_stage2_range(u32 vmid,
 			phys_addr_t start, u64 size)
 {
 	struct el2_data *el2_data;
-	u32 vmid;
-	kvm = kern_hyp_va(kvm);
+	struct kvm *kvm = hypsec_vmid_to_kvm(vmid);
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	clear_shadow_stage2_range(kvm, start, size);
 
 	if (size != KVM_PHYS_SIZE)
 		return;
-	vmid = el2_get_vmid(el2_data, kvm);
 	clear_vm_pfn_owner(el2_data, vmid);
 }
 
