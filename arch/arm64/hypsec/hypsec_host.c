@@ -376,7 +376,6 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		__el2_remap_vm_image((u32)hr->regs[1], (unsigned long)hr->regs[2]);
 		break;
 	case HVC_VERIFY_VM_IMAGES:
-		//kvm = hypsec_vmid_to_kvm((u32)hr->regs[1]);
 		ret = (u64)__el2_verify_and_load_images((u32)hr->regs[1]);
 		hr->regs[31] = (u64)ret;
 		break;
