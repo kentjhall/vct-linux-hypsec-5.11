@@ -215,10 +215,9 @@ static void __hyp_text __activate_vm(struct kvm *kvm)
 }
 #else
 static void __hyp_text __activate_vm(struct kvm *kvm,
-				     struct el2_data *el2_data)
+				     u64 vmid)
 {
-	u64 vmid, shadow_vttbr;
-	vmid = el2_get_vmid(el2_data, kvm) & 0xff;
+	u64 shadow_vttbr;
 	vmid = vmid << VTTBR_VMID_SHIFT;
 	shadow_vttbr = get_shadow_vttbr(kvm);
 	write_sysreg(shadow_vttbr | vmid, vttbr_el2);
@@ -660,6 +659,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 #ifdef CONFIG_STAGE2_KERNEL
 	struct kvm_cpu_context *shadow_ctxt;
 	struct el2_data *el2_data;
+	u32 vmid = vcpu->arch.vmid;
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 #endif
 
@@ -683,7 +683,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 #ifndef CONFIG_STAGE2_KERNEL
 	__activate_vm(kern_hyp_va(vcpu->kvm));
 #else
-	__activate_vm(kern_hyp_va(vcpu->kvm), el2_data);
+	__activate_vm(hypsec_vmid_to_kvm(vmid), vmid & 0xff);
 #endif
 
 	__hyp_vgic_restore_state(vcpu);

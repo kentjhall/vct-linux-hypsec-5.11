@@ -23,7 +23,9 @@
 #include <asm/kvm_emulate.h>
 #include <asm/kvm_hyp.h>
 #include <asm/kvm_mmu.h>
-
+#ifdef CONFIG_STAGE2_KERNEL
+#include <asm/hypsec_host.h>
+#endif
 static bool __hyp_text __is_be(struct kvm_vcpu *vcpu)
 {
 	if (vcpu_mode_is_32bit(vcpu))
@@ -45,7 +47,11 @@ static bool __hyp_text __is_be(struct kvm_vcpu *vcpu)
  */
 int __hyp_text __vgic_v2_perform_cpuif_access(struct kvm_vcpu *vcpu)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	struct kvm *kvm = kern_hyp_va(vcpu->kvm);
+#else
+	struct kvm *kvm = hypsec_vmid_to_kvm(vcpu->arch.vmid);
+#endif
 	struct vgic_dist *vgic = &kvm->arch.vgic;
 	phys_addr_t fault_ipa;
 	void __iomem *addr;
