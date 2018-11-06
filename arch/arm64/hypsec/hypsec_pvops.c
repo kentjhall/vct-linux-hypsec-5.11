@@ -32,7 +32,7 @@ void __hyp_text set_stage2_vring_gpa(struct kvm_vcpu *vcpu)
 	npages = (size_in_bytes >> PAGE_SHIFT) + 1;
 
 	for (i = 0; i < npages; i++) {
-		result = walk_stage2_pgd(kvm, addr, true);
+		result = walk_stage2_pgd(vcpu->arch.vmid, kvm, addr, true);
 		if (!result.level)
 			return;
 
@@ -55,14 +55,14 @@ void __hyp_text set_balloon_pfn(struct kvm_vcpu *vcpu)
 
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
-	result = walk_stage2_pgd(kvm, gpa, true);
+	result = walk_stage2_pgd(vcpu->arch.vmid, kvm, gpa, true);
 	if (!result.level)
 		return;
 
 	pfn = result.pfn;
 	if (pfn) {
 		/* FIXME: Do we really need to flush the entire thing? */
-		clear_shadow_stage2_range(kvm, 0, KVM_PHYS_SIZE);
+		clear_shadow_stage2_range(vcpu->arch.vmid, 0, KVM_PHYS_SIZE);
 		el2_memset((void *)__el2_va(pfn << PAGE_SHIFT), 0, PAGE_SIZE);
 		__set_pfn_host(pfn << PAGE_SHIFT, PAGE_SIZE,
 			pfn, PAGE_S2_KERNEL);
@@ -75,7 +75,8 @@ void __hyp_text set_balloon_pfn(struct kvm_vcpu *vcpu)
 static void __hyp_text __grant_stage2_sg_gpa(struct kvm *kvm,
 				      struct el2_data *el2_data,
 				      unsigned long addr,
-				      pgprot_t mem_type)
+				      pgprot_t mem_type,
+				      u32 vmid)
 {
 	struct s2_trans result;
 	struct s2_page *s2_pages;
@@ -85,7 +86,7 @@ static void __hyp_text __grant_stage2_sg_gpa(struct kvm *kvm,
 
 	s2_pages = el2_data->s2_pages;
 
-	result = walk_stage2_pgd(kvm, addr, true);
+	result = walk_stage2_pgd(vmid, kvm, addr, true);
 	stage2_spin_lock(&el2_data->s2pages_lock);
 	pfn = result.pfn;
 	if (!pfn) {
@@ -127,7 +128,7 @@ void __hyp_text grant_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 		mem_type = PAGE_S2_KERNEL;
 
 	do {
-		__grant_stage2_sg_gpa(kvm, el2_data, addr, mem_type);
+		__grant_stage2_sg_gpa(kvm, el2_data, addr, mem_type, vcpu->arch.vmid);
 		addr += PAGE_SIZE;
 		len--;
 	} while (len > 0);
@@ -146,7 +147,7 @@ static void __hyp_text __revoke_stage2_sg_gpa(struct kvm *kvm,
 
 	s2_pages = el2_data->s2_pages;
 
-	result = walk_stage2_pgd(kvm, addr, true);
+	result = walk_stage2_pgd(vmid, kvm, addr, true);
 	stage2_spin_lock(&el2_data->s2pages_lock);
 	pfn = result.pfn;
 	if (!pfn) {

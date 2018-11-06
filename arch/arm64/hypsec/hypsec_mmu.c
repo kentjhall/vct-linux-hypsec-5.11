@@ -277,7 +277,7 @@ static void __hyp_text walk_stage2_pud(pgd_t *pgd, phys_addr_t addr,
 		walk_stage2_pmd(pud, addr, result);
 }
 
-struct s2_trans __hyp_text walk_stage2_pgd(struct kvm *kvm,
+struct s2_trans __hyp_text walk_stage2_pgd(u32 vmid, struct kvm *kvm,
 					   phys_addr_t addr,
 					   bool walk_shadow_s2)
 {
@@ -290,7 +290,7 @@ struct s2_trans __hyp_text walk_stage2_pgd(struct kvm *kvm,
 	el2_memset(&result, 0, sizeof(struct s2_trans));
 	if (walk_shadow_s2) {
 		vttbr = (pgd_t *)get_shadow_vttbr(kvm);
-		lock = get_shadow_pt_lock(kvm);
+		lock = get_shadow_pt_lock(vmid);
 	} else {
 		vttbr = (void *)kvm->arch.vttbr;
 		vttbr = (void *)((unsigned long)vttbr & VTTBR_BADDR_MASK);
@@ -611,7 +611,7 @@ out:
 	return;
 }
 
-static void __hyp_text map_shadow_s2pt_mem(struct kvm *kvm,
+static void __hyp_text map_shadow_s2pt_mem(u32 vmid, struct kvm *kvm,
 					  struct el2_data *el2_data,
 					  phys_addr_t addr,
 					  struct s2_trans result,
@@ -626,7 +626,7 @@ static void __hyp_text map_shadow_s2pt_mem(struct kvm *kvm,
 	kvm_pfn_t pfn;
 	arch_spinlock_t *lock;
 
-	lock = get_shadow_pt_lock(kvm);
+	lock = get_shadow_pt_lock(vmid);
 
 	vttbr = (pgd_t *)get_shadow_vttbr(kvm);
 	vttbr = __el2_va(vttbr);
@@ -749,7 +749,7 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 	if (remapped_va)
 		result = handle_from_vm_info(el2_data, remapped_va, addr);
 	else
-		result = walk_stage2_pgd(kvm, addr, false);
+		result = walk_stage2_pgd(vmid, kvm, addr, false);
 
 	if (!result.level)
 		return ret;
@@ -761,7 +761,7 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 			return ret;
 	}
 
-	map_shadow_s2pt_mem(kvm, el2_data, addr, result,
+	map_shadow_s2pt_mem(vmid, kvm, el2_data, addr, result,
 			    kvm_vcpu_trap_is_iabt(vcpu));
 	ret = 1;
 
@@ -835,13 +835,14 @@ static void __hyp_text clear_vm_stage2_puds(pgd_t *pgd, phys_addr_t addr,
 	} while (pud++, addr = next, addr != end);
 }
 
-void __hyp_text clear_shadow_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size)
+void __hyp_text clear_shadow_stage2_range(u32 vmid, phys_addr_t start, u64 size)
 {
 	pgd_t *pgd;
 	pgd_t *vttbr;
 	phys_addr_t addr = start, end = start + size;
 	phys_addr_t next;
 	struct el2_data *el2_data;
+	struct kvm *kvm = hypsec_vmid_to_kvm(vmid);
 	arch_spinlock_t *lock;
 
 	vttbr = (pgd_t *)get_shadow_vttbr(kvm);
@@ -850,7 +851,7 @@ void __hyp_text clear_shadow_stage2_range(struct kvm *kvm, phys_addr_t start, u6
 	vttbr = __el2_va(vttbr);
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	lock = get_shadow_pt_lock(kvm);
+	lock = get_shadow_pt_lock(vmid);
 	stage2_spin_lock(lock);
 
 	pgd = vttbr + stage2_pgd_index(addr);
@@ -868,10 +869,9 @@ void __hyp_text __clear_vm_stage2_range(u32 vmid,
 			phys_addr_t start, u64 size)
 {
 	struct el2_data *el2_data;
-	struct kvm *kvm = hypsec_vmid_to_kvm(vmid);
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	clear_shadow_stage2_range(kvm, start, size);
+	clear_shadow_stage2_range(vmid, start, size);
 
 	if (size != KVM_PHYS_SIZE)
 		return;
@@ -1096,9 +1096,9 @@ int __hyp_text check_and_map_el2_mem(unsigned long start,
 	return map_el2_mem(start, end, pfn, PAGE_HYP);
 }
 
-void __hyp_text load_image_to_shadow_s2pt(struct kvm *kvm, struct el2_data *el2_data,
-				unsigned long target_addr, unsigned long el2_remap_addr,
-				unsigned long pgnum)
+void __hyp_text load_image_to_shadow_s2pt(u32 vmid, struct kvm *kvm,
+				struct el2_data *el2_data, unsigned long target_addr,
+				unsigned long el2_remap_addr, unsigned long pgnum)
 {
 	struct s2_trans result;
 	int i = 0;
@@ -1118,7 +1118,7 @@ void __hyp_text load_image_to_shadow_s2pt(struct kvm *kvm, struct el2_data *el2_
 		result.pfn = result.output >> PAGE_SHIFT;
 		result.writable = true;
 		result.level = 2;
-		map_shadow_s2pt_mem(kvm, el2_data, ipa, result, true);
+		map_shadow_s2pt_mem(vmid, kvm, el2_data, ipa, result, true);
 
 		i += (PMD_SIZE >> PAGE_SHIFT);
 	}

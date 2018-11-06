@@ -44,28 +44,6 @@ static unsigned long __hyp_text alloc_remap_addr(unsigned long size)
 	return ret;
 }
 
-static inline struct el2_vm_info* get_vm_info(struct el2_data *el2_data,
-					      struct kvm *kvm)
-{
-	u64 pool_start, len;
-	void *ret;
-
-	if (!kvm)
-		goto out_panic;
-
-	ret = kvm->arch.vm_info;
-	pool_start = (u64)&el2_data->vm_info;
-	len = sizeof(struct el2_vm_info) * EL2_VM_INFO_SIZE;
-	/* Check if vm_info was allocated from the pool */
-	if ((u64)ret < pool_start || (u64)ret >= (pool_start + len))
-		goto out_panic;
-
-	return ret;
-
-out_panic:
-	__hyp_panic();
-}
-
 static inline struct el2_vm_info* vmid_to_vm_info(u32 vmid)
 {
 	struct el2_data *el2_data;
@@ -77,12 +55,9 @@ static inline struct el2_vm_info* vmid_to_vm_info(u32 vmid)
 		__hyp_panic();
 }
 
-arch_spinlock_t* __hyp_text get_shadow_pt_lock(struct kvm *kvm)
+arch_spinlock_t* __hyp_text get_shadow_pt_lock(u32 vmid)
 {
-	struct el2_vm_info *vm_info;
-	struct el2_data *el2_data;
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	vm_info = get_vm_info(el2_data, kvm);
+	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
 	return &vm_info->shadow_pt_lock;
 }
 
@@ -174,7 +149,7 @@ bool __hyp_text __el2_verify_and_load_images(u32 vmid)
 		 * Desirably, we'd like to map verified images only, but
 		 * now we map all images to VM memory anyway.
 		 */
-		load_image_to_shadow_s2pt(kvm, el2_data, load_info.load_addr,
+		load_image_to_shadow_s2pt(vmid, kvm, el2_data, load_info.load_addr,
 			load_info.el2_remap_addr, load_info.el2_mapped_pages);
 	}
 

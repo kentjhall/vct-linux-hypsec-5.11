@@ -79,7 +79,7 @@ void set_balloon_pfn(struct kvm_vcpu *vcpu);
 void* alloc_stage2_page(unsigned int order);
 void* alloc_shadow_s2_pgd(unsigned int num);
 
-struct s2_trans walk_stage2_pgd(struct kvm *kvm, phys_addr_t addr,
+struct s2_trans walk_stage2_pgd(u32 vmid, struct kvm *kvm, phys_addr_t addr,
 				bool walk_shadow_s2);
 
 
@@ -89,14 +89,14 @@ int stage2_mem_regions_search(phys_addr_t addr, struct memblock_region *regions,
 unsigned long get_s2_page_index(struct el2_data *el2_data, phys_addr_t addr);
 int handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar);
 
-extern void clear_shadow_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size);
+extern void clear_shadow_stage2_range(u32 vmid, phys_addr_t start, u64 size);
 extern void __kvm_tlb_flush_vmid_el2(void);
 
 extern int map_el2_mem(unsigned long start, unsigned long end,
 			    unsigned long pfn, pgprot_t prot);
 
 extern void unmap_image_from_host_s2pt(u32 vmid, unsigned long el2_remap_addr, unsigned long pgnum);
-extern void load_image_to_shadow_s2pt(struct kvm *kvm, struct el2_data *el2_data,
+extern void load_image_to_shadow_s2pt(u32 vmid, struct kvm *kvm, struct el2_data *el2_data,
 				unsigned long target_addr, unsigned long el2_remap_addr,
 				unsigned long pgnum);
 
