@@ -251,7 +251,7 @@ static int __hyp_text __hypsec_register_vcpu(u32 vmid, struct kvm_vcpu *vcpu)
 		return ret;
 
 	vm_info = &el2_data->vm_info[vmid];
-	if (vm_info->kvm != kvm)
+	if (vm_info->kvm != kvm || vm_info->vcpus[vcpu->vcpu_id])
 		return ret;
 	else {
 		vcpu->arch.vmid = vmid;

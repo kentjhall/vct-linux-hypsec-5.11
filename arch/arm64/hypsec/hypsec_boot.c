@@ -209,9 +209,10 @@ int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 	kvm = kern_hyp_va(kvm);
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	vmid = hypsec_gen_vmid(el2_data);
-	if (vmid < 0)
+	if (vmid < 0 || el2_data->vm_info[vmid].used)
 		return -EINVAL;
 
+	el2_data->vm_info[vmid].used = true;
 	el2_data->vm_info[vmid].is_valid_vm = false;
 	el2_data->vm_info[vmid].inc_exe = false;
 	el2_data->vm_info[vmid].vmid = vmid;

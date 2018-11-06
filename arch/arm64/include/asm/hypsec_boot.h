@@ -38,6 +38,7 @@ struct el2_vm_info {
 	int load_info_cnt;
 	bool is_valid_vm;
 	bool inc_exe;
+	bool used;
 	struct el2_load_info load_info[5];
 	arch_spinlock_t shadow_pt_lock;
 	arch_spinlock_t boot_lock;
