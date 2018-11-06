@@ -17,9 +17,9 @@
 
 #include "ed25519/ed25519.h"
 
-static int __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
+static u32 __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
 {
-	int vmid;
+	u32 vmid;
 	stage2_spin_lock(&el2_data->vmid_lock);
 	vmid = el2_data->next_vmid++;
 	stage2_spin_unlock(&el2_data->vmid_lock);
@@ -208,8 +208,9 @@ void __hyp_text __el2_boot_from_inc_exe(u32 vmid)
 
 int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 {
-	int vmid;
+	u32 vmid;
 	struct el2_data *el2_data;
+	u64 vttbr, vmid64;
 
 	kvm = kern_hyp_va(kvm);
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -229,8 +230,10 @@ int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 
 	kvm->arch.vmid = vmid;
 	/* Allocates a 8KB page for stage 2 pgd */
-	//kvm->arch.shadow_vttbr = (u64)alloc_shadow_s2_pgd(S2_PGD_PAGES_NUM);
-	el2_data->vm_info[vmid].vttbr = (u64)alloc_shadow_s2_pgd(S2_PGD_PAGES_NUM);
+	vttbr = (u64)alloc_shadow_s2_pgd(S2_PGD_PAGES_NUM);
+	/* Supports 8-bit VMID */
+	vmid64 = ((u64)(vmid) << VTTBR_VMID_SHIFT) & VTTBR_VMID_MASK(8);
+	el2_data->vm_info[vmid].vttbr = vttbr | vmid64;
 
 	return 0;
 }

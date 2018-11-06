@@ -217,8 +217,7 @@ static void __hyp_text __activate_vm(struct kvm *kvm)
 static void __hyp_text __activate_vm(u64 vmid)
 {
 	u64 shadow_vttbr = get_shadow_vttbr((u32)vmid);
-	vmid = vmid << VTTBR_VMID_SHIFT;
-	write_sysreg(shadow_vttbr | vmid, vttbr_el2);
+	write_sysreg(shadow_vttbr, vttbr_el2);
 }
 #endif
 
