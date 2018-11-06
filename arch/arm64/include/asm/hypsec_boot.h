@@ -34,6 +34,7 @@ struct el2_load_info {
 };
 
 struct el2_vm_info {
+	u64 vttbr;
 	int vmid;
 	int load_info_cnt;
 	bool is_valid_vm;

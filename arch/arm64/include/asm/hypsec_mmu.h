@@ -60,7 +60,7 @@ struct hyp_va_region {
 	unsigned long to;
 };
 
-extern u64 get_shadow_vttbr(struct kvm *kvm);
+extern u64 get_shadow_vttbr(u32 vmid);
 void __set_pfn_host(phys_addr_t start, u64 size, kvm_pfn_t pfn, pgprot_t prot);
 
 void clear_vm_stage2_range(u32 vmid, phys_addr_t start, u64 size);
@@ -96,7 +96,7 @@ extern int map_el2_mem(unsigned long start, unsigned long end,
 			    unsigned long pfn, pgprot_t prot);
 
 extern void unmap_image_from_host_s2pt(u32 vmid, unsigned long el2_remap_addr, unsigned long pgnum);
-extern void load_image_to_shadow_s2pt(u32 vmid, struct kvm *kvm, struct el2_data *el2_data,
+extern void load_image_to_shadow_s2pt(u32 vmid, struct el2_data *el2_data,
 				unsigned long target_addr, unsigned long el2_remap_addr,
 				unsigned long pgnum);
 
@@ -124,7 +124,6 @@ extern void protect_el2_mem(void);
 void __el2_protect_stack_page(phys_addr_t addr);
 int map_el2_mem(unsigned long start, unsigned long end,
 			    unsigned long pfn, pgprot_t prot);
-void  __alloc_shadow_vttbr(struct kvm *kvm);
 void  __clear_vm_stage2_range(u32 vmid, phys_addr_t start, u64 size);
 void  __el2_register_smmu(void);
 void  __el2_encrypt_buf(void *buf, uint32_t len);

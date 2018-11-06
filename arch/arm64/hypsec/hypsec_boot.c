@@ -61,6 +61,12 @@ arch_spinlock_t* __hyp_text get_shadow_pt_lock(u32 vmid)
 	return &vm_info->shadow_pt_lock;
 }
 
+u64 __hyp_text get_shadow_vttbr(u32 vmid)
+{
+	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
+	return vm_info->vttbr;
+}
+
 void __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 				unsigned long size, int image_type)
 {
@@ -112,7 +118,6 @@ bool __hyp_text __el2_verify_and_load_images(u32 vmid)
 	struct el2_data *el2_data;
 	struct el2_vm_info *vm_info;
 	struct el2_load_info load_info;
-	struct kvm *kvm = hypsec_vmid_to_kvm(vmid);
 	int i;
 	bool res = true;
 	unsigned char signature[64];
@@ -149,7 +154,7 @@ bool __hyp_text __el2_verify_and_load_images(u32 vmid)
 		 * Desirably, we'd like to map verified images only, but
 		 * now we map all images to VM memory anyway.
 		 */
-		load_image_to_shadow_s2pt(vmid, kvm, el2_data, load_info.load_addr,
+		load_image_to_shadow_s2pt(vmid, el2_data, load_info.load_addr,
 			load_info.el2_remap_addr, load_info.el2_mapped_pages);
 	}
 
@@ -222,9 +227,10 @@ int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	el2_data->vm_info[vmid].kvm = kvm;
 
-	kvm->arch.vm_info = &el2_data->vm_info[vmid];
 	kvm->arch.vmid = vmid;
-	kvm->arch.shadow_vttbr = (u64)alloc_shadow_s2_pgd(S2_PGD_PAGES_NUM);
+	/* Allocates a 8KB page for stage 2 pgd */
+	//kvm->arch.shadow_vttbr = (u64)alloc_shadow_s2_pgd(S2_PGD_PAGES_NUM);
+	el2_data->vm_info[vmid].vttbr = (u64)alloc_shadow_s2_pgd(S2_PGD_PAGES_NUM);
 
 	return 0;
 }
