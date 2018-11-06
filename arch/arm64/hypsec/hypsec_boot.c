@@ -192,13 +192,13 @@ out:
 	return res;
 }
 
-unsigned long __hyp_text search_load_info(struct kvm *kvm,
+unsigned long __hyp_text search_load_info(u32 vmid,
 					  struct el2_data *el2_data,
 					  unsigned long addr)
 {
 	struct el2_load_info li;
 	int i;
-	struct el2_vm_info *vm_info = get_vm_info(el2_data, kvm);
+	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
 	unsigned long el2_va = 0;
 
 	for (i = 0; i < vm_info->load_info_cnt; i++) {
@@ -211,13 +211,13 @@ unsigned long __hyp_text search_load_info(struct kvm *kvm,
 	return el2_va;
 }
 
-unsigned long __hyp_text get_el2_image_va(struct kvm *kvm, unsigned long addr)
+unsigned long __hyp_text get_el2_image_va(u32 vmid, unsigned long addr)
 {
 	struct el2_data *el2_data;
 	unsigned long ret = 0;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	ret = search_load_info(kvm, el2_data, addr);
+	ret = search_load_info(vmid, el2_data, addr);
 	return ret;
 }
 

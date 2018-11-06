@@ -101,8 +101,8 @@ extern void load_image_to_shadow_s2pt(struct kvm *kvm, struct el2_data *el2_data
 				unsigned long pgnum);
 
 bool stage2_is_map_memory(phys_addr_t addr);
-unsigned long get_el2_image_va(struct kvm *kvm, unsigned long addr);
-extern struct s2_trans handle_from_vm_info(struct kvm *kvm, struct el2_data *el2_data,
+unsigned long get_el2_image_va(u32 vmid, unsigned long addr);
+extern struct s2_trans handle_from_vm_info(struct el2_data *el2_data,
 					   unsigned long el2_va, unsigned long addr);
 
 static inline bool is_mmio_gpa(u64 addr)

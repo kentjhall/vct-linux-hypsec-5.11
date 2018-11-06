@@ -748,12 +748,11 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	addr = (hpfar & HPFAR_MASK) << 8;
-	vmid = el2_get_vmid(el2_data, kvm);
+	vmid = vcpu->arch.vmid;
 
-	remapped_va = get_el2_image_va(kvm, addr);
+	remapped_va = get_el2_image_va(vmid, addr);
 	if (remapped_va)
-		result = handle_from_vm_info(kvm, el2_data,
-					remapped_va, addr);
+		result = handle_from_vm_info(el2_data, remapped_va, addr);
 	else
 		result = walk_stage2_pgd(kvm, addr, false);
 
@@ -1132,7 +1131,7 @@ void __hyp_text load_image_to_shadow_s2pt(struct kvm *kvm, struct el2_data *el2_
 	}
 }
 
-struct s2_trans __hyp_text handle_from_vm_info(struct kvm *kvm, struct el2_data *el2_data,
+struct s2_trans __hyp_text handle_from_vm_info(struct el2_data *el2_data,
 				unsigned long el2_va, unsigned long addr)
 {
 	struct s2_trans result;
