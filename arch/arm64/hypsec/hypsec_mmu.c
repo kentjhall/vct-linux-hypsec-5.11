@@ -438,6 +438,8 @@ static void __hyp_text set_pfn_host_pmds(pud_t *pud, phys_addr_t addr,
 		next = stage2_pmd_addr_end(addr, end);
 		if (!pmd_none(*pmd))
 			set_pfn_host_ptes(pmd, addr, next, pfn, prot);
+		if (pfn)
+			pfn += PMD_SIZE >> PAGE_SHIFT;
 	} while (pmd++, addr = next, addr != end);
 }
 
