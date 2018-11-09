@@ -16,6 +16,7 @@
 #include <asm/hypsec_host.h>
 
 #include "ed25519/ed25519.h"
+#include "tiny-AES-c/aes.h"
 
 static u32 __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
 {
@@ -211,6 +212,8 @@ int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 	u32 vmid;
 	struct el2_data *el2_data;
 	u64 vttbr, vmid64;
+	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
+	uint8_t iv[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
 
 	kvm = kern_hyp_va(kvm);
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -227,6 +230,9 @@ int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 	el2_data->vm_info[vmid].boot_lock =
 		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	el2_data->vm_info[vmid].kvm = kvm;
+	/* Hardcoded VM's encryption key for now. */
+	el2_memcpy(el2_data->vm_info[vmid].key, key, 16);
+	el2_memcpy(el2_data->vm_info[vmid].iv, iv, 16);
 
 	kvm->arch.vmid = vmid;
 	/* Allocates a 8KB page for stage 2 pgd */
@@ -265,6 +271,24 @@ struct kvm_vcpu* __hyp_text hypsec_vcpu_id_to_vcpu(u32 vmid, int vcpu_id)
 		__hyp_panic();
 	else
 		return vcpu;
+}
+
+void __hyp_text encrypt_buf(u32 vmid, void *buf, uint32_t len)
+{
+	struct AES_ctx ctx;
+	struct el2_vm_info *vm_info;
+	vm_info = vmid_to_vm_info(vmid);
+	AES_init_ctx_iv(&ctx, vm_info->key, vm_info->iv);
+	AES_CBC_encrypt_buffer(&ctx, (uint8_t *)buf, len);
+}
+
+void __hyp_text decrypt_buf(u32 vmid, void *buf, uint32_t len)
+{
+	struct AES_ctx ctx;
+	struct el2_vm_info *vm_info;
+	vm_info = vmid_to_vm_info(vmid);
+	AES_init_ctx_iv(&ctx, vm_info->key, vm_info->iv);
+	AES_CBC_decrypt_buffer(&ctx, (uint8_t *)buf, len);
 }
 
 void el2_set_boot_info(u32 vmid, unsigned long load_addr,

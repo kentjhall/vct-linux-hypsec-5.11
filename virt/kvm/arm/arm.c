@@ -1318,8 +1318,8 @@ long kvm_arch_vm_ioctl(struct file *filp,
 
 		npages = __get_user_pages_fast(arg, 1, 1, page);
 		if (npages == 1)
-			el2_encrypt_buf((void *)(page_to_pfn(page[0]) << PAGE_SHIFT),
-					PAGE_SIZE);
+			el2_encrypt_buf(kvm->arch.vmid,
+				(void *)(page_to_pfn(page[0]) << PAGE_SHIFT), PAGE_SIZE);
 		else
 			return -EFAULT;
 
@@ -1332,8 +1332,8 @@ long kvm_arch_vm_ioctl(struct file *filp,
 
 		npages = __get_user_pages_fast(arg, 1, 1, page);
 		if (npages == 1)
-			el2_decrypt_buf((void *)(page_to_pfn(page[0]) << PAGE_SHIFT),
-					PAGE_SIZE);
+			el2_decrypt_buf(kvm->arch.vmid,
+				(void *)(page_to_pfn(page[0]) << PAGE_SHIFT), PAGE_SIZE);
 		else
 			return -EFAULT;
 

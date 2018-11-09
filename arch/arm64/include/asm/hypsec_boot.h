@@ -45,6 +45,8 @@ struct el2_vm_info {
 	arch_spinlock_t boot_lock;
 	struct kvm *kvm;
 	struct kvm_vcpu *vcpus[HYPSEC_MAX_VCPUS];
+	uint8_t key[16];
+	uint8_t iv[16];
 };
 
 extern void el2_set_boot_info(u32 vmid, unsigned long load_addr,

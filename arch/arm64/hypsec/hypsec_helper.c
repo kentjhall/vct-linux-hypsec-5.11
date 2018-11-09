@@ -18,8 +18,6 @@
 #include <linux/serial_reg.h>
 #include <linux/amba/serial.h>
 
-#include "tiny-AES-c/aes.h"
-
 static inline unsigned long __hyp_text waituart(void)
 {
 	unsigned long ret, base, REG_FR;
@@ -128,24 +126,6 @@ int __hyp_text el2_memcmp(void *dest, void *src, size_t len)
 			return 1;
 	}
 	return 0;
-}
-
-void __hyp_text encrypt_buf(struct el2_data *el2_data,
-			    void *buf,
-			    uint32_t len)
-{
-	struct AES_ctx ctx;
-	AES_init_ctx_iv(&ctx, el2_data->key, el2_data->iv);
-	AES_CBC_encrypt_buffer(&ctx, (uint8_t *)buf, len);
-}
-
-void __hyp_text decrypt_buf(struct el2_data *el2_data,
-			    void *buf,
-			    uint32_t len)
-{
-	struct AES_ctx ctx;
-	AES_init_ctx_iv(&ctx, el2_data->key, el2_data->iv);
-	AES_CBC_decrypt_buffer(&ctx, (uint8_t *)buf, len);
 }
 
 /**

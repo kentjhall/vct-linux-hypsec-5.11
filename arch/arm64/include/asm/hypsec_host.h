@@ -52,9 +52,6 @@ struct el2_data {
 	struct el2_smmu_cfg smmu_cfg[EL2_SMMU_CFG_SIZE];
 	struct el2_arm_smmu_device smmu;
 
-	uint8_t key[16];
-	uint8_t iv[16];
-
 	u32 next_vmid;
 };
 
@@ -91,8 +88,8 @@ extern void el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
 		      size_t size, u64 prot, u64 ttbr);
 extern phys_addr_t el2_arm_lpae_iova_to_phys(unsigned long iova, u64 ttbr);
 
-void encrypt_buf(struct el2_data *el2_data, void *buf, uint32_t len);
-void decrypt_buf(struct el2_data *el2_data, void *buf, uint32_t len);
+void encrypt_buf(u32 vmid, void *buf, uint32_t len);
+void decrypt_buf(u32 vmid, void *buf, uint32_t len);
 
 extern void el2_boot_from_inc_exe(u32 vmid);
 extern bool el2_use_inc_exe(u32 vmid);

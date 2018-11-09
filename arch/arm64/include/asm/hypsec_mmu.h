@@ -113,8 +113,8 @@ static inline bool is_mmio_gpa(u64 addr)
 pmd_t *pmd_offset_el2(pud_t *pud, u64 addr);
 pte_t *pte_offset_el2(pmd_t *pmd, u64 addr);
 
-extern void el2_encrypt_buf(void *buf, uint32_t len);
-extern void el2_decrypt_buf(void *buf, uint32_t len);
+extern void el2_encrypt_buf(u32 vmid, void *buf, uint32_t len);
+extern void el2_decrypt_buf(u32 vmid, void *buf, uint32_t len);
 
 extern void map_mem_el2(void);
 extern void __kvm_tlb_flush_vmid_ipa_shadow(phys_addr_t ipa);
@@ -126,8 +126,8 @@ int map_el2_mem(unsigned long start, unsigned long end,
 			    unsigned long pfn, pgprot_t prot);
 void  __clear_vm_stage2_range(u32 vmid, phys_addr_t start, u64 size);
 void  __el2_register_smmu(void);
-void  __el2_encrypt_buf(void *buf, uint32_t len);
-void  __el2_decrypt_buf(void *buf, uint32_t len);
+void  __el2_encrypt_buf(u32 vmid, void *buf, uint32_t len);
+void  __el2_decrypt_buf(u32 vmid, void *buf, uint32_t len);
 int check_and_map_el2_mem(unsigned long start, unsigned long end,
 			  unsigned long pfn);
 int add_hyp_va_region(unsigned long from, unsigned long to);

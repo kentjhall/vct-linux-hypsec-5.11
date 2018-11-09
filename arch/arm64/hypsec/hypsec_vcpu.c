@@ -42,35 +42,34 @@ static void __hyp_text put_crypt_buf(__u64 *buf,
 	 kvm_regs->spsr[4] = buf[7];
 }
 
-static void __hyp_text encrypt_kvm_regs(struct el2_data *el2_data,
+static void __hyp_text encrypt_kvm_regs(u32 vmid,
 					struct kvm_regs *kvm_regs)
 {
 	struct user_pt_regs *regs = &kvm_regs->regs;
 	__u64 buf[8];
 
-	encrypt_buf(el2_data, regs, sizeof(__u64) * 32);
+	encrypt_buf(vmid, regs, sizeof(__u64) * 32);
 
 	get_crypt_buf(buf, kvm_regs);
-	encrypt_buf(el2_data, buf, sizeof(__u64) * 8);
+	encrypt_buf(vmid, buf, sizeof(__u64) * 8);
 	put_crypt_buf(buf, kvm_regs);
 
-	encrypt_buf(el2_data, &kvm_regs->fp_regs, sizeof(struct user_fpsimd_state));
+	encrypt_buf(vmid, &kvm_regs->fp_regs, sizeof(struct user_fpsimd_state));
 }
 
-static void __hyp_text decrypt_kvm_regs(struct el2_data *el2_data,
-					struct kvm_regs *kvm_regs)
+static void __hyp_text decrypt_kvm_regs(u32 vmid, struct kvm_regs *kvm_regs)
 {
 	struct user_pt_regs *regs = &kvm_regs->regs;
 	__u64 buf[8];
 
 	// sizeof(regs[31] + sp + pc), all in __u64
-	decrypt_buf(el2_data, regs, sizeof(__u64) * 32);
+	decrypt_buf(vmid, regs, sizeof(__u64) * 32);
 
 	get_crypt_buf(buf, kvm_regs);
-	decrypt_buf(el2_data, buf, sizeof(__u64) * 8);
+	decrypt_buf(vmid, buf, sizeof(__u64) * 8);
 	put_crypt_buf(buf, kvm_regs);
 
-	decrypt_buf(el2_data, &kvm_regs->fp_regs, sizeof(struct user_fpsimd_state));
+	decrypt_buf(vmid, &kvm_regs->fp_regs, sizeof(struct user_fpsimd_state));
 }
 
 static void __hyp_text prep_noop(struct kvm_vcpu *vcpu)
@@ -319,8 +318,8 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 	if (shadow_ctxt->dirty == -1) {
 		el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 		if (el2_use_inc_exe(vcpu->arch.vmid)) {
-			decrypt_kvm_regs(el2_data, &vcpu->arch.ctxt.gp_regs);
-			decrypt_buf(el2_data, &vcpu->arch.ctxt.sys_regs,
+			decrypt_kvm_regs(vcpu->arch.vmid, &vcpu->arch.ctxt.gp_regs);
+			decrypt_buf(vcpu->arch.vmid, &vcpu->arch.ctxt.sys_regs,
 					shadow_sys_regs_len);
 			el2_memcpy(&shadow_ctxt->sys_regs, &vcpu->arch.ctxt.sys_regs,
 					shadow_sys_regs_len);
@@ -364,23 +363,24 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 	shadow_ctxt->hpfar = 0;
 }
 
-void __hyp_text __save_encrypted_vcpu(struct kvm_vcpu *vcpu)
+void __hyp_text __save_encrypted_vcpu(u32 vmid, int vcpu_id)
 {
-	struct el2_data *el2_data;
+	struct kvm_vcpu *vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
+	//struct el2_data *el2_data;
 	struct shadow_vcpu_context *shadow_ctxt;
 	size_t shadow_sys_regs_len = sizeof(u64) * (SHADOW_SYS_REGS_SIZE + 1);
 	struct kvm_regs gp_local;
 	u64 sr_local[SHADOW_SYS_REGS_SIZE + 1];
 
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	vcpu = kern_hyp_va(vcpu);
+	//el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	//vcpu = kern_hyp_va(vcpu);
 	shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
 
 	el2_memcpy(&gp_local, &shadow_ctxt->gp_regs, sizeof(struct kvm_regs));
 	el2_memcpy(sr_local, &shadow_ctxt->sys_regs, shadow_sys_regs_len);
 
-	encrypt_kvm_regs(el2_data, &gp_local);
-	encrypt_buf(el2_data, sr_local, shadow_sys_regs_len);
+	encrypt_kvm_regs(vmid, &gp_local);
+	encrypt_buf(vmid, sr_local, shadow_sys_regs_len);
 	gp_local.regs.pstate = *shadow_vcpu_cpsr(vcpu);
 
 	el2_memcpy(&vcpu->arch.ctxt.gp_regs, &gp_local,

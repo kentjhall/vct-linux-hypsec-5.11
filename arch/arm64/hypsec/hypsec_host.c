@@ -98,15 +98,6 @@ static struct s2_sys_reg_desc host_sys_reg_descs[] = {
 	  FPEXC32_EL2, 0x70 }
 };
 
-static void stage2_init_aes(struct el2_data *el2_data)
-{
-	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
-	uint8_t iv[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
-
-	el2_memcpy(el2_data->key, key, 16);
-	el2_memcpy(el2_data->iv, iv, 16);
-}
-
 void init_el2_data_page(void)
 {
 	int i = 0, index = 0, err;
@@ -173,8 +164,6 @@ void init_el2_data_page(void)
 		el2_data->s2_sys_reg_descs[i] = host_sys_reg_descs[i];
 
 	el2_data->next_vmid = 1;
-
-	stage2_init_aes(el2_data);
 
 	memset(el2_data->va_regions, 0,
 		sizeof(struct hyp_va_region) * NUM_HYP_VA_REGIONS);
@@ -402,14 +391,13 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		__el2_boot_from_inc_exe((u32)hr->regs[1]);
 		break;
 	case HVC_ENCRYPT_BUF:
-		__el2_encrypt_buf((void*)hr->regs[1], (uint32_t)hr->regs[2]);
+		__el2_encrypt_buf((u32)hr->regs[1], (void*)hr->regs[2], (uint32_t)hr->regs[3]);
 		break;
 	case HVC_DECRYPT_BUF:
-		__el2_decrypt_buf((void*)hr->regs[1], (uint32_t)hr->regs[2]);
+		__el2_decrypt_buf((u32)hr->regs[1], (void*)hr->regs[2], (uint32_t)hr->regs[3]);
 		break;
 	case HVC_SAVE_CRYPT_VCPU:
-		vcpu = hypsec_vcpu_id_to_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
-		__save_encrypted_vcpu(vcpu);
+		__save_encrypted_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
 		break;
 	case HVC_GET_MDCR_EL2:
 		ret = (u64)__kvm_get_mdcr_el2();

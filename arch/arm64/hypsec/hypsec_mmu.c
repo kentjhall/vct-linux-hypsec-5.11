@@ -1132,32 +1132,27 @@ void __hyp_text __el2_register_smmu(void)
 	__set_pfn_host(start, end - start, 0, PAGE_NONE);
 }
 
-void __hyp_text __el2_encrypt_buf(void *buf, uint32_t len)
+void __hyp_text __el2_encrypt_buf(u32 vmid, void *buf, uint32_t len)
 {
-	struct el2_data *el2_data;
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	phys_addr_t pa, addr = (phys_addr_t)buf;
 	pte_t new_pte;
-
-	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	pa = (phys_addr_t)alloc_tmp_page();
 	el2_memcpy(__el2_va(pa), __el2_va(addr), len);
 
-	encrypt_buf(el2_data, __el2_va(pa), len);
+	encrypt_buf(vmid, __el2_va(pa), len);
 	new_pte = pfn_pte(pa >> PAGE_SHIFT, PAGE_S2_KERNEL);
 
 	handle_host_stage2_trans_fault(0, addr, el2_data, new_pte);
 	__kvm_tlb_flush_vmid_el2();
 }
 
-void __hyp_text __el2_decrypt_buf(void *buf, uint32_t len)
+void __hyp_text __el2_decrypt_buf(u32 vmid, void *buf, uint32_t len)
 {
-	struct el2_data *el2_data;
-	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
-
 	/* Unmap the decrypted page now so the host can not get access to it. */
 	__set_pfn_host((phys_addr_t)buf, PAGE_SIZE, 0, PAGE_NONE);
-	decrypt_buf(el2_data, __el2_va(buf), len);
+	decrypt_buf(vmid, __el2_va(buf), len);
 }
 
 void el2_protect_stack_page(phys_addr_t addr)
@@ -1181,12 +1176,12 @@ void el2_register_smmu(void)
 	kvm_call_core(HVC_REGISTER_SMMU);
 }
 
-void el2_encrypt_buf(void *buf, uint32_t len)
+void el2_encrypt_buf(u32 vmid, void *buf, uint32_t len)
 {
-	kvm_call_core(HVC_ENCRYPT_BUF, buf, len);
+	kvm_call_core(HVC_ENCRYPT_BUF, vmid, buf, len);
 }
 
-void el2_decrypt_buf(void *buf, uint32_t len)
+void el2_decrypt_buf(u32 vmid, void *buf, uint32_t len)
 {
-	kvm_call_core(HVC_DECRYPT_BUF, buf, len);
+	kvm_call_core(HVC_DECRYPT_BUF, vmid, buf, len);
 }
