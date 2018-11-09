@@ -105,4 +105,6 @@ extern void set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,
 				size_t len, u32 vmid);
 extern int hypsec_register_vm(struct kvm *kvm);
 int hypsec_register_vcpu(u32 vmid, struct kvm_vcpu *vcpu);
+
+struct el2_vm_info* vmid_to_vm_info(u32 vmid);
 #endif /* __ARM_STAGE2_H__ */

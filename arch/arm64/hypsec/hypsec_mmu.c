@@ -271,16 +271,16 @@ struct s2_trans __hyp_text walk_stage2_pgd(u32 vmid, struct kvm *kvm,
 	pgd_t *pgd;
 	arch_spinlock_t *lock;
 	struct s2_trans result;
+	struct el2_vm_info* vm_info = vmid_to_vm_info(vmid);
 
 	/* Just in case we cannot find the pfn.. */
 	el2_memset(&result, 0, sizeof(struct s2_trans));
 	if (walk_shadow_s2) {
-		vttbr = (pgd_t *)get_shadow_vttbr(vmid);
-		lock = get_shadow_pt_lock(vmid);
+		vttbr = (pgd_t *)(vm_info->vttbr & VTTBR_BADDR_MASK);
+		lock = &vm_info->shadow_pt_lock;
 	} else {
-		vttbr = (void *)kvm->arch.vttbr;
-		vttbr = (void *)((unsigned long)vttbr & VTTBR_BADDR_MASK);
-		lock = &kvm->mmu_lock.rlock.raw_lock;
+		vttbr = (void *)(vm_info->virt_vttbr);
+		lock = vm_info->virt_vttbr_lock;
 	}
 	vttbr = __el2_va(vttbr);
 

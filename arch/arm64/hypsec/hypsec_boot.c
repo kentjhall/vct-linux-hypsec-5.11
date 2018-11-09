@@ -45,7 +45,7 @@ static unsigned long __hyp_text alloc_remap_addr(unsigned long size)
 	return ret;
 }
 
-static inline struct el2_vm_info* vmid_to_vm_info(u32 vmid)
+struct el2_vm_info* __hyp_text vmid_to_vm_info(u32 vmid)
 {
 	struct el2_data *el2_data;
 
@@ -224,6 +224,10 @@ int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 	el2_data->vm_info[vmid].boot_lock =
 		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	el2_data->vm_info[vmid].kvm = kvm;
+	/* Register virtual NPT to vm_info */
+	el2_data->vm_info[vmid].virt_vttbr = (u64)virt_to_phys(kvm->arch.pgd);
+	el2_data->vm_info[vmid].virt_vttbr_lock = &kvm->mmu_lock.rlock.raw_lock;
+
 	/* Hardcoded VM's keys for now. */
 	el2_memcpy(el2_data->vm_info[vmid].key, key, 16);
 	el2_memcpy(el2_data->vm_info[vmid].iv, iv, 16);
