@@ -551,19 +551,6 @@ static void __hyp_text reject_invalid_mem_access(phys_addr_t addr,
 	stage2_inject_el1_fault(addr);
 }
 
-static pte_t __hyp_text gen_encrypted_pte(struct el2_data *el2_data,
-                                         phys_addr_t addr)
-{
-	pte_t new_pte;
-	phys_addr_t pa = (phys_addr_t)alloc_tmp_page();
-
-	el2_memcpy(__el2_va(pa), __el2_va(addr), PAGE_SIZE);
-	encrypt_buf(el2_data, __el2_va(pa), PAGE_SIZE);
-	new_pte = pfn_pte(pa >> PAGE_SHIFT, PAGE_S2_KERNEL);
-	__kvm_tlb_flush_vmid_el2();
-	return new_pte;
-}
-
 void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 					struct s2_host_regs *host_regs)
 {
@@ -580,11 +567,9 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 	pfn = addr >> PAGE_SHIFT;
 	if (stage2_is_map_memory(addr)) {
 		vmid = get_hpa_owner(addr);
-		if (vmid == HYPSEC_VMID) {
+		if (vmid) {
 			reject_invalid_mem_access(addr, host_lr);
 			goto out;
-		} else if (vmid) {
-			new_pte = gen_encrypted_pte(el2_data, addr);
 		} else if (!vmid)
 			new_pte = pfn_pte(pfn, PAGE_S2_KERNEL);
 	} else if (!stage2_emul_mmio(el2_data, addr, host_regs)) {
