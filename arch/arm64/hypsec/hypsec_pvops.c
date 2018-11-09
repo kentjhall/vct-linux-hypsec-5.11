@@ -22,7 +22,6 @@ void __hyp_text set_stage2_vring_gpa(struct kvm_vcpu *vcpu)
 	unsigned long addr, npages, index;
 	size_t size_in_bytes;
 	int i;
-	struct kvm *kvm = hypsec_vmid_to_kvm(vcpu->arch.vmid);
 	struct s2_trans result;
 
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -32,7 +31,7 @@ void __hyp_text set_stage2_vring_gpa(struct kvm_vcpu *vcpu)
 	npages = (size_in_bytes >> PAGE_SHIFT) + 1;
 
 	for (i = 0; i < npages; i++) {
-		result = walk_stage2_pgd(vcpu->arch.vmid, kvm, addr, true);
+		result = walk_stage2_pgd(vcpu->arch.vmid, addr, true);
 		if (!result.level)
 			return;
 
@@ -47,7 +46,6 @@ void __hyp_text set_stage2_vring_gpa(struct kvm_vcpu *vcpu)
 
 void __hyp_text set_balloon_pfn(struct kvm_vcpu *vcpu)
 {
-	struct kvm *kvm = hypsec_vmid_to_kvm(vcpu->arch.vmid);
 	struct s2_trans result;
 	struct el2_data *el2_data;
 	unsigned long gpa = shadow_vcpu_get_reg(vcpu, 1);
@@ -55,7 +53,7 @@ void __hyp_text set_balloon_pfn(struct kvm_vcpu *vcpu)
 
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
-	result = walk_stage2_pgd(vcpu->arch.vmid, kvm, gpa, true);
+	result = walk_stage2_pgd(vcpu->arch.vmid, gpa, true);
 	if (!result.level)
 		return;
 
@@ -72,11 +70,10 @@ void __hyp_text set_balloon_pfn(struct kvm_vcpu *vcpu)
 	return;
 }
 
-static void __hyp_text __grant_stage2_sg_gpa(struct kvm *kvm,
-				      struct el2_data *el2_data,
-				      unsigned long addr,
-				      pgprot_t mem_type,
-				      u32 vmid)
+static void __hyp_text __grant_stage2_sg_gpa(struct el2_data *el2_data,
+				      	     unsigned long addr,
+				      	     pgprot_t mem_type,
+				      	     u32 vmid)
 {
 	struct s2_trans result;
 	struct s2_page *s2_pages;
@@ -86,7 +83,7 @@ static void __hyp_text __grant_stage2_sg_gpa(struct kvm *kvm,
 
 	s2_pages = el2_data->s2_pages;
 
-	result = walk_stage2_pgd(vmid, kvm, addr, true);
+	result = walk_stage2_pgd(vmid, addr, true);
 	stage2_spin_lock(&el2_data->s2pages_lock);
 	pfn = result.pfn;
 	if (!pfn) {
@@ -114,7 +111,6 @@ void __hyp_text grant_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 	struct el2_data *el2_data;
 	unsigned long addr;
 	int len;
-	struct kvm *kvm = hypsec_vmid_to_kvm(vcpu->arch.vmid);
 	int writable;
 	pgprot_t mem_type = PAGE_S2;
 
@@ -128,16 +124,15 @@ void __hyp_text grant_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 		mem_type = PAGE_S2_KERNEL;
 
 	do {
-		__grant_stage2_sg_gpa(kvm, el2_data, addr, mem_type, vcpu->arch.vmid);
+		__grant_stage2_sg_gpa(el2_data, addr, mem_type, vcpu->arch.vmid);
 		addr += PAGE_SIZE;
 		len--;
 	} while (len > 0);
 }
 
-static void __hyp_text __revoke_stage2_sg_gpa(struct kvm *kvm,
-				      struct el2_data *el2_data,
-				      unsigned long addr,
-				      u32 vmid)
+static void __hyp_text __revoke_stage2_sg_gpa(struct el2_data *el2_data,
+				      	      unsigned long addr,
+				      	      u32 vmid)
 {
 	struct s2_trans result;
 	struct s2_page *s2_pages;
@@ -147,7 +142,7 @@ static void __hyp_text __revoke_stage2_sg_gpa(struct kvm *kvm,
 
 	s2_pages = el2_data->s2_pages;
 
-	result = walk_stage2_pgd(vmid, kvm, addr, true);
+	result = walk_stage2_pgd(vmid, addr, true);
 	stage2_spin_lock(&el2_data->s2pages_lock);
 	pfn = result.pfn;
 	if (!pfn) {
@@ -174,7 +169,6 @@ void __hyp_text revoke_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 	struct el2_data *el2_data;
 	unsigned long addr;
 	int len;
-	struct kvm *kvm = hypsec_vmid_to_kvm(vcpu->arch.vmid);
 
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
@@ -182,7 +176,7 @@ void __hyp_text revoke_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 	len = shadow_vcpu_get_reg(vcpu, 2) >> PAGE_SHIFT;
 
 	do {
-		__revoke_stage2_sg_gpa(kvm, el2_data, addr, vcpu->arch.vmid);
+		__revoke_stage2_sg_gpa(el2_data, addr, vcpu->arch.vmid);
 		addr += PAGE_SIZE;
 		len--;
 	} while (len > 0);

@@ -263,7 +263,7 @@ static void __hyp_text walk_stage2_pud(pgd_t *pgd, phys_addr_t addr,
 		walk_stage2_pmd(pud, addr, result);
 }
 
-struct s2_trans __hyp_text walk_stage2_pgd(u32 vmid, struct kvm *kvm,
+struct s2_trans __hyp_text walk_stage2_pgd(u32 vmid,
 					   phys_addr_t addr,
 					   bool walk_shadow_s2)
 {
@@ -710,7 +710,6 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 	u32 vmid = vcpu->arch.vmid, target_vmid;
 	phys_addr_t addr;
 	struct el2_data *el2_data;
-	struct kvm *kvm = hypsec_vmid_to_kvm(vmid);
 	struct s2_trans result;
 	int ret = -ENOMEM;
 	unsigned long remapped_va;
@@ -722,7 +721,7 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 	if (remapped_va)
 		result = handle_from_vm_info(el2_data, remapped_va, addr);
 	else
-		result = walk_stage2_pgd(vmid, kvm, addr, false);
+		result = walk_stage2_pgd(vmid, addr, false);
 
 	if (!result.level)
 		return ret;
