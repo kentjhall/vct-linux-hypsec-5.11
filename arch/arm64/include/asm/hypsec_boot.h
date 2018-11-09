@@ -31,6 +31,7 @@ struct el2_load_info {
 	unsigned long size;
 	unsigned long el2_remap_addr;
 	int el2_mapped_pages;
+	unsigned char signature[64];
 };
 
 struct el2_vm_info {
@@ -47,6 +48,7 @@ struct el2_vm_info {
 	struct kvm_vcpu *vcpus[HYPSEC_MAX_VCPUS];
 	uint8_t key[16];
 	uint8_t iv[16];
+	unsigned char public_key[32];
 };
 
 extern void el2_set_boot_info(u32 vmid, unsigned long load_addr,

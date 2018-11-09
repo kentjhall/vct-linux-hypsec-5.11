@@ -73,6 +73,7 @@ void __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 {
 	struct el2_vm_info *vm_info;
 	int load_count;
+	unsigned char *signature_hex = "3f8e027d94055d36a8a12de3472970e7072897a0700d09e8fd03ff78dcbeb939723ff81f098db82a1562dfd3cf1794aa61a210c733d849bcdfdf55f69014780a";
 
 	vm_info = vmid_to_vm_info(vmid);
 	stage2_spin_lock(&vm_info->boot_lock);
@@ -88,6 +89,7 @@ void __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 	vm_info->load_info[load_count].size = size;
 	vm_info->load_info[load_count].el2_remap_addr = alloc_remap_addr(size);
 	vm_info->load_info[load_count].el2_mapped_pages = 0;
+	el2_hex2bin(vm_info->load_info[load_count].signature, signature_hex, 64);
 out:
 	stage2_spin_unlock(&vm_info->boot_lock);
 }
@@ -117,18 +119,13 @@ void __hyp_text __el2_remap_vm_image(u32 vmid, unsigned long pfn)
 bool __hyp_text __el2_verify_and_load_images(u32 vmid)
 {
 	struct el2_data *el2_data;
-	struct el2_vm_info *vm_info;
+	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
 	struct el2_load_info load_info;
 	int i;
 	bool res = true;
-	unsigned char signature[64];
-	unsigned char public_key[32];
-	unsigned char *signature_hex = "3f8e027d94055d36a8a12de3472970e7072897a0700d09e8fd03ff78dcbeb939723ff81f098db82a1562dfd3cf1794aa61a210c733d849bcdfdf55f69014780a";
-	unsigned char *public_key_hex = "25f2d889403a586265eeff77d54687971301c280a02a4b5e7a416449be2ab239";
 	arch_spinlock_t *lock;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	vm_info = vmid_to_vm_info(vmid);
 
 	lock = &vm_info->boot_lock;
 	stage2_spin_lock(lock);
@@ -137,20 +134,16 @@ bool __hyp_text __el2_verify_and_load_images(u32 vmid)
 		goto out;
 	/* Traverse through the load info list and check the integrity of images. */
 	for (i = 0; i < vm_info->load_info_cnt; i++) {
-		//Call to the crypto authentication function here.
+		/* Call to the crypto authentication function here. */
 		unsigned char *kern_img;
 		int verify_res = 0;
 
 		load_info = vm_info->load_info[i];
 		unmap_image_from_host_s2pt(vmid, load_info.el2_remap_addr,
 			load_info.el2_mapped_pages);
-
-		el2_hex2bin(signature, signature_hex, 64);
-		el2_hex2bin(public_key, public_key_hex, 32);
-
-		load_info = vm_info->load_info[i];
 		kern_img = (char *) load_info.el2_remap_addr;
-		verify_res = ed25519_verify(signature, kern_img, load_info.size, public_key);
+		verify_res = ed25519_verify(load_info.signature, kern_img,
+					    load_info.size, vm_info->public_key);
 		/*
 		 * Desirably, we'd like to map verified images only, but
 		 * now we map all images to VM memory anyway.
@@ -214,6 +207,7 @@ int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 	u64 vttbr, vmid64;
 	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
 	uint8_t iv[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
+	unsigned char *public_key_hex = "25f2d889403a586265eeff77d54687971301c280a02a4b5e7a416449be2ab239";
 
 	kvm = kern_hyp_va(kvm);
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -230,9 +224,10 @@ int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 	el2_data->vm_info[vmid].boot_lock =
 		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	el2_data->vm_info[vmid].kvm = kvm;
-	/* Hardcoded VM's encryption key for now. */
+	/* Hardcoded VM's keys for now. */
 	el2_memcpy(el2_data->vm_info[vmid].key, key, 16);
 	el2_memcpy(el2_data->vm_info[vmid].iv, iv, 16);
+	el2_hex2bin(el2_data->vm_info[vmid].public_key, public_key_hex, 32);
 
 	kvm->arch.vmid = vmid;
 	/* Allocates a 8KB page for stage 2 pgd */
