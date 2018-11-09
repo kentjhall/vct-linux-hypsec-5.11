@@ -294,7 +294,6 @@ extern int __hypsec_register_vm(struct kvm *kvm);
 void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 {
 	u64 ret = 0, callno = hr->regs[0];
-	struct kvm *kvm;
 	struct kvm_vcpu *vcpu;
 
 	/* FIXME: we write return val to reg[31] as this will be restored to x0 */
@@ -317,16 +316,10 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		flush_icache_range(hr->regs[1], hr->regs[2]);
 		break;*/
 	case HVC_TLB_FLUSH_VMID:
-		kvm = hypsec_vmid_to_kvm((u32)hr->regs[1]);
-		__kvm_tlb_flush_vmid(kvm);
-		break;
-	case HVC_TLB_FLUSH_VMID_IPA:
-		kvm = hypsec_vmid_to_kvm((u32)hr->regs[1]);
-		__kvm_tlb_flush_vmid_ipa(kvm, (phys_addr_t)hr->regs[2]);
+		hypsec_tlb_flush_helper((u32)hr->regs[1], 0);
 		break;
 	case HVC_TLB_FLUSH_LOCAL_VMID:
-		vcpu = hypsec_vcpu_id_to_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
-		__kvm_tlb_flush_local_vmid(vcpu);
+		hypsec_tlb_flush_helper((u32)hr->regs[1], 1);
 		break;
 	case HVC_REGISTER_VM:
 		ret = (int)__hypsec_register_vm((struct kvm*)hr->regs[1]);

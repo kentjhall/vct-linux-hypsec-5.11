@@ -107,4 +107,6 @@ extern int hypsec_register_vm(struct kvm *kvm);
 int hypsec_register_vcpu(u32 vmid, struct kvm_vcpu *vcpu);
 
 struct el2_vm_info* vmid_to_vm_info(u32 vmid);
+
+void hypsec_tlb_flush_helper(u32 vmid, int mode);
 #endif /* __ARM_STAGE2_H__ */

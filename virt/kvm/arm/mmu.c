@@ -78,8 +78,6 @@ static void kvm_tlb_flush_vmid_ipa(struct kvm *kvm, phys_addr_t ipa)
 {
 #ifndef CONFIG_STAGE2_KERNEL
 	kvm_call_hyp(__kvm_tlb_flush_vmid_ipa, kvm, ipa);
-#else
-	kvm_call_core(HVC_TLB_FLUSH_VMID_IPA, kvm->arch.vmid, ipa);
 #endif
 }
 
