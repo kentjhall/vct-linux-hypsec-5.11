@@ -841,11 +841,11 @@ void __hyp_text __clear_vm_stage2_range(u32 vmid,
 {
 	struct el2_data *el2_data;
 
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	clear_shadow_stage2_range(vmid, start, size);
-
 	if (size != KVM_PHYS_SIZE)
 		return;
+
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	clear_shadow_stage2_range(vmid, start, size);
 	clear_vm_pfn_owner(el2_data, vmid);
 }
 
