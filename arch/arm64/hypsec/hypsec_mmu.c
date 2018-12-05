@@ -839,12 +839,11 @@ void __hyp_text clear_shadow_stage2_range(u32 vmid, phys_addr_t start, u64 size)
 void __hyp_text __clear_vm_stage2_range(u32 vmid,
 			phys_addr_t start, u64 size)
 {
-	struct el2_data *el2_data;
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
-	if (size != KVM_PHYS_SIZE)
+	if (size != KVM_PHYS_SIZE && el2_data->vm_info[vmid].powered_on)
 		return;
 
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	clear_shadow_stage2_range(vmid, start, size);
 	clear_vm_pfn_owner(el2_data, vmid);
 }

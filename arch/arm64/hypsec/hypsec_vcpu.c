@@ -87,6 +87,7 @@ static void __hyp_text prep_hvc(struct kvm_vcpu *vcpu)
 		vcpu->arch.shadow_vcpu_ctxt;
 	struct kvm_regs *gp_regs = &shadow_ctxt->gp_regs;
 	unsigned long psci_fn = gp_regs->regs.regs[0] & ~((u32) 0);
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	/* PSCI updates x0 for return value */
 	shadow_ctxt->dirty |= (1UL << 0);
@@ -103,6 +104,9 @@ static void __hyp_text prep_hvc(struct kvm_vcpu *vcpu)
 		case PSCI_0_2_FN64_AFFINITY_INFO:
 			vcpu_set_reg(vcpu, 1, gp_regs->regs.regs[1]);
 			vcpu_set_reg(vcpu, 2, gp_regs->regs.regs[2]);
+			break;
+		case PSCI_0_2_FN_SYSTEM_OFF:
+			el2_data->vm_info[vcpu->arch.vmid].powered_on = false;
 			break;
 		default:
 			break;
@@ -334,6 +338,9 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 
 		el2_save_sys_regs_32(vcpu, shadow_ctxt);
 		shadow_ctxt->dirty = 0;
+
+		if (!el2_data->vm_info[vcpu->arch.vmid].powered_on)
+			el2_data->vm_info[vcpu->arch.vmid].powered_on = true;
 
 		return;
 	}
