@@ -756,6 +756,9 @@ static void __hyp_text __hyp_call_panic_nvhe(u64 spsr, u64 elr, u64 par,
 {
 	struct kvm_vcpu *vcpu;
 	unsigned long str_va;
+#ifdef CONFIG_STAGE2_KERNEL
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+#endif
 
 	vcpu = __host_ctxt->__hyp_running_vcpu;
 
@@ -764,6 +767,9 @@ static void __hyp_text __hyp_call_panic_nvhe(u64 spsr, u64 elr, u64 par,
 		__deactivate_traps(vcpu);
 		__deactivate_vm(vcpu);
 		__sysreg_restore_state_nvhe(__host_ctxt);
+#ifdef CONFIG_STAGE2_KERNEL
+		__host_el2_restore_state(el2_data);
+#endif
 	}
 
 	/*
