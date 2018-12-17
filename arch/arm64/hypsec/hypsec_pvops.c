@@ -110,24 +110,28 @@ void __hyp_text grant_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 {
 	struct el2_data *el2_data;
 	unsigned long addr;
-	int len;
 	int writable;
+	int len = 0;
+	u64 arg2;
 	pgprot_t mem_type = PAGE_S2;
 
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	addr = shadow_vcpu_get_reg(vcpu, 1);
-	len = shadow_vcpu_get_reg(vcpu, 2) >> PAGE_SHIFT;
+	arg2 = shadow_vcpu_get_reg(vcpu, 2);
+	len += (arg2 & (PAGE_SIZE - 1) ? 1 : 0);
+	if (arg2 >> PAGE_SHIFT)
+		len += arg2 >> PAGE_SHIFT;
 
 	writable = shadow_vcpu_get_reg(vcpu, 3);
 	if (writable == 1)
 		mem_type = PAGE_S2_KERNEL;
 
-	do {
+	while (len > 0) {
 		__grant_stage2_sg_gpa(el2_data, addr, mem_type, vcpu->arch.vmid);
 		addr += PAGE_SIZE;
 		len--;
-	} while (len > 0);
+	};
 }
 
 static void __hyp_text __revoke_stage2_sg_gpa(struct el2_data *el2_data,
@@ -168,16 +172,20 @@ void __hyp_text revoke_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 {
 	struct el2_data *el2_data;
 	unsigned long addr;
-	int len;
+	int len = 0;
+	u64 arg2;
 
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	addr = shadow_vcpu_get_reg(vcpu, 1);
-	len = shadow_vcpu_get_reg(vcpu, 2) >> PAGE_SHIFT;
+	arg2 = shadow_vcpu_get_reg(vcpu, 2);
+	len += (arg2 & (PAGE_SIZE - 1) ? 1 : 0);
+	if (arg2 >> PAGE_SHIFT)
+		len += arg2 >> PAGE_SHIFT;
 
-	do {
+	while (len > 0) {
 		__revoke_stage2_sg_gpa(el2_data, addr, vcpu->arch.vmid);
 		addr += PAGE_SIZE;
 		len--;
-	} while (len > 0);
+	};
 }
