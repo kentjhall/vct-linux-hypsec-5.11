@@ -30,6 +30,9 @@
 #include <linux/dma-mapping.h>
 
 #include <asm/barrier.h>
+#ifdef CONFIG_STAGE2_KERNEL
+#include <asm/hypsec_host.h>
+#endif
 
 #include "io-pgtable.h"
 
@@ -466,8 +469,12 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
 			phys_addr_t paddr, size_t size, int iommu_prot)
 {
 	struct arm_lpae_io_pgtable *data = io_pgtable_ops_to_data(ops);
+#ifndef CONFIG_STAGE2_KERNEL
 	arm_lpae_iopte *ptep = data->pgd;
 	int ret, lvl = ARM_LPAE_START_LVL(data);
+#else
+	int ret;
+#endif
 	arm_lpae_iopte prot;
 
 	/* If no access, then nothing to do */
@@ -479,7 +486,12 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
 		return -ERANGE;
 
 	prot = arm_lpae_prot_to_pte(data, iommu_prot);
+#ifndef CONFIG_STAGE2_KERNEL
 	ret = __arm_lpae_map(data, iova, paddr, size, prot, lvl, ptep);
+#else
+	el2_arm_lpae_map(iova, paddr, size, prot, (u64)virt_to_phys(data->pgd));
+	ret = 0;
+#endif
 	/*
 	 * Synchronise all PTE updates for the new mapping before there's
 	 * a chance for anything to kick off a table walk for the new iova.
@@ -524,7 +536,12 @@ static void arm_lpae_free_pgtable(struct io_pgtable *iop)
 {
 	struct arm_lpae_io_pgtable *data = io_pgtable_to_data(iop);
 
+#ifndef CONFIG_STAGE2_KERNEL
 	__arm_lpae_free_pgtable(data, ARM_LPAE_START_LVL(data), data->pgd);
+#else
+	el2_free_smmu_pgd((unsigned long)virt_to_phys(data->pgd));
+	__arm_lpae_free_pages(data->pgd, data->pgd_size, &data->iop.cfg);
+#endif
 	kfree(data);
 }
 
@@ -632,6 +649,7 @@ static size_t arm_lpae_unmap(struct io_pgtable_ops *ops, unsigned long iova,
 			     size_t size)
 {
 	struct arm_lpae_io_pgtable *data = io_pgtable_ops_to_data(ops);
+#ifndef CONFIG_STAGE2_KERNEL
 	arm_lpae_iopte *ptep = data->pgd;
 	int lvl = ARM_LPAE_START_LVL(data);
 
@@ -639,12 +657,17 @@ static size_t arm_lpae_unmap(struct io_pgtable_ops *ops, unsigned long iova,
 		return 0;
 
 	return __arm_lpae_unmap(data, iova, size, lvl, ptep);
+#else
+	el2_arm_lpae_map(iova, 0, size, 0, (u64)virt_to_phys(data->pgd));
+	return size;
+#endif
 }
 
 static phys_addr_t arm_lpae_iova_to_phys(struct io_pgtable_ops *ops,
 					 unsigned long iova)
 {
 	struct arm_lpae_io_pgtable *data = io_pgtable_ops_to_data(ops);
+#ifndef CONFIG_STAGE2_KERNEL
 	arm_lpae_iopte pte, *ptep = data->pgd;
 	int lvl = ARM_LPAE_START_LVL(data);
 
@@ -675,6 +698,9 @@ static phys_addr_t arm_lpae_iova_to_phys(struct io_pgtable_ops *ops,
 found_translation:
 	iova &= (ARM_LPAE_BLOCK_SIZE(lvl, data) - 1);
 	return iopte_to_paddr(pte, data) | iova;
+#else
+	return el2_arm_lpae_iova_to_phys(iova, (u64)virt_to_phys(data->pgd));
+#endif
 }
 
 static void arm_lpae_restrict_pgsizes(struct io_pgtable_cfg *cfg)
