@@ -586,14 +586,24 @@ static irqreturn_t arm_smmu_global_fault(int irq, void *dev)
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_STAGE2_KERNEL
+#define ARM_SMMU_CB_VMID(smmu, cfg) ((u16)(smmu)->cavium_id_base + (cfg)->cbndx + 1)
+#endif
 static void arm_smmu_init_context_bank(struct arm_smmu_domain *smmu_domain,
 				       struct io_pgtable_cfg *pgtbl_cfg)
 {
 	struct arm_smmu_cfg *cfg = &smmu_domain->cfg;
 	struct arm_smmu_cb *cb = &smmu_domain->smmu->cbs[cfg->cbndx];
+#ifdef CONFIG_STAGE2_KERNEL
+	struct arm_smmu_device *smmu = smmu_domain->smmu;
+#endif
 	bool stage1 = cfg->cbar != CBAR_TYPE_S2_TRANS;
 
 	cb->cfg = cfg;
+#ifdef CONFIG_STAGE2_KERNEL
+	el2_alloc_smmu_pgd(pgtbl_cfg->arm_lpae_s2_cfg.vttbr, cfg->cbndx,
+		ARM_SMMU_CB_VMID(smmu, cfg));
+#endif
 
 	/* TTBCR */
 	if (stage1) {
