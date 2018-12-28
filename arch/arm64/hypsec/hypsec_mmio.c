@@ -193,8 +193,12 @@ bool __hyp_text handle_smmu_global_access(u32 hsr, u64 fault_ipa,
 				return false;
 			break;
 		case ARM_SMMU_GR0_sCR2:
-			/* Check if the host tries to bypass VMID */
-			break;
+			/*
+			 * Check if the host tries to bypass VMID by
+			 * writing the BPVMID[0:7] bits.
+			 */
+			if (data & 0xff)
+				return false;
 		/* We don't care abt GR0_ID0-7, cuz they're RO. */
 		default:
 			break;
@@ -210,7 +214,7 @@ bool __hyp_text handle_smmu_global_access(u32 hsr, u64 fault_ipa,
 	}
 
 #endif
-	 /* GR1 CBAR */
+	 /* GR1 CBAR for the specific Context Bank Index */
 	if (offset >= gr1_base && offset < gr1_base + 0x800) {
 		n = get_cbndx(offset, 0x1000);
 		if (n >= smmu.num_context_banks) {
@@ -222,6 +226,8 @@ bool __hyp_text handle_smmu_global_access(u32 hsr, u64 fault_ipa,
 			print_string("\rhandle_smmu_global_access: invalid data\n");
 			return false;
 		}
+
+		/* Hostvisor is only allowed to set the context bank using data in its smmu_cfg */
 		smmu_cfg = get_smmu_cfg_cbndx(n, el2_data);
 		if (!smmu_cfg->vmid)
 			smmu_cfg->vmid = (data & CBAR_VMID_MASK);
@@ -261,6 +267,8 @@ bool __hyp_text handle_smmu_cb_access(u32 hsr, u64 fault_ipa,
 			*val = smmu_cfg->hw_ttbr;
 			break;
 		case ARM_SMMU_CB_TTBR1:
+			/* It's not used since we have single stage SMMU. */
+			break;
 		case ARM_SMMU_CB_CONTEXTIDR:
 			return false;
 			break;
