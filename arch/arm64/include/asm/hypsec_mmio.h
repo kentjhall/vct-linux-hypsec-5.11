@@ -1,6 +1,9 @@
 #ifndef __ARM_STAGE2_MMIO__
 #define __ARM_STAGE2_MMIO__
 
+/* We map a smmu_cfg to each context bank on the hardware.
+ * We hardcode the value here since we have 8 ctxtbnk on Seattle.
+ */
 #define EL2_SMMU_CFG_SIZE	8
 
 /* FIXME: Hardcoded SMMU addresses now.. */

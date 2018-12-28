@@ -124,6 +124,8 @@ static struct el2_smmu_cfg* __hyp_text get_smmu_cfg_ttbr(
 static inline struct el2_smmu_cfg* __hyp_text get_smmu_cfg_cbndx(int cbndx,
 					struct el2_data *el2_data)
 {
+	if (cbndx > EL2_SMMU_CFG_SIZE)
+		__hyp_panic();
 	return &el2_data->smmu_cfg[cbndx];
 }
 
@@ -394,6 +396,7 @@ void __hyp_text  __el2_free_smmu_pgd(unsigned long addr)
 	memset(smmu_cfg, 0, sizeof(struct el2_smmu_cfg));
 }
 
+/* Allocate a hw_ttbr to map to a hostvisor allocated ttbr. */
 void __hyp_text  __el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid)
 {
 	struct el2_data *el2_data;
