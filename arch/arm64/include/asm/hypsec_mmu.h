@@ -77,7 +77,6 @@ void revoke_stage2_sg_gpa(struct kvm_vcpu *vcpu);
 void set_balloon_pfn(struct kvm_vcpu *vcpu);
 
 void* alloc_stage2_page(unsigned int order);
-void* alloc_shadow_s2_pgd(unsigned int num);
 
 struct s2_trans walk_stage2_pgd(u32 vmid, phys_addr_t addr, bool walk_shadow_s2);
 

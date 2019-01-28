@@ -116,7 +116,7 @@ static void __hyp_text clear_vm_pfn_owner(struct el2_data *el2_data, u32 vmid)
 
 void* __hyp_text alloc_stage2_page(unsigned int num)
 {
-	u64 p_addr, start;
+	u64 p_addr, start, unaligned, append;
 	struct el2_data *el2_data;
 
 	if (!num)
@@ -132,8 +132,16 @@ void* __hyp_text alloc_stage2_page(unsigned int num)
 	}
 
 	/* Start allocating memory from the normal page pool */
-	start = el2_data->page_pool_start + STAGE2_PGD_PAGES_SIZE;
+	start = el2_data->page_pool_start;
 	p_addr = (u64)start + (PAGE_SIZE * el2_data->used_pages);
+
+	unaligned = p_addr % (PAGE_SIZE * num);
+	/* Append to make p_addr aligned with (PAGE_SIZE * num) */
+	if (unaligned) {
+		append = num - (unaligned >> PAGE_SHIFT);
+		p_addr += append * PAGE_SIZE;
+		num += append;
+	}
 	el2_data->used_pages += num;
 
 	stage2_spin_unlock(&el2_data->page_pool_lock);
@@ -159,30 +167,6 @@ void * __hyp_text alloc_tmp_page(void)
 	el2_data->used_tmp_pages++;
 
 	stage2_spin_unlock(&el2_data->tmp_page_pool_lock);
-	return (void *)p_addr;
-}
-
-/* Allocate a 4k page from the reserved 2M area  */
-void* __hyp_text alloc_shadow_s2_pgd(unsigned int num)
-{
-	u64 p_addr, start;
-	struct el2_data *el2_data;
-
-	if (!num)
-		return NULL;
-
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	stage2_spin_lock(&el2_data->page_pool_lock);
-
-	/* Check if we're out of memory in the reserved area */
-	if (el2_data->used_pgd_pages >= STAGE2_NUM_PGD_PAGES)
-		print_string("stage2: out of pages\r\n");
-
-	start = el2_data->page_pool_start;
-	p_addr = (u64)start + (PAGE_SIZE * el2_data->used_pgd_pages);
-	el2_data->used_pgd_pages += num;
-
-	stage2_spin_unlock(&el2_data->page_pool_lock);
 	return (void *)p_addr;
 }
 

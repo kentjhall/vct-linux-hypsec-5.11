@@ -235,7 +235,8 @@ int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 
 	kvm->arch.vmid = vmid;
 	/* Allocates a 8KB page for stage 2 pgd */
-	vttbr = (u64)alloc_shadow_s2_pgd(S2_PGD_PAGES_NUM);
+	vttbr = (u64)alloc_stage2_page(S2_PGD_PAGES_NUM);
+
 	/* Supports 8-bit VMID */
 	vmid64 = ((u64)(vmid) << VTTBR_VMID_SHIFT) & VTTBR_VMID_MASK(8);
 	el2_data->vm_info[vmid].vttbr = vttbr | vmid64;

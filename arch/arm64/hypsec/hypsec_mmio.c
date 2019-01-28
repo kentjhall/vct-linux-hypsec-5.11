@@ -423,7 +423,7 @@ void __hyp_text  __el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid)
 
 	smmu_cfg->ttbr = addr;
 	/* Allocate a new hw ttbr */
-	smmu_cfg->hw_ttbr = (u64)alloc_shadow_s2_pgd(2);
+	smmu_cfg->hw_ttbr = (u64)alloc_stage2_page(2);
 }
 
 u64 __hyp_text smmu_init_pte(u64 prot, phys_addr_t paddr)
