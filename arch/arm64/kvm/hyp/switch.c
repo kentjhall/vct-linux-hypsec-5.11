@@ -648,7 +648,12 @@ int kvm_vcpu_run_vhe(struct kvm_vcpu *vcpu)
 }
 
 /* Switch to the guest for legacy non-VHE systems */
+#ifndef CONFIG_STAGE2_KERNEL
 int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
+#else
+int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
+				   struct shadow_vcpu_context *prot_ctxt)
+#endif
 {
 	u64 exit_code;
 	struct kvm_cpu_context *host_ctxt;
@@ -667,7 +672,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu)
 	guest_ctxt = &vcpu->arch.ctxt;
 #ifdef CONFIG_STAGE2_KERNEL
 	shadow_ctxt =
-		(struct kvm_cpu_context *)vcpu->arch.shadow_vcpu_ctxt;
+		(struct kvm_cpu_context *)prot_ctxt;
 #endif
 
 	__sysreg_save_state_nvhe(host_ctxt);

@@ -63,7 +63,13 @@ extern void __kvm_timer_set_cntvoff(u32 cntvoff_low, u32 cntvoff_high);
 
 extern int kvm_vcpu_run_vhe(struct kvm_vcpu *vcpu);
 
+#ifndef CONFIG_STAGE2_KERNEL
 extern int __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu);
+#else
+struct shadow_vcpu_context;
+extern int __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
+			       struct shadow_vcpu_context *prot_ctxt);
+#endif
 
 extern u64 __vgic_v3_get_ich_vtr_el2(void);
 extern u64 __vgic_v3_read_vmcr(void);
