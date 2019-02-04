@@ -273,6 +273,23 @@ struct kvm_vcpu* __hyp_text hypsec_vcpu_id_to_vcpu(u32 vmid, int vcpu_id)
 		return vcpu;
 }
 
+struct shadow_vcpu_context* __hyp_text hypsec_vcpu_id_to_shadow_ctxt(
+	u32 vmid, int vcpu_id)
+{
+	struct shadow_vcpu_context *shadow_ctxt = NULL;
+	struct el2_vm_info *vm_info;
+
+	if (vcpu_id >= HYPSEC_MAX_VCPUS)
+		__hyp_panic();
+
+	vm_info = vmid_to_vm_info(vmid);
+	shadow_ctxt = vm_info->shadow_ctxt[vcpu_id];
+	if (!shadow_ctxt)
+		__hyp_panic();
+	else
+		return shadow_ctxt;
+}
+
 void __hyp_text encrypt_buf(u32 vmid, void *buf, uint32_t len)
 {
 	struct AES_ctx ctx;

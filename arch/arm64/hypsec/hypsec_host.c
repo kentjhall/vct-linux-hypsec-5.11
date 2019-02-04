@@ -256,6 +256,7 @@ static int __hyp_text __hypsec_register_vcpu(u32 vmid, struct kvm_vcpu *vcpu)
 	ret = 1;
 	el2_data->shadow_vcpu_ctxt[index].dirty = -1;
 	new_ctxt = &el2_data->shadow_vcpu_ctxt[index];
+	vm_info->shadow_ctxt[vcpu->vcpu_id] = new_ctxt;
 
 err_unlock:
 	stage2_spin_unlock(&el2_data->shadow_vcpu_ctxt_lock);

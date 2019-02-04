@@ -48,6 +48,7 @@ struct el2_vm_info {
 	arch_spinlock_t boot_lock;
 	struct kvm *kvm;
 	struct kvm_vcpu *vcpus[HYPSEC_MAX_VCPUS];
+	struct shadow_vcpu_context *shadow_ctxt[HYPSEC_MAX_VCPUS];
 	uint8_t key[16];
 	uint8_t iv[16];
 	unsigned char public_key[32];
@@ -70,4 +71,5 @@ void __el2_boot_from_inc_exe(u32 vmid);
 
 struct kvm* hypsec_vmid_to_kvm(u32 vmid);
 struct kvm_vcpu* hypsec_vcpu_id_to_vcpu(u32 vmid, int vcpu_id);
+struct shadow_vcpu_context* hypsec_vcpu_id_to_shadow_ctxt( u32 vmid, int vcpu_id);
 #endif /* __ARM_STAGE2_BOOT__ */
