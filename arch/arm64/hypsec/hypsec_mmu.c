@@ -248,31 +248,25 @@ static void __hyp_text walk_stage2_pud(pgd_t *pgd, phys_addr_t addr,
 }
 
 struct s2_trans __hyp_text walk_stage2_pgd(u32 vmid,
-					   phys_addr_t addr,
-					   bool walk_shadow_s2)
+					   phys_addr_t addr)
 {
 	pgd_t *vttbr;
 	pgd_t *pgd;
-	arch_spinlock_t *lock;
 	struct s2_trans result;
 	struct el2_vm_info* vm_info = vmid_to_vm_info(vmid);
 
 	/* Just in case we cannot find the pfn.. */
 	el2_memset(&result, 0, sizeof(struct s2_trans));
-	if (walk_shadow_s2) {
-		vttbr = (pgd_t *)(vm_info->vttbr & VTTBR_BADDR_MASK);
-		lock = &vm_info->shadow_pt_lock;
-	} else {
-		vttbr = (void *)(vm_info->virt_vttbr);
-		lock = vm_info->virt_vttbr_lock;
-	}
+	vttbr = (pgd_t *)(vm_info->vttbr & VTTBR_BADDR_MASK);
 	vttbr = __el2_va(vttbr);
 
-	stage2_spin_lock(lock);
+	stage2_spin_lock(&vm_info->shadow_pt_lock);
+
 	pgd = vttbr + stage2_pgd_index(addr);
 	if (stage2_pgd_present(*pgd))
 		walk_stage2_pud(pgd, addr, &result);
-	stage2_spin_unlock(lock);
+
+	stage2_spin_unlock(&vm_info->shadow_pt_lock);
 
 	return result;
 }

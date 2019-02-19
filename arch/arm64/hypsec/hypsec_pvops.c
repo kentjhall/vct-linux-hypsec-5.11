@@ -31,7 +31,7 @@ void __hyp_text set_stage2_vring_gpa(struct kvm_vcpu *vcpu)
 	npages = (size_in_bytes >> PAGE_SHIFT) + 1;
 
 	for (i = 0; i < npages; i++) {
-		result = walk_stage2_pgd(vcpu->arch.vmid, addr, true);
+		result = walk_stage2_pgd(vcpu->arch.vmid, addr);
 		if (!result.level)
 			return;
 
@@ -53,7 +53,7 @@ void __hyp_text set_balloon_pfn(struct kvm_vcpu *vcpu)
 
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
-	result = walk_stage2_pgd(vcpu->arch.vmid, gpa, true);
+	result = walk_stage2_pgd(vcpu->arch.vmid, gpa);
 	if (!result.level)
 		return;
 
@@ -83,7 +83,7 @@ static void __hyp_text __grant_stage2_sg_gpa(struct el2_data *el2_data,
 
 	s2_pages = el2_data->s2_pages;
 
-	result = walk_stage2_pgd(vmid, addr, true);
+	result = walk_stage2_pgd(vmid, addr);
 	stage2_spin_lock(&el2_data->s2pages_lock);
 	pfn = result.pfn;
 	if (!pfn) {
@@ -146,7 +146,7 @@ static void __hyp_text __revoke_stage2_sg_gpa(struct el2_data *el2_data,
 
 	s2_pages = el2_data->s2_pages;
 
-	result = walk_stage2_pgd(vmid, addr, true);
+	result = walk_stage2_pgd(vmid, addr);
 	stage2_spin_lock(&el2_data->s2pages_lock);
 	pfn = result.pfn;
 	if (!pfn) {

@@ -78,7 +78,7 @@ void set_balloon_pfn(struct kvm_vcpu *vcpu);
 
 void* alloc_stage2_page(unsigned int order);
 
-struct s2_trans walk_stage2_pgd(u32 vmid, phys_addr_t addr, bool walk_shadow_s2);
+struct s2_trans walk_stage2_pgd(u32 vmid, phys_addr_t addr);
 
 int stage2_mem_regions_search(phys_addr_t addr, struct memblock_region *regions,
 	unsigned long cnt);
