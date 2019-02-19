@@ -339,8 +339,11 @@ static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu, u64 esr)
 		 * twice if it's GPA belongs to MMIO region. Since no mapping
 		 * should be built anyway.
 		 */
-		else if (!is_mmio_gpa((hpfar & HPFAR_MASK) << 8))
+		else if (!is_mmio_gpa((hpfar & HPFAR_MASK) << 8)) {
 			vcpu->arch.shadow_vcpu_ctxt->hpfar = hpfar;
+			el2_memset(&vcpu->arch.walk_result, 0,
+					sizeof(struct s2_trans));
+		}
 	}
 #endif
 

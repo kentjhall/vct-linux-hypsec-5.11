@@ -40,6 +40,9 @@
 #include <kvm/arm_vgic.h>
 #include <kvm/arm_arch_timer.h>
 #include <kvm/arm_pmu.h>
+#ifdef CONFIG_STAGE2_KERNEL
+#include <asm/hypsec_mmu.h>
+#endif
 
 #define KVM_MAX_VCPUS VGIC_V3_MAX_CPUS
 
@@ -237,6 +240,8 @@ struct kvm_vcpu_arch {
 	u32 vmid;
 	char	filler[PAGE_SIZE];
 	u64 tpidr_el2;
+
+	struct s2_trans walk_result;
 #endif
 	struct kvm_cpu_context ctxt;
 

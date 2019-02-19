@@ -747,12 +747,11 @@ int __hyp_text post_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 	phys_addr_t addr;
 	struct el2_data *el2_data;
 	struct s2_trans result;
-	u32 vmid = vcpu->arch.vmid;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	addr = (hpfar & HPFAR_MASK) << 8;
 
-	result = walk_stage2_pgd(vmid, addr, false);
+	result = vcpu->arch.walk_result;
 	if (!result.level)
 		return -ENOMEM;
 
@@ -1098,6 +1097,28 @@ void __hyp_text load_image_to_shadow_s2pt(u32 vmid,
 		map_shadow_s2pt_mem(vmid, el2_data, ipa, result, true);
 
 		i += (PMD_SIZE >> PAGE_SHIFT);
+	}
+}
+
+void __hyp_text map_vgic_cpu_to_shadow_s2pt(u32 vmid, struct el2_data *el2_data)
+{
+	struct s2_trans result;
+	/* We now hardcode the GPA here to be the same as QEMU. */
+	unsigned long vgic_cpu_gpa = 0x08010000;
+	int i = 0;
+
+	result.output = el2_data->vgic_cpu_base;
+	result.pfn = result.output >> PAGE_SHIFT;
+	result.writable = true;
+	result.level = 3;
+
+	while (i < KVM_VGIC_V2_CPU_SIZE) {
+		map_shadow_s2pt_mem(vmid, el2_data, vgic_cpu_gpa, result, false);
+
+		i += PAGE_SIZE;
+		vgic_cpu_gpa += PAGE_SIZE;
+		result.output += PAGE_SIZE;
+		result.pfn++;
 	}
 }
 

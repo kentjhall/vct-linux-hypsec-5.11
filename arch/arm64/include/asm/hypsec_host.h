@@ -53,6 +53,7 @@ struct el2_data {
 	struct el2_arm_smmu_device smmu;
 
 	u32 next_vmid;
+	phys_addr_t vgic_cpu_base;
 };
 
 void init_el2_data_page(void);
@@ -65,6 +66,12 @@ static inline void stage2_spin_lock(arch_spinlock_t *lock)
 static inline void stage2_spin_unlock(arch_spinlock_t *lock)
 {
 	arch_spin_unlock(lock);
+}
+
+static inline void el2_init_vgic_cpu_base(phys_addr_t base)
+{
+	struct el2_data *el2_data = (void *)kvm_ksym_ref(el2_data_start);
+	el2_data->vgic_cpu_base = base;
 }
 
 extern void __noreturn __hyp_panic(void);
@@ -109,4 +116,5 @@ int hypsec_register_vcpu(u32 vmid, struct kvm_vcpu *vcpu);
 struct el2_vm_info* vmid_to_vm_info(u32 vmid);
 
 void hypsec_tlb_flush_helper(u32 vmid, int mode);
+extern void map_vgic_cpu_to_shadow_s2pt(u32 vmid, struct el2_data *el2_data);
 #endif /* __ARM_STAGE2_H__ */

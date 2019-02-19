@@ -1536,6 +1536,20 @@ static void kvm_send_hwpoison_signal(unsigned long address,
 	send_sig_info(SIGBUS, &info, current);
 }
 
+#ifdef CONFIG_STAGE2_KERNEL
+static void set_s2_trans_result(struct kvm_vcpu *vcpu, kvm_pfn_t pfn,
+				phys_addr_t output, bool writable, int level)
+{
+	struct s2_trans *walk_result = &vcpu->arch.walk_result;
+	walk_result->pfn = pfn;
+	walk_result->output = output;
+	walk_result->writable = writable;
+	walk_result->readable = true;
+	walk_result->level = level;
+	walk_result->desc = 0;
+}
+#endif
+
 static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 			  struct kvm_memory_slot *memslot, unsigned long hva,
 			  unsigned long fault_status)
@@ -1662,6 +1676,9 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 				new_pmd = kvm_s2pmd_mkexec(new_pmd);
 		}
 
+#ifdef CONFIG_STAGE2_KERNEL
+		set_s2_trans_result(vcpu, pfn, pfn << PAGE_SHIFT, writable, 2);
+#endif
 		ret = stage2_set_pmd_huge(kvm, memcache, fault_ipa, &new_pmd);
 	} else {
 		pte_t new_pte = pfn_pte(pfn, mem_type);
@@ -1684,6 +1701,9 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 				new_pte = kvm_s2pte_mkexec(new_pte);
 		}
 
+#ifdef CONFIG_STAGE2_KERNEL
+		set_s2_trans_result(vcpu, pfn, pfn << PAGE_SHIFT, writable, 3);
+#endif
 		ret = stage2_set_pte(kvm, memcache, fault_ipa, &new_pte, flags);
 	}
 

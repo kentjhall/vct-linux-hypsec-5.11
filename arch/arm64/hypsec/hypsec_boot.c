@@ -241,6 +241,8 @@ int __hyp_text __hypsec_register_vm(struct kvm *kvm)
 	vmid64 = ((u64)(vmid) << VTTBR_VMID_SHIFT) & VTTBR_VMID_MASK(8);
 	el2_data->vm_info[vmid].vttbr = vttbr | vmid64;
 
+	map_vgic_cpu_to_shadow_s2pt(vmid, el2_data);
+
 	return 0;
 }
 
