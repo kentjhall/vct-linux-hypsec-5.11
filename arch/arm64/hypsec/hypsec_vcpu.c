@@ -366,7 +366,7 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 	shadow_ctxt->far_el2 = 0;
 
 	if (shadow_ctxt->hpfar)
-		handle_shadow_s2pt_fault(vcpu, shadow_ctxt->hpfar);
+		post_handle_shadow_s2pt_fault(vcpu, shadow_ctxt->hpfar);
 	shadow_ctxt->hpfar = 0;
 }
 

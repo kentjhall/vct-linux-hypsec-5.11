@@ -332,7 +332,7 @@ static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu, u64 esr)
 	vcpu->arch.fault.hpfar_el2 = hpfar;
 #ifdef CONFIG_STAGE2_KERNEL
 	if ((esr & ESR_ELx_FSC_TYPE) == FSC_FAULT) {
-		if (handle_shadow_s2pt_fault(vcpu, hpfar) > 0)
+		if (pre_handle_shadow_s2pt_fault(vcpu, hpfar) > 0)
 			return false;
 		/*
 		 * Here we'd like to avoid calling handle_shadow_s2pt_fault

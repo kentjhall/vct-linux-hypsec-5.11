@@ -84,7 +84,8 @@ int stage2_mem_regions_search(phys_addr_t addr, struct memblock_region *regions,
 	unsigned long cnt);
 
 unsigned long get_s2_page_index(struct el2_data *el2_data, phys_addr_t addr);
-int handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar);
+int pre_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar);
+int post_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar);
 
 extern void clear_shadow_stage2_range(u32 vmid, phys_addr_t start, u64 size);
 extern void __kvm_tlb_flush_vmid_el2(void);
@@ -102,9 +103,14 @@ unsigned long get_el2_image_va(u32 vmid, unsigned long addr);
 extern struct s2_trans handle_from_vm_info(struct el2_data *el2_data,
 					   unsigned long el2_va, unsigned long addr);
 
+static inline bool is_gic_cpu(u64 addr)
+{
+	return (addr >= 0x08010000 && addr < 0x08020000) ? true : false;
+}
+
 static inline bool is_mmio_gpa(u64 addr)
 {
-	return (addr < 0x40000000) ? true : false;
+	return (addr < 0x40000000 && !is_gic_cpu(addr)) ? true : false;
 }
 
 pmd_t *pmd_offset_el2(pud_t *pud, u64 addr);

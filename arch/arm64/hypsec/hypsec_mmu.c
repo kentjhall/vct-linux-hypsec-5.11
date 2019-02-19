@@ -689,26 +689,13 @@ static __hyp_text bool is_hypsec_va_range(unsigned long s, unsigned long e)
 	return false;
 }
 
-int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
+static int __hyp_text prot_and_map_to_s2pt(struct s2_trans result,
+					   struct el2_data *el2_data,
+					   struct kvm_vcpu *vcpu,
+					   phys_addr_t faulted_ipa)
 {
 	u32 vmid = vcpu->arch.vmid, target_vmid;
-	phys_addr_t addr;
-	struct el2_data *el2_data;
-	struct s2_trans result;
 	int ret = -ENOMEM;
-	unsigned long remapped_va;
-
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	addr = (hpfar & HPFAR_MASK) << 8;
-
-	remapped_va = get_el2_image_va(vmid, addr);
-	if (remapped_va)
-		result = handle_from_vm_info(el2_data, remapped_va, addr);
-	else
-		result = walk_stage2_pgd(vmid, addr, false);
-
-	if (!result.level)
-		return ret;
 
 	if (stage2_is_map_memory(result.output)) {
 		/* Check if a page is owned by EL2 or already belongs to a VM */
@@ -717,11 +704,10 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 			return ret;
 	}
 
-	map_shadow_s2pt_mem(vmid, el2_data, addr, result,
+	map_shadow_s2pt_mem(vmid, el2_data, faulted_ipa, result,
 			    kvm_vcpu_trap_is_iabt(vcpu));
 	ret = 1;
-
-	if (result.pfn && !is_mmio_gpa(addr)) {
+	if (result.pfn && !is_mmio_gpa(faulted_ipa)) {
 		if (result.level == 2) {
 			set_pfn_owner(el2_data, result.output, PMD_SIZE, vmid);
 			__set_pfn_host(result.output, PMD_SIZE, 0, PAGE_GUEST);
@@ -734,6 +720,43 @@ int __hyp_text handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 	__kvm_flush_vm_context();
 
 	return ret;
+}
+
+int __hyp_text pre_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
+{
+	phys_addr_t addr;
+	struct el2_data *el2_data;
+	struct s2_trans result;
+	unsigned long remapped_va;
+	u32 vmid = vcpu->arch.vmid;
+
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	addr = (hpfar & HPFAR_MASK) << 8;
+
+	remapped_va = get_el2_image_va(vmid, addr);
+	if (remapped_va)
+		result = handle_from_vm_info(el2_data, remapped_va, addr);
+	else
+		return -ENOMEM;
+
+	return prot_and_map_to_s2pt(result, el2_data, vcpu, addr);
+}
+
+int __hyp_text post_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
+{
+	phys_addr_t addr;
+	struct el2_data *el2_data;
+	struct s2_trans result;
+	u32 vmid = vcpu->arch.vmid;
+
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	addr = (hpfar & HPFAR_MASK) << 8;
+
+	result = walk_stage2_pgd(vmid, addr, false);
+	if (!result.level)
+		return -ENOMEM;
+
+	return prot_and_map_to_s2pt(result, el2_data, vcpu, addr);
 }
 
 void __hyp_text clear_vm_stage2_ptes(pmd_t *pmd, phys_addr_t addr,
