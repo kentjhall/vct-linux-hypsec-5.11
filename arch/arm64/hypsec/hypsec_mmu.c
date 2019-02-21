@@ -554,11 +554,13 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 			goto out;
 		} else if (!vmid)
 			new_pte = pfn_pte(pfn, PAGE_S2_KERNEL);
-	} else if (!stage2_emul_mmio(el2_data, addr, host_regs)) {
-		new_pte = pfn_pte(pfn, PAGE_S2_DEVICE);
-		new_pte = kvm_s2pte_mkwrite(new_pte);
-	} else
-		goto out;
+	} else {
+		if (!stage2_emul_mmio(el2_data, addr, host_regs)) {
+			new_pte = pfn_pte(pfn, PAGE_S2_DEVICE);
+			new_pte = kvm_s2pte_mkwrite(new_pte);
+		} else
+			return;
+	}
 
 	handle_host_stage2_trans_fault(host_lr, addr, el2_data, new_pte);
 
