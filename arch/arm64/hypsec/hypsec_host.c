@@ -103,6 +103,7 @@ void init_el2_data_page(void)
 	int i = 0, index = 0, err;
 	struct el2_data *el2_data;
 	struct memblock_region *r;
+	struct el2_arm_smmu_device *smmu;
 
 	memset((void *)kvm_ksym_ref(stage2_pgs_start), 0, STAGE2_PAGES_SIZE);
 	__flush_dcache_area((void *)kvm_ksym_ref(stage2_pgs_start), STAGE2_PAGES_SIZE);
@@ -159,6 +160,15 @@ void init_el2_data_page(void)
 
 	memset(el2_data->smmu_cfg, 0,
 		sizeof(struct el2_smmu_cfg) * EL2_SMMU_CFG_SIZE);
+	for (i = 0; i < el2_data->el2_smmu_num; i++) {
+		smmu = &el2_data->smmus[i];
+		err = create_hypsec_io_mappings(smmu->phys_base, smmu->size,
+						&smmu->hyp_base);
+		if (err) {
+			kvm_err("Cannot map smmu %d from %llx\n", i, smmu->phys_base);
+			goto out_err;
+		}
+	}
 
 	for (i = 0; i < SHADOW_SYS_REGS_DESC_SIZE; i++)
 		el2_data->s2_sys_reg_descs[i] = host_sys_reg_descs[i];

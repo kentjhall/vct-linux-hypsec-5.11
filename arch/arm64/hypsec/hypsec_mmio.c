@@ -372,13 +372,14 @@ void __hyp_text handle_host_mmio(phys_addr_t addr,
 				 struct s2_host_regs *host_regs,
 				 int index)
 {
-	u64 fault_ipa = addr | (read_sysreg_el2(far) & ((1 << 12) - 1));
+	u64 fault_ipa;
 	u32 hsr = read_sysreg(esr_el2);
 	bool is_write = host_dabt_is_write(hsr);
 	int len = host_dabt_get_as(hsr);
 	struct el2_data *el2_data;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	fault_ipa = el2_data->smmus[index].hyp_base | (read_sysreg_el2(far) & ((1 << 12) - 1));
 
 	if (is_write) {
 		handle_smmu_write(hsr, fault_ipa, len, host_regs, el2_data->smmus[index]);

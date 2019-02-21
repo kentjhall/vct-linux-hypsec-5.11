@@ -40,6 +40,8 @@ struct el2_arm_smmu_device {
 	u32				num_global_irqs;
 	u32				num_context_irqs;
 	bool				exists;
+
+	unsigned long			hyp_base;
 };
 
 struct el2_smmu_cfg {
