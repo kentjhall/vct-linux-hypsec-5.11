@@ -368,7 +368,9 @@ void __hyp_text handle_smmu_read(u32 hsr, u64 fault_ipa, int len,
 		__handle_smmu_read(hsr, fault_ipa, len, host_regs);
 }
 
-void __hyp_text handle_host_mmio(phys_addr_t addr, struct s2_host_regs *host_regs)
+void __hyp_text handle_host_mmio(phys_addr_t addr,
+				 struct s2_host_regs *host_regs,
+				 int index)
 {
 	u64 fault_ipa = addr | (read_sysreg_el2(far) & ((1 << 12) - 1));
 	u32 hsr = read_sysreg(esr_el2);
@@ -379,9 +381,9 @@ void __hyp_text handle_host_mmio(phys_addr_t addr, struct s2_host_regs *host_reg
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	if (is_write) {
-		handle_smmu_write(hsr, fault_ipa, len, host_regs, el2_data->smmu);
+		handle_smmu_write(hsr, fault_ipa, len, host_regs, el2_data->smmus[index]);
 	} else {
-		handle_smmu_read(hsr, fault_ipa, len, host_regs, el2_data->smmu);
+		handle_smmu_read(hsr, fault_ipa, len, host_regs, el2_data->smmus[index]);
 	}
 	host_skip_instr();
 

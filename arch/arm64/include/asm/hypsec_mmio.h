@@ -5,13 +5,11 @@
  * We hardcode the value here since we have 8 ctxtbnk on Seattle.
  */
 #define EL2_SMMU_CFG_SIZE	8
+#define SMMU_NUM		4
 
 /* FIXME: Hardcoded SMMU addresses now.. */
 #define SMMU_BASE(smmu)		smmu.phys_base
 #define SMMU_SIZE(smmu)		smmu.size
-#define is_smmu_range(smmu, addr)	\
-	((addr >= smmu.phys_base) &&	\
-		(addr <= smmu.phys_base + smmu.size)) ? 1 : 0
 
 /* Maximum number of context banks per SMMU */
 #define ARM_SMMU_MAX_CBS		128
@@ -52,7 +50,7 @@ struct el2_smmu_cfg {
 
 struct el2_smmu_cfg* get_smmu_cfg(struct el2_data *el2_data, unsigned long addr);
 struct el2_smmu_cfg* alloc_smmu_cfg(struct el2_data *el2_data);
-void handle_host_mmio(phys_addr_t addr, struct s2_host_regs *host_regs);
+void handle_host_mmio(phys_addr_t addr, struct s2_host_regs *host_regs, int index);
 
 void   __el2_free_smmu_pgd(unsigned long addr);
 void   __el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid);

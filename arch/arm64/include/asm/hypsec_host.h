@@ -51,6 +51,8 @@ struct el2_data {
 
 	struct el2_smmu_cfg smmu_cfg[EL2_SMMU_CFG_SIZE];
 	struct el2_arm_smmu_device smmu;
+	struct el2_arm_smmu_device smmus[SMMU_NUM];
+	int el2_smmu_num;
 
 	u32 next_vmid;
 	phys_addr_t vgic_cpu_base;
@@ -117,4 +119,18 @@ struct el2_vm_info* vmid_to_vm_info(u32 vmid);
 
 void hypsec_tlb_flush_helper(u32 vmid, int mode);
 extern void map_vgic_cpu_to_shadow_s2pt(u32 vmid, struct el2_data *el2_data);
+
+static inline int is_smmu_range(struct el2_data *el2_data, phys_addr_t addr)
+{
+	int ret = -EINVAL, i;
+	struct el2_arm_smmu_device smmu;
+
+	for (i = 0; i < el2_data->el2_smmu_num; i++) {
+		smmu = el2_data->smmus[i];
+		if ((addr >= smmu.phys_base) &&
+		    (addr <= smmu.phys_base + smmu.size))
+			break;
+	}
+	return ret;
+}
 #endif /* __ARM_STAGE2_H__ */

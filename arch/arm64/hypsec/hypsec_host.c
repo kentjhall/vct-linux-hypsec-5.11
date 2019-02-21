@@ -364,9 +364,6 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		ret = (u64)__el2_verify_and_load_images((u32)hr->regs[1]);
 		hr->regs[31] = (u64)ret;
 		break;
-	case HVC_REGISTER_SMMU:
-		__el2_register_smmu();
-		break;
 	case HVC_FREE_SMMU_PGD:
 		__el2_free_smmu_pgd((unsigned long)hr->regs[1]);
 		break;

@@ -2058,33 +2058,34 @@ static void s2_smmu_probe(struct arm_smmu_device *smmu,
 			  u64 base, u64 size)
 {
 	struct el2_data *el2_data;
-	struct el2_arm_smmu_device *el2_smmu;
+	struct el2_arm_smmu_device el2_smmu;
 	u64 smmu_start, smmu_end;
 
-	BUG_ON(!smmu);
-
 	el2_data = (void *)kvm_ksym_ref(el2_data_start);
-	el2_smmu = &el2_data->smmu;
-	el2_smmu->phys_base = base;
-	el2_smmu->size = size;
+	if (el2_data->el2_smmu_num > SMMU_NUM)
+		return;
+
+	el2_smmu.phys_base = base;
+	el2_smmu.size = size;
 
 	smmu_start = base;
 	smmu_end = base + size;
 
-	el2_smmu->pgshift = smmu->pgshift;
-	el2_smmu->features = smmu->features;
-	el2_smmu->options = smmu->options;
+	el2_smmu.pgshift = smmu->pgshift;
+	el2_smmu.features = smmu->features;
+	el2_smmu.options = smmu->options;
 
-	el2_smmu->num_context_banks = smmu->num_context_banks;
-	el2_smmu->num_s2_context_banks = smmu->num_s2_context_banks;
+	el2_smmu.num_context_banks = smmu->num_context_banks;
+	el2_smmu.num_s2_context_banks = smmu->num_s2_context_banks;
 
-	el2_smmu->va_size = smmu->va_size;
-	el2_smmu->ipa_size = smmu->ipa_size;
-	el2_smmu->pa_size = smmu->pa_size;
+	el2_smmu.va_size = smmu->va_size;
+	el2_smmu.ipa_size = smmu->ipa_size;
+	el2_smmu.pa_size = smmu->pa_size;
 
-	el2_smmu->num_global_irqs = smmu->num_global_irqs;
+	el2_smmu.num_global_irqs = smmu->num_global_irqs;
 
-	el2_register_smmu();
+	el2_data->smmus[el2_data->el2_smmu_num] = el2_smmu;
+	el2_data->el2_smmu_num++;
 }
 #endif
 
@@ -2267,7 +2268,30 @@ static struct platform_driver arm_smmu_driver = {
 	.remove	= arm_smmu_device_remove,
 	.shutdown = arm_smmu_device_shutdown,
 };
+#ifndef CONFIG_STAGE2_KERNEL
 module_platform_driver(arm_smmu_driver);
+#else
+static int __init arm_smmu_init(void)
+{
+	static bool registered;
+	int ret = 0;
+
+	if (!registered) {
+		ret = platform_driver_register(&arm_smmu_driver);
+		registered = !ret;
+	}
+	return ret;
+}
+
+static void __exit arm_smmu_exit(void)
+{
+	return platform_driver_unregister(&arm_smmu_driver);
+}
+
+/* The following hack is to probe SMMU before hostvisor installation. */
+subsys_initcall(arm_smmu_init);
+module_exit(arm_smmu_exit);
+#endif
 
 IOMMU_OF_DECLARE(arm_smmuv1, "arm,smmu-v1");
 IOMMU_OF_DECLARE(arm_smmuv2, "arm,smmu-v2");

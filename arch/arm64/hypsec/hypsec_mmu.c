@@ -508,9 +508,13 @@ static int __hyp_text stage2_emul_mmio(struct el2_data *el2_data,
 				       phys_addr_t addr,
 				       struct s2_host_regs *host_regs)
 {
-	if (el2_data->smmu.exists && is_smmu_range(el2_data->smmu, addr)) {
-		handle_host_mmio(addr, host_regs);
-		return 1;
+	int ret;
+	if (el2_data->el2_smmu_num) {
+		ret = is_smmu_range(el2_data, addr);
+		if (ret >= 0) {
+			handle_host_mmio(addr, host_regs, ret);
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -1137,21 +1141,6 @@ out:
 	return result;
 }
 
-void __hyp_text __el2_register_smmu(void)
-{
-	struct el2_data *el2_data;
-	struct el2_arm_smmu_device el2_smmu;
-	u64 start, end;
-
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	el2_smmu = el2_data->smmu;
-	start = el2_smmu.phys_base;
-	end = start + el2_smmu.size;
-	map_el2_mem(start, end, start >> PAGE_SHIFT, PAGE_HYP_DEVICE);
-
-	__set_pfn_host(start, end - start, 0, PAGE_NONE);
-}
-
 void __hyp_text __el2_encrypt_buf(u32 vmid, void *buf, uint32_t len)
 {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -1189,11 +1178,6 @@ int el2_create_hyp_mapping(unsigned long start, unsigned long end,
 void clear_vm_stage2_range(u32 vmid, phys_addr_t start, u64 size)
 {
 	kvm_call_core(HVC_CLEAR_VM_S2_RANGE, vmid, start, size);
-}
-
-void el2_register_smmu(void)
-{
-	kvm_call_core(HVC_REGISTER_SMMU);
 }
 
 void el2_encrypt_buf(u32 vmid, void *buf, uint32_t len)
