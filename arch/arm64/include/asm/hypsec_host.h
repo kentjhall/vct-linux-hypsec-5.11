@@ -128,8 +128,10 @@ static inline int is_smmu_range(struct el2_data *el2_data, phys_addr_t addr)
 	for (i = 0; i < el2_data->el2_smmu_num; i++) {
 		smmu = el2_data->smmus[i];
 		if ((addr >= smmu.phys_base) &&
-		    (addr <= smmu.phys_base + smmu.size))
+		    (addr <= smmu.phys_base + smmu.size)) {
+			ret = i;
 			break;
+		}
 	}
 	return ret;
 }
