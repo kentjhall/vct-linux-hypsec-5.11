@@ -63,8 +63,6 @@
 #define HVC_TLB_FLUSH_VMID_IPA 13
 #define HVC_TLB_FLUSH_LOCAL_VMID 14
 
-#define HVC_REGISTER_VM 15
-#define HVC_REGISTER_VCPU 16
 #define HVC_UPDATE_EXPT_FLAG 18
 
 #define HVC_FLUSH_VM_CTXT 19
@@ -87,6 +85,13 @@
 #define HVC_SAVE_CRYPT_VCPU 34
 
 #define HVC_GET_MDCR_EL2 35
+
+#define HVC_REGISTER_KVM 36
+#define HVC_REGISTER_VCPU 37
+#define HVC_MAP_ONE_KVM_PAGE 38
+#define HVC_MAP_ONE_VCPU_PAGE 39
+#define HVC_INIT_VM 40
+#define HVC_INIT_VCPU 41
 #endif
 
 /* Error returned when an invalid stub number is passed into x0 */

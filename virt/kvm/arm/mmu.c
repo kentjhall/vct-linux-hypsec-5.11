@@ -32,7 +32,7 @@
 #include <asm/virt.h>
 #include <asm/system_misc.h>
 #ifdef CONFIG_STAGE2_KERNEL
-#include <asm/hypsec_mmu.h>
+#include <asm/hypsec_host.h>
 #endif
 
 #include "trace.h"
@@ -955,6 +955,34 @@ int el2_create_hyp_mappings(void *from, void *to, pgprot_t prot)
 
 	return 0;
 
+}
+
+void map_kvm_page_to_hyp(u32 vmid, void *from, void *to)
+{
+	unsigned long va, start = (unsigned long)from, end = (unsigned long)to;
+	phys_addr_t phys_addr;
+
+	start = start & PAGE_MASK;
+	end = PAGE_ALIGN(end);
+
+	for (va = start; va < end; va += PAGE_SIZE) {
+		phys_addr = kvm_kaddr_to_phys((void *)va);
+		hypsec_map_one_kvm_page(vmid, __phys_to_pfn(phys_addr));
+	}
+}
+
+void map_vcpu_page_to_hyp(u32 vmid, int vcpu_id, void *from, void *to)
+{
+	unsigned long va, start = (unsigned long)from, end = (unsigned long)to;
+	phys_addr_t phys_addr;
+
+	start = start & PAGE_MASK;
+	end = PAGE_ALIGN(end);
+
+	for (va = start; va < end; va += PAGE_SIZE) {
+		phys_addr = kvm_kaddr_to_phys((void *)va);
+		hypsec_map_one_vcpu_page(vmid, vcpu_id, __phys_to_pfn(phys_addr));
+	}
 }
 #endif
 

@@ -114,7 +114,9 @@ extern u32 __init_stage2_translation(void);
 .macro get_vcpu_ptr vcpu, ctxt
 	get_host_ctxt \ctxt, \vcpu
 	ldr	\vcpu, [\ctxt, #HOST_CONTEXT_VCPU]
+#ifndef CONFIG_STAGE2_KERNEL
 	kern_hyp_va	\vcpu
+#endif
 .endm
 
 #endif

@@ -34,18 +34,26 @@ struct el2_load_info {
 	unsigned char signature[64];
 };
 
+struct int_vcpu {
+	struct kvm_vcpu *vcpu;
+	bool ready;
+	int vcpu_pg_cnt;
+};
+
 struct el2_vm_info {
 	u64 vttbr;
 	int vmid;
 	int load_info_cnt;
+	int kvm_pg_cnt;
 	bool is_valid_vm;
 	bool inc_exe;
 	bool used;
+	bool kvm_ready;
 	struct el2_load_info load_info[5];
 	arch_spinlock_t shadow_pt_lock;
 	arch_spinlock_t boot_lock;
 	struct kvm *kvm;
-	struct kvm_vcpu *vcpus[HYPSEC_MAX_VCPUS];
+	struct int_vcpu int_vcpus[HYPSEC_MAX_VCPUS];
 	struct shadow_vcpu_context *shadow_ctxt[HYPSEC_MAX_VCPUS];
 	uint8_t key[16];
 	uint8_t iv[16];

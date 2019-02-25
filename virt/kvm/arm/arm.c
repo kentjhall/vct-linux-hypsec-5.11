@@ -52,6 +52,8 @@
 #include <asm/sections.h>
 #ifdef CONFIG_STAGE2_KERNEL
 #include <asm/hypsec_host.h>
+extern void map_kvm_page_to_hyp(u32 vmid, void *from, void *to);
+extern void map_vcpu_page_to_hyp(u32 vmid, int vcpu_id, void *from, void *to);
 #endif
 
 #ifdef REQUIRES_VIRT
@@ -157,18 +159,19 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 
 #ifndef CONFIG_STAGE2_KERNEL
 	ret = create_hyp_mappings(kvm, kvm + 1, PAGE_HYP);
-#else
-	ret = el2_create_hyp_mappings(kvm, kvm + 1, PAGE_HYP);
-#endif
 	if (ret)
 		goto out_free_stage2_pgd;
+#else
+	kvm->arch.vmid =  hypsec_register_kvm();
+	map_kvm_page_to_hyp(kvm->arch.vmid, kvm, kvm + 1);
+#endif
 
 	kvm_vgic_early_init(kvm);
 
 	/* Mark the initial VMID generation invalid */
 	kvm->arch.vmid_gen = 0;
 #ifdef CONFIG_STAGE2_KERNEL
-	ret = hypsec_register_vm(kvm);
+	ret = hypsec_init_vm(kvm->arch.vmid);
 	if (ret)
 		goto out_free_stage2_pgd;
 #endif
@@ -325,11 +328,12 @@ struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
 
 #ifndef CONFIG_STAGE2_KERNEL
 	err = create_hyp_mappings(vcpu, vcpu + 1, PAGE_HYP);
-#else
-	err = el2_create_hyp_mappings(vcpu, vcpu + 1, PAGE_HYP);
-#endif
 	if (err)
 		goto vcpu_uninit;
+#else
+	hypsec_register_vcpu(kvm->arch.vmid, id);
+	map_vcpu_page_to_hyp(kvm->arch.vmid, id, vcpu, vcpu + 1);
+#endif
 
 	return vcpu;
 vcpu_uninit:
@@ -599,7 +603,7 @@ static int kvm_vcpu_first_run_init(struct kvm_vcpu *vcpu)
 	if (likely(vcpu->arch.has_run_once))
 		return 0;
 #ifdef CONFIG_STAGE2_KERNEL
-	if (!hypsec_register_vcpu(kvm->arch.vmid, vcpu))
+	if (!hypsec_init_vcpu(kvm->arch.vmid, vcpu->vcpu_id))
 		return 1;
 
 	el2_verify_and_load_images(kvm->arch.vmid);

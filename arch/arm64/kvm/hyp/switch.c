@@ -668,7 +668,9 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 #endif
 
+#ifndef CONFIG_STAGE2_KERNEL
 	vcpu = kern_hyp_va(vcpu);
+#endif
 
 	host_ctxt = kern_hyp_va(vcpu->arch.host_cpu_context);
 	host_ctxt->__hyp_running_vcpu = vcpu;
@@ -701,10 +703,10 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 	__sysreg32_restore_state(vcpu);
 #ifndef CONFIG_STAGE2_KERNEL
 	__sysreg_restore_state_nvhe(guest_ctxt);
+	__debug_switch_to_guest(vcpu);
 #else
 	__sysreg_restore_state_nvhe(shadow_ctxt);
 #endif
-	__debug_switch_to_guest(vcpu);
 
 	__set_guest_arch_workaround_state(vcpu);
 
@@ -752,7 +754,9 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 	 * This must come after restoring the host sysregs, since a non-VHE
 	 * system may enable SPE here and make use of the TTBRs.
 	 */
+#ifndef CONFIG_STAGE2_KERNEL
 	__debug_switch_to_host(vcpu);
+#endif
 
 	return exit_code;
 }

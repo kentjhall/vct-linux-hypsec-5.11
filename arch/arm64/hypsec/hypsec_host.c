@@ -226,18 +226,14 @@ out:
 	return ret;
 }
 
-static int __hyp_text __hypsec_register_vcpu(u32 vmid, struct kvm_vcpu *vcpu)
+static int __hyp_text __hypsec_init_vcpu(u32 vmid, int vcpu_id)
 {
 	struct el2_data *el2_data;
 	struct shadow_vcpu_context *new_ctxt = NULL;
 	struct el2_vm_info *vm_info;
-	struct kvm *kvm;
 	int index, ret = 0;
-	/* TODO: this is potentially buggy? */
-	unsigned long addr = __pa(vcpu);
+	struct kvm_vcpu *vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
 
-	vcpu = kern_hyp_va(vcpu);
-	kvm = kern_hyp_va(vcpu->kvm);
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	/*
 	 * We cannot protect shadow ctxt if vcpu isn't aligned
@@ -250,12 +246,7 @@ static int __hyp_text __hypsec_register_vcpu(u32 vmid, struct kvm_vcpu *vcpu)
 		return ret;
 
 	vm_info = &el2_data->vm_info[vmid];
-	if (vm_info->kvm != kvm || vm_info->vcpus[vcpu->vcpu_id])
-		return ret;
-	else {
-		vcpu->arch.vmid = vmid;
-		vm_info->vcpus[vcpu->vcpu_id] = vcpu;
-	}
+	vcpu->arch.vmid = vmid;
 
 	stage2_spin_lock(&el2_data->shadow_vcpu_ctxt_lock);
 
@@ -266,7 +257,7 @@ static int __hyp_text __hypsec_register_vcpu(u32 vmid, struct kvm_vcpu *vcpu)
 	ret = 1;
 	el2_data->shadow_vcpu_ctxt[index].dirty = -1;
 	new_ctxt = &el2_data->shadow_vcpu_ctxt[index];
-	vm_info->shadow_ctxt[vcpu->vcpu_id] = new_ctxt;
+	vm_info->shadow_ctxt[vcpu_id] = new_ctxt;
 
 err_unlock:
 	stage2_spin_unlock(&el2_data->shadow_vcpu_ctxt_lock);
@@ -275,12 +266,14 @@ err_unlock:
 	 *Make the shadow structures in VCPU RO, We now move vcpu_arch
 	 * as we moved it to the start of the vcpu structure.
 	 */
-	__set_pfn_host(addr, PAGE_SIZE, addr >> PAGE_SHIFT, PAGE_S2);
+	//__set_pfn_host(addr, PAGE_SIZE, addr >> PAGE_SHIFT, PAGE_S2);
 	/*
 	 * Make the page that contains shadow structure a guest page,
 	 * so it can be cleaned up later on when VM terminates.
 	 */
-	set_pfn_owner(el2_data, addr, PAGE_SIZE, vmid);
+	//set_pfn_owner(el2_data, addr, PAGE_SIZE, vmid);
+
+	/* TODO: Needs to go back to fully protect shadow_ctxt. */
 	vcpu->arch.shadow_vcpu_ctxt = new_ctxt;
 
 	return ret;
@@ -333,15 +326,6 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		break;
 	case HVC_TLB_FLUSH_LOCAL_VMID:
 		hypsec_tlb_flush_helper((u32)hr->regs[1], 1);
-		break;
-	case HVC_REGISTER_VM:
-		ret = (int)__hypsec_register_vm((struct kvm*)hr->regs[1]);
-		hr->regs[31] = (u64)ret;
-		break;
-	case HVC_REGISTER_VCPU:
-		ret = (u64)__hypsec_register_vcpu((u32)hr->regs[1],
-						  (struct kvm_vcpu*)hr->regs[2]);
-		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_UPDATE_EXPT_FLAG:
 		vcpu = hypsec_vcpu_id_to_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
@@ -406,17 +390,61 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		ret = (u64)__kvm_get_mdcr_el2();
 		hr->regs[31] = (u64)ret;
 		break;
+	case HVC_REGISTER_KVM:
+		ret = (int)__hypsec_register_kvm();
+		hr->regs[31] = (u64)ret;
+		break;
+	case HVC_REGISTER_VCPU:
+		ret = (int)__hypsec_register_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
+		hr->regs[31] = (u64)ret;
+		break;
+	case HVC_MAP_ONE_KVM_PAGE:
+		ret = (int)__hypsec_map_one_kvm_page((u32)hr->regs[1], (unsigned long)hr->regs[2]);
+		hr->regs[31] = (int)ret;
+		break;
+	case HVC_MAP_ONE_VCPU_PAGE:
+		ret = (int)__hypsec_map_one_vcpu_page((u32)hr->regs[1], (int)hr->regs[2], (unsigned long)hr->regs[3]);
+		hr->regs[31] = (int)ret;
+		break;
+	case HVC_INIT_VM:
+		ret = (int)__hypsec_init_vm((u32)hr->regs[1]);
+		hr->regs[31] = (int)ret;
+		break;
+	case HVC_INIT_VCPU:
+		ret = (int)__hypsec_init_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
+		hr->regs[31] = (int)ret;
+		break;
 	default:
 		__hyp_panic();
 	};
 }
 
-int hypsec_register_vm(struct kvm *kvm)
+int hypsec_register_kvm(void)
 {
-	return kvm_call_core(HVC_REGISTER_VM, kvm);
+	return kvm_call_core(HVC_REGISTER_KVM);
 }
 
-int hypsec_register_vcpu(u32 vmid, struct kvm_vcpu *vcpu)
+int hypsec_register_vcpu(u32 vmid, int vcpu_id)
 {
-	return kvm_call_core((void *)HVC_REGISTER_VCPU, vmid, vcpu);
+	return kvm_call_core((void *)HVC_REGISTER_VCPU, vmid, vcpu_id);
+}
+
+int hypsec_map_one_kvm_page(u32 vmid, unsigned long pfn)
+{
+	return kvm_call_core(HVC_MAP_ONE_KVM_PAGE, vmid, pfn);
+}
+
+int hypsec_map_one_vcpu_page(u32 vmid, int vcpu_id, unsigned long pfn)
+{
+	return kvm_call_core(HVC_MAP_ONE_VCPU_PAGE, vmid, vcpu_id, pfn);
+}
+
+int hypsec_init_vm(u32 vmid)
+{
+	return kvm_call_core(HVC_INIT_VM, vmid);
+}
+
+int hypsec_init_vcpu(u32 vmid, int vcpu_id)
+{
+	return kvm_call_core(HVC_INIT_VCPU, vmid, vcpu_id);
 }

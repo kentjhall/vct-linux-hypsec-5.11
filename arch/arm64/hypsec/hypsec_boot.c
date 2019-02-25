@@ -200,37 +200,128 @@ void __hyp_text __el2_boot_from_inc_exe(u32 vmid)
 	vm_info->inc_exe = true;
 }
 
-int __hyp_text __hypsec_register_vm(struct kvm *kvm)
+#define KVM_SIZE	sizeof(struct kvm)
+#define VCPU_SIZE	sizeof(struct kvm_vcpu)
+#define N_KVM_PAGES	(KVM_SIZE >> PAGE_SHIFT) + ((KVM_SIZE % PAGE_SIZE) ? 1 : 0)
+#define N_VCPU_PAGES	(VCPU_SIZE >> PAGE_SHIFT) + ((VCPU_SIZE % PAGE_SIZE) ? 1 : 0)
+#define EL2_REMAP_KVM_BASE	0x10000000
+#define EL2_REMAP_VCPU_BASE	0x40000000
+static void* __hyp_text get_el2_kvm_addr(struct el2_data *el2_data)
+{
+	unsigned long npages = N_KVM_PAGES;
+	unsigned long offset = (PAGE_SIZE * npages) * el2_data->kvm_cnt++;
+	return (void*)((unsigned long)EL2_REMAP_KVM_BASE | offset);
+}
+
+static void* __hyp_text get_el2_vcpu_addr(struct el2_data *el2_data)
+{
+	unsigned long npages = N_VCPU_PAGES;
+	unsigned long offset = (PAGE_SIZE * npages) * el2_data->vcpu_cnt++;
+	return (void*)((unsigned long)EL2_REMAP_VCPU_BASE | offset);
+}
+
+int __hyp_text __hypsec_register_vcpu(u32 vmid, int vcpu_id)
+{
+	struct el2_data *el2_data;
+	struct int_vcpu *int_vcpu;
+
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	if (vmid >= EL2_VM_INFO_SIZE || vcpu_id >= HYPSEC_MAX_VCPUS)
+		return -EINVAL;
+
+	int_vcpu = &el2_data->vm_info[vmid].int_vcpus[vcpu_id];
+	int_vcpu->vcpu = get_el2_vcpu_addr(el2_data);
+	int_vcpu->ready = false;
+	return 1;
+}
+
+//got to check vmid/vcpu id bounds somewhere
+u32 __hyp_text __hypsec_register_kvm(void)
 {
 	u32 vmid;
+	struct el2_data *el2_data;
+
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	vmid = hypsec_gen_vmid(el2_data);
+	if (vmid < 0 || el2_data->vm_info[vmid].used)
+		return 0;
+
+	el2_data->vm_info[vmid].used = true;
+	el2_data->vm_info[vmid].kvm_ready = false;
+	el2_data->vm_info[vmid].kvm = get_el2_kvm_addr(el2_data);
+	el2_data->vm_info[vmid].vmid = vmid;
+	return vmid;
+}
+
+int __hyp_text __hypsec_map_one_vcpu_page(u32 vmid, int vcpu_id, unsigned long pfn)
+{
+	struct el2_data *el2_data;
+	struct el2_vm_info *vm_info;
+	struct int_vcpu *int_vcpu;
+	unsigned long target;
+
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	vm_info = &el2_data->vm_info[vmid];
+	/* Return if vm_info has not been allocated OR kvm is remapped */
+	if (!vm_info->used || !vm_info->kvm_ready)
+		return -EINVAL;
+
+	int_vcpu = &vm_info->int_vcpus[vcpu_id];
+	if (int_vcpu->ready)
+		return -EINVAL;
+
+	target = (unsigned long)int_vcpu->vcpu + (int_vcpu->vcpu_pg_cnt * PAGE_SIZE);
+	map_el2_mem(target, target + PAGE_SIZE, pfn, PAGE_HYP);
+	int_vcpu->vcpu_pg_cnt++;
+	if (int_vcpu->vcpu_pg_cnt == N_VCPU_PAGES)
+		int_vcpu->ready = true;
+
+	return 1;
+}
+
+int __hyp_text __hypsec_map_one_kvm_page(u32 vmid, unsigned long pfn)
+{
+	struct el2_data *el2_data;
+	struct el2_vm_info *vm_info;
+	unsigned long target;
+
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	vm_info = &el2_data->vm_info[vmid];
+	/* Return if vm_info has not been allocated OR kvm is remapped */
+	if (!vm_info->used || vm_info->kvm_ready)
+		return -EINVAL;
+
+	target = (unsigned long)vm_info->kvm + (vm_info->kvm_pg_cnt * PAGE_SIZE);
+	map_el2_mem(target, target + PAGE_SIZE, pfn, PAGE_HYP);
+	vm_info->kvm_pg_cnt++;
+	if (vm_info->kvm_pg_cnt == N_KVM_PAGES)
+		vm_info->kvm_ready = true;
+
+	return 1;
+}
+
+int __hyp_text __hypsec_init_vm(u32 vmid)
+{
 	struct el2_data *el2_data;
 	u64 vttbr, vmid64;
 	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
 	uint8_t iv[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
 	unsigned char *public_key_hex = "25f2d889403a586265eeff77d54687971301c280a02a4b5e7a416449be2ab239";
 
-	kvm = kern_hyp_va(kvm);
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	vmid = hypsec_gen_vmid(el2_data);
-	if (vmid < 0 || el2_data->vm_info[vmid].used)
-		return -EINVAL;
 
-	el2_data->vm_info[vmid].used = true;
 	el2_data->vm_info[vmid].is_valid_vm = false;
 	el2_data->vm_info[vmid].inc_exe = false;
-	el2_data->vm_info[vmid].vmid = vmid;
 	el2_data->vm_info[vmid].shadow_pt_lock =
 		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	el2_data->vm_info[vmid].boot_lock =
 		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->vm_info[vmid].kvm = kvm;
 
 	/* Hardcoded VM's keys for now. */
 	el2_memcpy(el2_data->vm_info[vmid].key, key, 16);
 	el2_memcpy(el2_data->vm_info[vmid].iv, iv, 16);
 	el2_hex2bin(el2_data->vm_info[vmid].public_key, public_key_hex, 32);
 
-	kvm->arch.vmid = vmid;
 	/* Allocates a 8KB page for stage 2 pgd */
 	vttbr = (u64)alloc_stage2_page(S2_PGD_PAGES_NUM);
 
@@ -248,6 +339,7 @@ struct kvm* __hyp_text hypsec_vmid_to_kvm(u32 vmid)
 	struct kvm *kvm = NULL;
 	struct el2_vm_info *vm_info;
 
+	// Check vmid bound here
 	vm_info = vmid_to_vm_info(vmid);
 	kvm = vm_info->kvm;
 	if (!kvm)
@@ -265,7 +357,7 @@ struct kvm_vcpu* __hyp_text hypsec_vcpu_id_to_vcpu(u32 vmid, int vcpu_id)
 		__hyp_panic();
 
 	vm_info = vmid_to_vm_info(vmid);
-	vcpu = vm_info->vcpus[vcpu_id];
+	vcpu = vm_info->int_vcpus[vcpu_id].vcpu;
 	if (!vcpu)
 		__hyp_panic();
 	else

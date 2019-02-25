@@ -82,7 +82,9 @@ void __hyp_text __kvm_tlb_flush_vmid_ipa(struct kvm *kvm, phys_addr_t ipa)
 	dsb(ishst);
 
 	/* Switch to requested VMID */
+#ifndef CONFIG_STAGE2_KERNEL
 	kvm = kern_hyp_va(kvm);
+#endif
 	__tlb_switch_to_guest()(kvm);
 
 	/*
@@ -134,7 +136,9 @@ void __hyp_text __kvm_tlb_flush_vmid(struct kvm *kvm)
 	dsb(ishst);
 
 	/* Switch to requested VMID */
+#ifndef CONFIG_STAGE2_KERNEL
 	kvm = kern_hyp_va(kvm);
+#endif
 	__tlb_switch_to_guest()(kvm);
 
 	__tlbi(vmalls12e1is);
@@ -146,7 +150,11 @@ void __hyp_text __kvm_tlb_flush_vmid(struct kvm *kvm)
 
 void __hyp_text __kvm_tlb_flush_local_vmid(struct kvm_vcpu *vcpu)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	struct kvm *kvm = kern_hyp_va(kern_hyp_va(vcpu)->kvm);
+#else
+	struct kvm *kvm = hypsec_vmid_to_kvm(vcpu->arch.vmid);
+#endif
 
 	/* Switch to requested VMID */
 	__tlb_switch_to_guest()(kvm);
