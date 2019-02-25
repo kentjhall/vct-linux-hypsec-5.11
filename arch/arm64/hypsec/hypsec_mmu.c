@@ -650,45 +650,6 @@ out:
 	stage2_spin_unlock(lock);
 }
 
-static __hyp_text bool is_within_range(u64 ss, u64 se,
-				       u64 ts, u64 te)
-{
-	if (se >= te && te >= ss)
-		return true;
-	else if (se > ts && ts >= ss)
-		return true;
-	else if (te >= se && ss >= ts)
-		return true;
-	return false;
-}
-
-static __hyp_text bool is_hypsec_pa_range(unsigned long hpa, size_t len)
-{
-	u64 s = hpa, e = hpa + len;
-	if (is_within_range(s, e, (u64)__pa(kvm_ksym_ref(stage2_pgs_start)),
-	    (u64)__pa(kvm_ksym_ref(el2_data_end))))
-		return true;
-	return false;
-}
-
-static __hyp_text bool is_hypsec_va_range(unsigned long s, unsigned long e)
-{
-	/* Check if VA is valid */
-	struct el2_data *el2_data;
-	struct hyp_va_region *va_regions;
-	int i;
-
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	va_regions = el2_data->va_regions;
-	for (i = 0; i < NUM_HYP_VA_REGIONS; i++) {
-		if (!va_regions[i].from && !va_regions[i].to)
-			break;
-		if (is_within_range(s, e, va_regions[i].from, va_regions[i].to))
-			return true;
-	}
-	return false;
-}
-
 static int __hyp_text prot_and_map_to_s2pt(struct s2_trans result,
 					   struct el2_data *el2_data,
 					   struct kvm_vcpu *vcpu,
@@ -1049,29 +1010,6 @@ out:
 	return err;
 }
 
-int __hyp_text check_and_map_el2_mem(unsigned long start,
-				      unsigned long end, unsigned long pfn)
-{
-	unsigned hpa = pfn << PAGE_SHIFT;
-	int i = 0, pgnum = (end - start) >> PAGE_SHIFT;
-
-	if (is_hypsec_va_range(start, end)) {
-		print_string("\nmap to invalid hyp va\n");
-		return -EINVAL;
-	}
-
-	do {
-		if (is_hypsec_pa_range(hpa, PAGE_SIZE)) {
-			print_string("Attempted to overwrite data in EL2\n");
-			return -EINVAL;
-		}
-		hpa += PAGE_SIZE;
-		i++;
-	} while (i < pgnum);
-
-	return map_el2_mem(start, end, pfn, PAGE_HYP);
-}
-
 void __hyp_text load_image_to_shadow_s2pt(u32 vmid,
 				struct el2_data *el2_data, unsigned long target_addr,
 				unsigned long el2_remap_addr, unsigned long pgnum)
@@ -1169,12 +1107,6 @@ void __hyp_text __el2_decrypt_buf(u32 vmid, void *buf, uint32_t len)
 void el2_protect_stack_page(phys_addr_t addr)
 {
 	kvm_call_core(HVC_PROT_EL2_STACK, addr);
-}
-
-int el2_create_hyp_mapping(unsigned long start, unsigned long end,
-			    unsigned long pfn)
-{
-	return kvm_call_core(HVC_MAP_TO_EL2, start, end, pfn);
 }
 
 void clear_vm_stage2_range(u32 vmid, phys_addr_t start, u64 size)

@@ -175,33 +175,8 @@ void init_el2_data_page(void)
 
 	el2_data->next_vmid = 1;
 
-	memset(el2_data->va_regions, 0,
-		sizeof(struct hyp_va_region) * NUM_HYP_VA_REGIONS);
 out_err:
 	return;
-}
-
-int add_hyp_va_region(unsigned long from, unsigned long to)
-{
-	struct el2_data *el2_data;
-	int i, ret = 0;
-
-	el2_data = (void *)kvm_ksym_ref(el2_data_start);
-	for (i = 0; i < NUM_HYP_VA_REGIONS; i++) {
-		if (el2_data->va_regions[i].from &&
-		    el2_data->va_regions[i].to)
-			continue;
-		else {
-			el2_data->va_regions[i].from = from;
-			el2_data->va_regions[i].to = to;
-			break;
-		}
-	}
-
-	if (unlikely(i == NUM_HYP_VA_REGIONS))
-		ret = -EINVAL;
-
-	return ret;
 }
 
 unsigned long __hyp_text get_s2_page_index(struct el2_data *el2_data,
@@ -336,12 +311,6 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		break;
 	case HVC_PROT_EL2_STACK:
 		__el2_protect_stack_page((phys_addr_t)hr->regs[1]);
-		break;
-	case HVC_MAP_TO_EL2:
-		ret = (int)check_and_map_el2_mem((unsigned long)hr->regs[1],
-						 (unsigned long)hr->regs[2],
-						 (unsigned long)hr->regs[3]);
-		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_CLEAR_VM_S2_RANGE:
 		__clear_vm_stage2_range((u32)hr->regs[1],
