@@ -57,6 +57,7 @@ struct el2_data {
 
 	u32 next_vmid;
 	phys_addr_t vgic_cpu_base;
+	bool installed;
 };
 
 void init_el2_data_page(void);
@@ -89,8 +90,6 @@ int el2_memcmp(void *dest, void *src, size_t len);
 
 int el2_hex_to_bin(char ch);
 int el2_hex2bin(unsigned char *dst, const char *src, int count);
-
-extern void el2_protect_stack_page(phys_addr_t addr);
 
 extern void el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid);
 extern void el2_free_smmu_pgd(unsigned long addr);

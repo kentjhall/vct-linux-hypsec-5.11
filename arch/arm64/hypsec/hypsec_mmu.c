@@ -892,7 +892,7 @@ void __hyp_text protect_el2_mem(void)
 	} while (addr < end);
 }
 
-void __hyp_text __el2_protect_stack_page(phys_addr_t addr)
+void __hyp_text protect_el2_stack_page(unsigned long addr)
 {
 	unsigned long index;
 	struct el2_data *el2_data;
@@ -1102,11 +1102,6 @@ void __hyp_text __el2_decrypt_buf(u32 vmid, void *buf, uint32_t len)
 	/* Unmap the decrypted page now so the host can not get access to it. */
 	__set_pfn_host((phys_addr_t)buf, PAGE_SIZE, 0, PAGE_NONE);
 	decrypt_buf(vmid, __el2_va(buf), len);
-}
-
-void el2_protect_stack_page(phys_addr_t addr)
-{
-	kvm_call_core(HVC_PROT_EL2_STACK, addr);
 }
 
 void clear_vm_stage2_range(u32 vmid, phys_addr_t start, u64 size)

@@ -110,14 +110,10 @@ int kvm_arch_vcpu_should_kick(struct kvm_vcpu *vcpu)
 #ifdef CONFIG_STAGE2_KERNEL
 static void install_el2_runtime(void *discard)
 {
-	struct el2_data *el2_data;
 	unsigned long stack_page;
 
-	el2_data = (void *)kvm_ksym_ref(el2_data_start);
-	kvm_call_core(HVC_ENABLE_S2_TRANS);
-
 	stack_page = __this_cpu_read(kvm_arm_hyp_stack_page);
-	el2_protect_stack_page(__pa(stack_page));
+	kvm_call_core(HVC_ENABLE_S2_TRANS, __pa(stack_page));
 }
 #endif
 
