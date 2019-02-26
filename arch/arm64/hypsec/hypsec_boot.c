@@ -224,14 +224,29 @@ int __hyp_text __hypsec_register_vcpu(u32 vmid, int vcpu_id)
 {
 	struct el2_data *el2_data;
 	struct int_vcpu *int_vcpu;
+	struct el2_vm_info *vm_info;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	if (vmid >= EL2_VM_INFO_SIZE || vcpu_id >= HYPSEC_MAX_VCPUS)
+
+	if (vmid >= EL2_VM_INFO_SIZE)
+		return -EINVAL;
+	vm_info = &el2_data->vm_info[vmid];
+	/*
+	 * We can only register a vcpu if its vm_info has been allocated and
+	 * kvm is remapped.
+	 */
+	if (!vm_info->used || !vm_info->kvm_ready)
 		return -EINVAL;
 
-	int_vcpu = &el2_data->vm_info[vmid].int_vcpus[vcpu_id];
+	if (vcpu_id < 0 || vcpu_id >= HYPSEC_MAX_VCPUS)
+		return -EINVAL;
+	int_vcpu = &vm_info->int_vcpus[vcpu_id];
+	if (int_vcpu->used)
+		return -EINVAL;
+
 	int_vcpu->vcpu = get_el2_vcpu_addr(el2_data);
 	int_vcpu->ready = false;
+	int_vcpu->used = true;
 	return 1;
 }
 
@@ -243,7 +258,7 @@ u32 __hyp_text __hypsec_register_kvm(void)
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	vmid = hypsec_gen_vmid(el2_data);
-	if (vmid < 0 || el2_data->vm_info[vmid].used)
+	if (vmid < 0)
 		return 0;
 
 	el2_data->vm_info[vmid].used = true;
@@ -261,11 +276,16 @@ int __hyp_text __hypsec_map_one_vcpu_page(u32 vmid, int vcpu_id, unsigned long p
 	unsigned long target;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+
+	if (vmid >= EL2_VM_INFO_SIZE)
+		return -EINVAL;
 	vm_info = &el2_data->vm_info[vmid];
 	/* Return if vm_info has not been allocated OR kvm is remapped */
 	if (!vm_info->used || !vm_info->kvm_ready)
 		return -EINVAL;
 
+	if (vcpu_id < 0 || vcpu_id >= HYPSEC_MAX_VCPUS)
+		return -EINVAL;
 	int_vcpu = &vm_info->int_vcpus[vcpu_id];
 	if (int_vcpu->ready)
 		return -EINVAL;
@@ -286,6 +306,8 @@ int __hyp_text __hypsec_map_one_kvm_page(u32 vmid, unsigned long pfn)
 	unsigned long target;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	if (vmid >= EL2_VM_INFO_SIZE)
+		return -EINVAL;
 	vm_info = &el2_data->vm_info[vmid];
 	/* Return if vm_info has not been allocated OR kvm is remapped */
 	if (!vm_info->used || vm_info->kvm_ready)

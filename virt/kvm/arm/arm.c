@@ -52,8 +52,8 @@
 #include <asm/sections.h>
 #ifdef CONFIG_STAGE2_KERNEL
 #include <asm/hypsec_host.h>
-extern void map_kvm_page_to_hyp(u32 vmid, void *from, void *to);
-extern void map_vcpu_page_to_hyp(u32 vmid, int vcpu_id, void *from, void *to);
+extern int map_kvm_page_to_hyp(u32 vmid, void *from, void *to);
+extern int map_vcpu_page_to_hyp(u32 vmid, int vcpu_id, void *from, void *to);
 #endif
 
 #ifdef REQUIRES_VIRT
@@ -162,8 +162,15 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 	if (ret)
 		goto out_free_stage2_pgd;
 #else
-	kvm->arch.vmid =  hypsec_register_kvm();
-	map_kvm_page_to_hyp(kvm->arch.vmid, kvm, kvm + 1);
+	ret = hypsec_register_kvm();
+	if (ret <= 0)
+		goto out_free_stage2_pgd;
+	else
+		kvm->arch.vmid = (u32)ret;
+
+	ret = map_kvm_page_to_hyp(kvm->arch.vmid, kvm, kvm + 1);
+	if (ret < 0)
+		goto out_free_stage2_pgd;
 #endif
 
 	kvm_vgic_early_init(kvm);
@@ -331,8 +338,13 @@ struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
 	if (err)
 		goto vcpu_uninit;
 #else
-	hypsec_register_vcpu(kvm->arch.vmid, id);
-	map_vcpu_page_to_hyp(kvm->arch.vmid, id, vcpu, vcpu + 1);
+	err = hypsec_register_vcpu(kvm->arch.vmid, id);
+	if (err < 0)
+		goto free_vcpu;
+
+	err = map_vcpu_page_to_hyp(kvm->arch.vmid, id, vcpu, vcpu + 1);
+	if (err < 0)
+		goto free_vcpu;
 #endif
 
 	return vcpu;

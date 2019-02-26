@@ -36,8 +36,9 @@ struct el2_load_info {
 
 struct int_vcpu {
 	struct kvm_vcpu *vcpu;
-	bool ready;
 	int vcpu_pg_cnt;
+	bool ready;
+	bool used;
 };
 
 struct el2_vm_info {

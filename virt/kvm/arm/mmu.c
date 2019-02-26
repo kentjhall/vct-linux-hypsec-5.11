@@ -923,9 +923,10 @@ int create_hypsec_io_mappings(phys_addr_t phys_addr, size_t size,
 	return 0;
 }
 
-void map_kvm_page_to_hyp(u32 vmid, void *from, void *to)
+int map_kvm_page_to_hyp(u32 vmid, void *from, void *to)
 {
 	unsigned long va, start = (unsigned long)from, end = (unsigned long)to;
+	int ret = -EINVAL;
 	phys_addr_t phys_addr;
 
 	start = start & PAGE_MASK;
@@ -933,13 +934,18 @@ void map_kvm_page_to_hyp(u32 vmid, void *from, void *to)
 
 	for (va = start; va < end; va += PAGE_SIZE) {
 		phys_addr = kvm_kaddr_to_phys((void *)va);
-		hypsec_map_one_kvm_page(vmid, __phys_to_pfn(phys_addr));
+		ret = hypsec_map_one_kvm_page(vmid, __phys_to_pfn(phys_addr));
+		if (ret < 0)
+			goto out;
 	}
+out:
+	return ret;
 }
 
-void map_vcpu_page_to_hyp(u32 vmid, int vcpu_id, void *from, void *to)
+int map_vcpu_page_to_hyp(u32 vmid, int vcpu_id, void *from, void *to)
 {
 	unsigned long va, start = (unsigned long)from, end = (unsigned long)to;
+	int ret = -EINVAL;
 	phys_addr_t phys_addr;
 
 	start = start & PAGE_MASK;
@@ -947,8 +953,12 @@ void map_vcpu_page_to_hyp(u32 vmid, int vcpu_id, void *from, void *to)
 
 	for (va = start; va < end; va += PAGE_SIZE) {
 		phys_addr = kvm_kaddr_to_phys((void *)va);
-		hypsec_map_one_vcpu_page(vmid, vcpu_id, __phys_to_pfn(phys_addr));
+		ret = hypsec_map_one_vcpu_page(vmid, vcpu_id, __phys_to_pfn(phys_addr));
+		if (ret < 0)
+			goto out;
 	}
+out:
+	return ret;
 }
 #endif
 
