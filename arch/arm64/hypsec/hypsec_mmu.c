@@ -1084,16 +1084,16 @@ out:
 void __hyp_text __el2_encrypt_buf(u32 vmid, void *buf, uint32_t len)
 {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	phys_addr_t pa, addr = (phys_addr_t)buf;
+	phys_addr_t tmp_pa, hpa = (phys_addr_t)buf;
 	pte_t new_pte;
 
-	pa = (phys_addr_t)alloc_tmp_page();
-	el2_memcpy(__el2_va(pa), __el2_va(addr), len);
+	tmp_pa = (phys_addr_t)alloc_tmp_page();
+	el2_memcpy(__el2_va(tmp_pa), __el2_va(hpa), len);
 
-	encrypt_buf(vmid, __el2_va(pa), len);
-	new_pte = pfn_pte(pa >> PAGE_SHIFT, PAGE_S2_KERNEL);
+	encrypt_buf(vmid, __el2_va(tmp_pa), len);
+	new_pte = pfn_pte(tmp_pa >> PAGE_SHIFT, PAGE_S2_KERNEL);
 
-	handle_host_stage2_trans_fault(0, addr, el2_data, new_pte);
+	handle_host_stage2_trans_fault(0, hpa, el2_data, new_pte);
 	__kvm_tlb_flush_vmid_el2();
 }
 

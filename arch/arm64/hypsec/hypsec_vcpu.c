@@ -365,14 +365,11 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 void __hyp_text __save_encrypted_vcpu(u32 vmid, int vcpu_id)
 {
 	struct kvm_vcpu *vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
-	//struct el2_data *el2_data;
 	struct shadow_vcpu_context *shadow_ctxt;
 	size_t shadow_sys_regs_len = sizeof(u64) * (SHADOW_SYS_REGS_SIZE + 1);
 	struct kvm_regs gp_local;
 	u64 sr_local[SHADOW_SYS_REGS_SIZE + 1];
 
-	//el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	//vcpu = kern_hyp_va(vcpu);
 	shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
 
 	el2_memcpy(&gp_local, &shadow_ctxt->gp_regs, sizeof(struct kvm_regs));
