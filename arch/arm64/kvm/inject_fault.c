@@ -27,6 +27,7 @@
 #ifdef CONFIG_STAGE2_KERNEL
 #include <asm/kvm_hyp.h>
 #include <asm/kvm_mmu.h>
+#include <asm/hypsec_vcpu.h>
 #endif
 
 #define PSTATE_FAULT_BITS_64 	(PSR_MODE_EL1h | PSR_A_BIT | PSR_F_BIT | \
@@ -70,12 +71,7 @@ static u64 __hyp_text get_except_vector(struct kvm_vcpu *vcpu, enum exception_ty
 }
 
 #ifdef CONFIG_STAGE2_KERNEL
-enum inject_exp {
-	DABT,
-	IABT,
-	UNDEF
-};
-
+/* We only inject UNDEF fault to VM now. */
 void __hyp_text update_exception_gp_regs(struct kvm_vcpu *vcpu)
 {
 	struct shadow_vcpu_context *shadow_ctxt;
@@ -86,10 +82,17 @@ void __hyp_text update_exception_gp_regs(struct kvm_vcpu *vcpu)
 	bool is_aarch32;
 
 	shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
+	flag = shadow_ctxt->dirty;
+	if (flag & PENDING_UNDEF_INJECT) {
+		esr = (ESR_ELx_EC_UNKNOWN << ESR_ELx_EC_SHIFT);
+		if (kvm_vcpu_trap_il_is32bit(vcpu))
+			esr |= ESR_ELx_IL;
+	} else
+		return;
+
 	gp_regs = &shadow_ctxt->gp_regs;
 	cpsr = gp_regs->regs.pstate;
 	is_aarch32 = (cpsr & PSR_MODE32_BIT);
-	flag = shadow_ctxt->dirty;
 
 	*__vcpu_elr_el1(vcpu) = gp_regs->regs.pc;
 
@@ -101,49 +104,18 @@ void __hyp_text update_exception_gp_regs(struct kvm_vcpu *vcpu)
 	gp_regs->regs.pstate = PSTATE_FAULT_BITS_64;
 	vcpu_write_spsr(vcpu, cpsr);
 
-	if (flag & PENDING_UNDEF_INJECT) {
-		esr = (ESR_ELx_EC_UNKNOWN << ESR_ELx_EC_SHIFT);
-		if (kvm_vcpu_trap_il_is32bit(vcpu))
-			esr |= ESR_ELx_IL;
-	} else {
-		shadow_ctxt->sys_regs[FAR_EL1] = shadow_ctxt->far_el2;
-
-		if (kvm_vcpu_trap_il_is32bit(vcpu))
-			esr |= ESR_ELx_IL;
-
-		if (is_aarch32 || (cpsr & PSR_MODE_MASK) == PSR_MODE_EL0t)
-			esr |= (ESR_ELx_EC_IABT_LOW << ESR_ELx_EC_SHIFT);
-		else
-			esr |= (ESR_ELx_EC_IABT_CUR << ESR_ELx_EC_SHIFT);
-
-		if (flag & PENDING_IABT_INJECT)
-			esr |= ESR_ELx_EC_DABT_LOW << ESR_ELx_EC_SHIFT;
-	}
-
 	shadow_ctxt->sys_regs[ESR_EL1] = esr;
 }
 
-void __hyp_text __update_exception_shadow_flag(struct kvm_vcpu *vcpu, int exp)
+void __hyp_text hypsec_inject_undef(struct kvm_vcpu *vcpu)
 {
+	/* We currently support injecting UNDEF to 64-bit VM */
 	struct shadow_vcpu_context *shadow_ctxt;
 
 	vcpu = kern_hyp_va(vcpu);
 	shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
-
-	if (exp == DABT)
-		shadow_ctxt->dirty |= PENDING_DABT_INJECT;
-	else if (exp == IABT)
-		shadow_ctxt->dirty |= PENDING_IABT_INJECT;
-	else if (exp == UNDEF)
-		shadow_ctxt->dirty |= PENDING_UNDEF_INJECT;
-
+	shadow_ctxt->dirty |= PENDING_UNDEF_INJECT;
 	shadow_ctxt->far_el2 = kvm_vcpu_get_hfar(vcpu);
-}
-
-static unsigned long el2_update_exception_gp_regs(struct kvm_vcpu *vcpu, int exp)
-{
-	return kvm_call_core((void *)HVC_UPDATE_EXPT_FLAG,
-				vcpu->kvm->arch.vmid, vcpu->vcpu_id, exp);
 }
 #endif
 
@@ -153,20 +125,11 @@ static void inject_abt64(struct kvm_vcpu *vcpu, bool is_iabt, unsigned long addr
 	bool is_aarch32 = vcpu_mode_is_32bit(vcpu);
 	u32 esr = 0;
 
-#ifndef CONFIG_STAGE2_KERNEL
 	vcpu_write_elr_el1(vcpu, *vcpu_pc(vcpu));
 	*vcpu_pc(vcpu) = get_except_vector(vcpu, except_type_sync);
 
 	*vcpu_cpsr(vcpu) = PSTATE_FAULT_BITS_64;
 	vcpu_write_spsr(vcpu, cpsr);
-#else
-	if (!is_iabt)
-		el2_update_exception_gp_regs(vcpu, DABT);
-	else
-		el2_update_exception_gp_regs(vcpu, IABT);
-
-	return;
-#endif
 
 	vcpu_write_sys_reg(vcpu, addr, FAR_EL1);
 
@@ -194,7 +157,6 @@ static void inject_abt64(struct kvm_vcpu *vcpu, bool is_iabt, unsigned long addr
 
 static void inject_undef64(struct kvm_vcpu *vcpu)
 {
-#ifndef CONFIG_STAGE2_KERNEL
 	unsigned long cpsr = *vcpu_cpsr(vcpu);
 	u32 esr = (ESR_ELx_EC_UNKNOWN << ESR_ELx_EC_SHIFT);
 
@@ -212,10 +174,6 @@ static void inject_undef64(struct kvm_vcpu *vcpu)
 		esr |= ESR_ELx_IL;
 
 	vcpu_write_sys_reg(vcpu, esr, ESR_EL1);
-#else
-	el2_update_exception_gp_regs(vcpu, UNDEF);
-	return;
-#endif
 }
 
 /**

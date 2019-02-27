@@ -1827,9 +1827,13 @@ int kvm_handle_guest_abort(struct kvm_vcpu *vcpu, struct kvm_run *run)
 	write_fault = kvm_is_write_fault(vcpu);
 	if (kvm_is_error_hva(hva) || (write_fault && !writable)) {
 		if (is_iabt) {
-			/* Prefetch Abort on I/O address */
+#ifndef CONFIG_STAGE2_KERNEL
+			/* Prefetch Abort on I/O address, can this happen? */
 			kvm_inject_pabt(vcpu, kvm_vcpu_get_hfar(vcpu));
 			ret = 1;
+#else
+			ret = -EFAULT;
+#endif
 			goto out_unlock;
 		}
 

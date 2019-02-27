@@ -35,7 +35,6 @@ struct s2_sys_reg_desc {
 	u64 val;
 };
 
-
 void __save_shadow_kvm_regs(struct kvm_vcpu *vcpu, u64 ec);
 void __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu);
 
@@ -43,5 +42,5 @@ void update_exception_gp_regs(struct kvm_vcpu *vcpu);
 extern int sec_el2_handle_sys_reg(struct kvm_vcpu *vcpu, u32 esr);
 
 void __save_encrypted_vcpu(u32 vmid, int vcpu_id);
-void __update_exception_shadow_flag(struct kvm_vcpu *vcpu, int exp);
+void hypsec_inject_undef(struct kvm_vcpu *vcpu);
 #endif /* __ARM_STAGE2_H__ */

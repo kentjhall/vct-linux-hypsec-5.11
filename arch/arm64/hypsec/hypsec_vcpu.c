@@ -72,14 +72,6 @@ static void __hyp_text decrypt_kvm_regs(u32 vmid, struct kvm_regs *kvm_regs)
 	decrypt_buf(vmid, &kvm_regs->fp_regs, sizeof(struct user_fpsimd_state));
 }
 
-static void __hyp_text prep_noop(struct kvm_vcpu *vcpu)
-{
-	/*
-	 * It seems host only reads the PC and we don't have to
-	 * do anything here.
-	 */
-}
-
 static void __hyp_text prep_hvc(struct kvm_vcpu *vcpu)
 {
 	/* We care only about hvc for psci now. */
@@ -186,20 +178,6 @@ static void __hyp_text el2_prepare_exit_ctxt(struct kvm_vcpu *vcpu, u32 hsr)
 	u8 hsr_ec = ESR_ELx_EC(hsr);
 
 	switch (hsr_ec) {
-		case ESR_ELx_EC_CP15_32:
-		case ESR_ELx_EC_CP15_64:
-		case ESR_ELx_EC_CP14_MR:
-		case ESR_ELx_EC_CP14_LS:
-		case ESR_ELx_EC_CP14_64:
-		case ESR_ELx_EC_SMC32:
-		case ESR_ELx_EC_SMC64:
-		case ESR_ELx_EC_SOFTSTP_LOW:
-		case ESR_ELx_EC_WATCHPT_LOW:
-		case ESR_ELx_EC_BREAKPT_LOW:
-		case ESR_ELx_EC_BKPT32:
-		case ESR_ELx_EC_BRK64:
-			prep_noop(vcpu);
-			break;
 		case ESR_ELx_EC_WFx:
 			prep_wfx(vcpu);
 			break;
@@ -214,9 +192,23 @@ static void __hyp_text el2_prepare_exit_ctxt(struct kvm_vcpu *vcpu, u32 hsr)
 		case ESR_ELx_EC_DABT_LOW:
 			prep_abort(vcpu);
 			break;
+		case ESR_ELx_EC_CP15_32:
+		case ESR_ELx_EC_CP15_64:
+		case ESR_ELx_EC_CP14_MR:
+		case ESR_ELx_EC_CP14_LS:
+		case ESR_ELx_EC_CP14_64:
+		case ESR_ELx_EC_SMC32:
+		case ESR_ELx_EC_SMC64:
+		case ESR_ELx_EC_SOFTSTP_LOW:
+		case ESR_ELx_EC_WATCHPT_LOW:
+		case ESR_ELx_EC_BREAKPT_LOW:
+		case ESR_ELx_EC_BKPT32:
+		case ESR_ELx_EC_BRK64:
+			hypsec_inject_undef(vcpu);
+			break;
 		default:
 			print_string("\runknown exception\n");
-			BUG();
+			hypsec_inject_undef(vcpu);
 	}
 }
 
