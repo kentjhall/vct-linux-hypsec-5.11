@@ -216,6 +216,9 @@ struct arm_smmu_device {
 
 	/* IOMMU core code handle */
 	struct iommu_device		iommu;
+#ifdef CONFIG_STAGE2_KERNEL
+	u64				phys_base;
+#endif
 };
 
 enum arm_smmu_context_fmt {
@@ -602,7 +605,7 @@ static void arm_smmu_init_context_bank(struct arm_smmu_domain *smmu_domain,
 	cb->cfg = cfg;
 #ifdef CONFIG_STAGE2_KERNEL
 	el2_alloc_smmu_pgd(pgtbl_cfg->arm_lpae_s2_cfg.vttbr, cfg->cbndx,
-		ARM_SMMU_CB_VMID(smmu, cfg));
+		ARM_SMMU_CB_VMID(smmu, cfg), smmu->phys_base);
 #endif
 
 	/* TTBCR */
@@ -2201,6 +2204,7 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 	arm_smmu_device_reset(smmu);
 	arm_smmu_test_smr_masks(smmu);
 #ifdef CONFIG_STAGE2_KERNEL
+	smmu->phys_base = phys_smmu_base;
 	s2_smmu_probe(smmu, phys_smmu_base, smmu_size);
 #endif
 	/*

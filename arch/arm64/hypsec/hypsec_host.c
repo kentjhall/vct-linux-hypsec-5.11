@@ -331,7 +331,7 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		break;
 	case HVC_ALLOC_SMMU_PGD:
 		__el2_alloc_smmu_pgd((unsigned long)hr->regs[1], (u8)hr->regs[2],
-					(u32)hr->regs[3]);
+					(u32)hr->regs[3], (u64)hr->regs[4]);
 		break;
 	case HVC_SMMU_LPAE_MAP:
 		__el2_arm_lpae_map((unsigned long)hr->regs[1], hr->regs[2],

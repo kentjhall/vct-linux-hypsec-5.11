@@ -391,6 +391,20 @@ void __hyp_text handle_host_mmio(phys_addr_t addr,
 	return;
 }
 
+static struct __hyp_text el2_arm_smmu_device *base_to_el2_smmu(
+					struct el2_data *el2_data,
+					u64 base)
+{
+	int i;
+	struct el2_arm_smmu_device *smmu;
+	for (i = 0; i < el2_data->el2_smmu_num; i++) {
+		smmu = &el2_data->smmus[i];
+		if (smmu->phys_base == base)
+			return smmu;
+	}
+	return NULL;
+}
+
 /* TODO: how do we make sure it's ok to free now? */
 void __hyp_text  __el2_free_smmu_pgd(unsigned long addr)
 {
@@ -408,13 +422,20 @@ void __hyp_text  __el2_free_smmu_pgd(unsigned long addr)
 }
 
 /* Allocate a hw_ttbr to map to a hostvisor allocated ttbr. */
-void __hyp_text  __el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid)
+void __hyp_text  __el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid, u64 base)
 {
 	struct el2_data *el2_data;
 	struct el2_smmu_cfg *smmu_cfg;
+	struct el2_arm_smmu_device *smmu;
 
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	if (cbndx >= el2_data->smmu.num_context_banks) {
+	smmu = base_to_el2_smmu(el2_data, base);
+	if (!smmu) {
+		print_string("\r__el2_alloc_smmu_pgd: cannot find smmu\n");
+		return;
+	}
+
+	if (cbndx >= smmu->num_context_banks) {
 		print_string("\r__el2_alloc_smmu_pgd: invalid cbndx\n");
 		return;
 	}
@@ -607,9 +628,9 @@ void el2_free_smmu_pgd(unsigned long addr)
 	kvm_call_core(HVC_FREE_SMMU_PGD, addr);
 }
 
-void el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid)
+void el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid, u64 base)
 {
-	kvm_call_core(HVC_ALLOC_SMMU_PGD, addr, cbndx, vmid);
+	kvm_call_core(HVC_ALLOC_SMMU_PGD, addr, cbndx, vmid, base);
 }
 
 /* TODO: we need to verify if the map is legit */

@@ -91,7 +91,7 @@ int el2_memcmp(void *dest, void *src, size_t len);
 int el2_hex_to_bin(char ch);
 int el2_hex2bin(unsigned char *dst, const char *src, int count);
 
-extern void el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid);
+extern void el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid, u64 base);
 extern void el2_free_smmu_pgd(unsigned long addr);
 extern void el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
 		      size_t size, u64 prot, u64 ttbr);
