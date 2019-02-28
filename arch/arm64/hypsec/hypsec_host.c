@@ -261,18 +261,18 @@ static void __hyp_text hvc_enable_s2_trans(unsigned long stack_addr)
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
-	__init_stage2_translation();
-
-	write_sysreg(el2_data->host_vttbr, vttbr_el2);
-	write_sysreg(HCR_HOST_NVHE_FLAGS, hcr_el2);
-	__kvm_flush_vm_context();
-
 	if (!el2_data->installed) {
 		protect_el2_mem();
 		el2_data->installed = true;
 	}
 
 	protect_el2_stack_page(stack_addr);
+
+	__init_stage2_translation();
+
+	write_sysreg(el2_data->host_vttbr, vttbr_el2);
+	write_sysreg(HCR_HOST_NVHE_FLAGS, hcr_el2);
+	__kvm_flush_vm_context();
 }
 
 extern int __hypsec_register_vm(struct kvm *kvm);
