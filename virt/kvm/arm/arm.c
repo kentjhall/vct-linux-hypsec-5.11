@@ -731,8 +731,10 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *run)
 		ret = kvm_handle_mmio_return(vcpu, vcpu->run);
 		if (ret)
 			return ret;
+#ifndef CONFIG_STAGE2_KERNEL
 		if (kvm_arm_handle_step_debug(vcpu, vcpu->run))
 			return 0;
+#endif
 	}
 
 	if (run->immediate_exit)
@@ -812,7 +814,9 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *run)
 			continue;
 		}
 
+#ifndef CONFIG_STAGE2_KERNEL
 		kvm_arm_setup_debug(vcpu);
+#endif
 
 		/**************************************************************
 		 * Enter the guest
@@ -840,7 +844,9 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *run)
 		 * Back from guest
 		 *************************************************************/
 
+#ifndef CONFIG_STAGE2_KERNEL
 		kvm_arm_clear_debug(vcpu);
+#endif
 
 		/*
 		 * We must sync the PMU state before the vgic state so

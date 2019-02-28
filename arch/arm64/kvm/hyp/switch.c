@@ -80,6 +80,9 @@ static void __hyp_text __activate_traps_fpsimd32(struct kvm_vcpu *vcpu)
 
 static void __hyp_text __activate_traps_common(struct kvm_vcpu *vcpu)
 {
+#ifdef CONFIG_STAGE2_KERNEL
+	u64 mdcr_el2 = read_sysreg(mdcr_el2);
+#endif
 	/* Trap on AArch32 cp15 c15 (impdef sysregs) accesses (EL1 or EL0) */
 	write_sysreg(1 << 15, hstr_el2);
 
@@ -91,7 +94,19 @@ static void __hyp_text __activate_traps_common(struct kvm_vcpu *vcpu)
 	 */
 	write_sysreg(0, pmselr_el0);
 	write_sysreg(ARMV8_PMU_USERENR_MASK, pmuserenr_el0);
+#ifdef CONFIG_STAGE2_KERNEL
+	mdcr_el2 &= MDCR_EL2_HPMN_MASK;
+	mdcr_el2 |= (MDCR_EL2_TPM |
+		     MDCR_EL2_TPMS |
+		     MDCR_EL2_TPMCR |
+		     MDCR_EL2_TDRA |
+		     MDCR_EL2_TDOSA |
+		     MDCR_EL2_TDA |
+		     MDCR_EL2_TDE);
+	write_sysreg(mdcr_el2, mdcr_el2);
+#else
 	write_sysreg(vcpu->arch.mdcr_el2, mdcr_el2);
+#endif
 }
 
 static void __hyp_text __deactivate_traps_common(void)
