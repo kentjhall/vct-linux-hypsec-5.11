@@ -121,6 +121,7 @@ int kvm_arch_hardware_setup(void)
 {
 #ifdef CONFIG_STAGE2_KERNEL
 	on_each_cpu(install_el2_runtime, NULL, 1);
+	printk("HypSec EL2 runtime is installed\n");
 #endif
 	return 0;
 }
