@@ -830,7 +830,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *run)
 			kvm_arm_vhe_guest_exit();
 		} else {
 #ifdef CONFIG_STAGE2_KERNEL
-			vcpu->arch.tpidr_el2 = get_tpidr_el2();
+			vcpu->arch.tpidr_el2 = get_host_tpidr_el2();
 			ret = kvm_call_core(HVC_VCPU_RUN,
 					vcpu->arch.vmid, vcpu->vcpu_id);
 #else

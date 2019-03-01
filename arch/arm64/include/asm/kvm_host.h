@@ -456,7 +456,7 @@ static inline void __cpu_init_hyp_mode(phys_addr_t pgd_ptr,
 }
 
 #ifdef CONFIG_STAGE2_KERNEL
-static inline u64 get_tpidr_el2(void)
+static inline u64 get_host_tpidr_el2(void)
 {
 	return (u64)this_cpu_ptr(&kvm_host_cpu_state)
 		- (u64)kvm_ksym_ref(kvm_host_cpu_state);
