@@ -328,6 +328,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 	struct kvm_cpu_context *host_ctxt;
 	struct kvm_cpu_context *guest_ctxt;
 	struct kvm_cpu_context *shadow_ctxt;
+	struct kvm_cpu_context core_ctxt;
 	struct el2_data *el2_data;
 	u32 vmid = vcpu->arch.vmid;
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -358,7 +359,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 
 	do {
 		/* Jump in the fire! */
-		exit_code = __guest_enter(vcpu, host_ctxt);
+		exit_code = __guest_enter(vcpu, &core_ctxt);
 
 		/* And we're baaack! */
 	} while (fixup_guest_exit(vcpu, &exit_code));
