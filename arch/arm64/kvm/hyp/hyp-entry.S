@@ -246,17 +246,29 @@ wa_epilogue:
 	eret
 
 el1_trap:
+#ifndef CONFIG_STAGE2_KERNEL
 	get_vcpu_ptr	x1, x0
+#else
+	mrs	x1, tpidr_el2
+#endif
 	mov	x0, #ARM_EXCEPTION_TRAP
 	b	__guest_exit
 
 el1_irq:
+#ifndef CONFIG_STAGE2_KERNEL
 	get_vcpu_ptr	x1, x0
+#else
+	mrs	x1, tpidr_el2
+#endif
 	mov	x0, #ARM_EXCEPTION_IRQ
 	b	__guest_exit
 
 el1_error:
+#ifndef CONFIG_STAGE2_KERNEL
 	get_vcpu_ptr	x1, x0
+#else
+	mrs	x1, tpidr_el2
+#endif
 	mov	x0, #ARM_EXCEPTION_EL1_SERROR
 	b	__guest_exit
 

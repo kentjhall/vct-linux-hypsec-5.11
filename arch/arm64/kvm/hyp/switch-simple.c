@@ -340,7 +340,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 
 	__sysreg_save_state_nvhe(host_ctxt);
 
-	set_tpidr_el2(vcpu->arch.tpidr_el2);
+	set_tpidr_el2((u64)vcpu);
 	__restore_shadow_kvm_regs(vcpu);
 
 	__activate_traps(vcpu);

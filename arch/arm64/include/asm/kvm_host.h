@@ -239,7 +239,6 @@ struct kvm_vcpu_arch {
 	struct shadow_vcpu_context *shadow_vcpu_ctxt;
 	u32 vmid;
 	char	filler[PAGE_SIZE];
-	u64 tpidr_el2;
 
 	struct s2_trans walk_result;
 #endif

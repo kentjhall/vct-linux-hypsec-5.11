@@ -65,6 +65,9 @@ ENTRY(__guest_enter)
 #ifndef CONFIG_STAGE2_KERNEL
 	add	x18, x0, #VCPU_CONTEXT
 #else
+	// Store the host_ctxt for use at exit time
+	str	x1, [sp, #-16]!
+
 	add	x18, x0, #SHADOW_VCPU_CONTEXT
 	ldr	x18, [x18]
 #endif
@@ -125,7 +128,12 @@ ENTRY(__guest_exit)
 	// Store the guest regs x19-x29, lr
 	save_callee_saved_regs x1
 
+#ifndef CONFIG_STAGE2_KERNEL
 	get_host_ctxt	x2, x3
+#else
+	// Restore the host_ctxt from the stack
+	ldr	x2, [sp], #16
+#endif
 
 	// Now restore the host regs
 	restore_callee_saved_regs x2
