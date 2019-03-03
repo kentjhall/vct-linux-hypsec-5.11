@@ -250,6 +250,8 @@ static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu, u64 esr)
 
 	vcpu->arch.fault.far_el2 = far;
 	vcpu->arch.fault.hpfar_el2 = hpfar;
+	vcpu->arch.shadow_vcpu_ctxt->far_el2 = far;
+
 	if ((esr & ESR_ELx_FSC_TYPE) == FSC_FAULT) {
 		if (pre_handle_shadow_s2pt_fault(vcpu, hpfar) > 0)
 			return false;
@@ -315,7 +317,7 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 	if (*exit_code != ARM_EXCEPTION_TRAP)
 		goto exit;
 
-	ec = hypsec_vcpu_trap_get_class(esr_el2);
+	ec = hypsec_vcpu_trap_get_class(vcpu);
 	if (ec == ESR_ELx_EC_HVC64) {
 		if (handle_pvops(vcpu) > 0)
 			return true;
@@ -368,12 +370,11 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 	host_ctxt->__hyp_running_vcpu = vcpu;
 	guest_ctxt = &vcpu->arch.ctxt;
 	shadow_ctxt =
-		(struct kvm_cpu_context *)vcpu->arch.shadow_vcpu_ctxt;
+		(struct kvm_cpu_context *)prot_ctxt;
 
 	__sysreg_save_state_nvhe(host_ctxt);
 
-	//set_tpidr_el2(vcpu->arch.tpidr_el2);
-	write_sysreg(vcpu->arch.tpidr_el2, tpidr_el2);
+	set_tpidr_el2(vcpu->arch.tpidr_el2);
 	__restore_shadow_kvm_regs(vcpu);
 
 	__activate_traps(vcpu);

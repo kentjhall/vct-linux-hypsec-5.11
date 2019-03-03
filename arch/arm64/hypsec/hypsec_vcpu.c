@@ -144,7 +144,7 @@ static void __hyp_text prep_abort(struct kvm_vcpu *vcpu)
 	struct shadow_vcpu_context *shadow_ctxt =
 		vcpu->arch.shadow_vcpu_ctxt;
 	struct kvm_regs *gp_regs = &shadow_ctxt->gp_regs;
-	int Rd = kvm_vcpu_dabt_get_rd(vcpu);
+	int Rd = hypsec_vcpu_dabt_get_rd(vcpu);
 	phys_addr_t fault_ipa = (read_sysreg(hpfar_el2) & HPFAR_MASK) << 8;
 
 	/* We only have to care about regiters if it's MMIO */
@@ -152,7 +152,7 @@ static void __hyp_text prep_abort(struct kvm_vcpu *vcpu)
 		return;
 
 	shadow_ctxt->dirty |= DIRTY_PC_FLAG;
-	if (kvm_vcpu_dabt_iswrite(vcpu))
+	if (hypsec_vcpu_dabt_iswrite(vcpu))
 		vcpu_set_reg(vcpu, Rd, gp_regs->regs.regs[Rd]);
 	else
 		shadow_ctxt->dirty |= (1UL << Rd);

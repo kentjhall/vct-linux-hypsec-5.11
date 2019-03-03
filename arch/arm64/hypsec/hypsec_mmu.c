@@ -666,7 +666,7 @@ static int __hyp_text prot_and_map_to_s2pt(struct s2_trans result,
 	}
 
 	map_shadow_s2pt_mem(vmid, el2_data, faulted_ipa, result,
-			    kvm_vcpu_trap_is_iabt(vcpu));
+			    hypsec_vcpu_trap_is_iabt(vcpu));
 	ret = 1;
 	if (result.pfn && !is_mmio_gpa(faulted_ipa)) {
 		if (result.level == 2) {

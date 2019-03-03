@@ -115,7 +115,6 @@ void __hyp_text hypsec_inject_undef(struct kvm_vcpu *vcpu)
 	vcpu = kern_hyp_va(vcpu);
 	shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
 	shadow_ctxt->dirty |= PENDING_UNDEF_INJECT;
-	shadow_ctxt->far_el2 = kvm_vcpu_get_hfar(vcpu);
 }
 #endif
 

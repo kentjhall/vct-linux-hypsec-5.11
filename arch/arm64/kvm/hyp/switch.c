@@ -500,7 +500,7 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 #ifndef CONFIG_STAGE2_KERNEL
 	    kvm_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_FP_ASIMD)
 #else
-	    hypsec_vcpu_trap_get_class(esr_el2) == ESR_ELx_EC_FP_ASIMD)
+	    hypsec_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_FP_ASIMD)
 #endif
 		return __hyp_switch_fpsimd(vcpu);
 
@@ -513,7 +513,7 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 
 #ifdef CONFIG_STAGE2_KERNEL
 	if (*exit_code == ARM_EXCEPTION_TRAP &&
-	   hypsec_vcpu_trap_get_class(esr_el2) == ESR_ELx_EC_HVC64) {
+	   hypsec_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_HVC64) {
 		if (handle_pvops(vcpu) > 0)
 			return true;
 	}
@@ -563,8 +563,8 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 	    (kvm_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_SYS64 ||
 	     kvm_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_CP15_32)) {
 #else
-	    (hypsec_vcpu_trap_get_class(esr_el2) == ESR_ELx_EC_SYS64 ||
-	     hypsec_vcpu_trap_get_class(esr_el2) == ESR_ELx_EC_CP15_32)) {
+	    (hypsec_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_SYS64 ||
+	     hypsec_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_CP15_32)) {
 #endif
 		int ret = __vgic_v3_perform_cpuif_access(vcpu);
 

@@ -330,9 +330,35 @@ static inline u8 kvm_vcpu_trap_get_fault_type(const struct kvm_vcpu *vcpu)
 	return kvm_vcpu_get_hsr(vcpu) & ESR_ELx_FSC_TYPE;
 }
 #ifdef CONFIG_STAGE2_KERNEL
-static inline u8 hypsec_vcpu_trap_get_class(u32 esr)
+static inline u32 hypsec_vcpu_get_hsr(const struct kvm_vcpu *vcpu)
 {
-	return ESR_ELx_EC(esr);
+	return vcpu->arch.shadow_vcpu_ctxt->esr;
+}
+
+static inline u8 hypsec_vcpu_trap_get_class(const struct kvm_vcpu *vcpu)
+{
+	return ESR_ELx_EC(hypsec_vcpu_get_hsr(vcpu));
+}
+
+static inline int hypsec_vcpu_dabt_get_rd(const struct kvm_vcpu *vcpu)
+{
+	return (hypsec_vcpu_get_hsr(vcpu) & ESR_ELx_SRT_MASK) >> ESR_ELx_SRT_SHIFT;
+}
+
+static inline bool hypsec_vcpu_dabt_iss1tw(const struct kvm_vcpu *vcpu)
+{
+	return !!(hypsec_vcpu_get_hsr(vcpu) & ESR_ELx_S1PTW);
+}
+
+static inline bool hypsec_vcpu_dabt_iswrite(const struct kvm_vcpu *vcpu)
+{
+	return !!(hypsec_vcpu_get_hsr(vcpu) & ESR_ELx_WNR) ||
+		hypsec_vcpu_dabt_iss1tw(vcpu); /* AF/DBM update */
+}
+
+static inline bool hypsec_vcpu_trap_is_iabt(const struct kvm_vcpu *vcpu)
+{
+	return hypsec_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_IABT_LOW;
 }
 
 static inline bool kvm_vcpu_dabt_isextabt(const struct kvm_vcpu *vcpu, u8 fault)
@@ -456,7 +482,7 @@ static inline unsigned long vcpu_data_host_to_guest(struct kvm_vcpu *vcpu,
 #ifdef CONFIG_STAGE2_KERNEL
 static inline bool hypsec_is_vgic_v2_cpuif_trap(struct kvm_vcpu *vcpu, u32 esr)
 {
-	return (hypsec_vcpu_trap_get_class(esr) == ESR_ELx_EC_DABT_LOW &&
+	return (hypsec_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_DABT_LOW &&
 	       (esr & ESR_ELx_FSC_TYPE) == FSC_FAULT &&
 	       (esr & ESR_ELx_ISV) &&
 	       !kvm_vcpu_dabt_isextabt(vcpu, (esr & ESR_ELx_FSC)) &&
