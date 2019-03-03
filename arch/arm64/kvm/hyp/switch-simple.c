@@ -115,10 +115,13 @@ static void __hyp_text __activate_traps_nvhe(struct kvm_vcpu *vcpu)
 
 static void __hyp_text __activate_traps(struct kvm_vcpu *vcpu)
 {
-	u64 hcr = vcpu->arch.hcr_el2;
+	u64 hcr = HCR_HYPSEC_VM_FLAGS;
 
-	hcr |= HCR_HYPSEC_VM_FLAGS;
-	hcr &= ~HCR_TGE;
+	if (vcpu->arch.hcr_el2 & HCR_VI)
+		hcr |= HCR_VI;
+
+	if (vcpu->arch.hcr_el2 & HCR_VF)
+		hcr |= HCR_VF;
 
 	set_hcr_el2(hcr);
 
