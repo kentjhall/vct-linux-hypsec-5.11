@@ -69,7 +69,6 @@ static void __hyp_text __activate_traps_fpsimd32(struct kvm_vcpu *vcpu)
 
 static void __hyp_text __activate_traps_common(struct kvm_vcpu *vcpu)
 {
-	u64 mdcr_el2 = read_sysreg(mdcr_el2);
 	/* Trap on AArch32 cp15 c15 (impdef sysregs) accesses (EL1 or EL0) */
 	set_hstr_el2(1 << 15);
 
@@ -82,15 +81,7 @@ static void __hyp_text __activate_traps_common(struct kvm_vcpu *vcpu)
 	set_pmselr_el0(0);
 	set_pmuserenr_el0(ARMV8_PMU_USERENR_MASK);
 
-	mdcr_el2 &= MDCR_EL2_HPMN_MASK;
-	mdcr_el2 |= (MDCR_EL2_TPM |
-		     MDCR_EL2_TPMS |
-		     MDCR_EL2_TPMCR |
-		     MDCR_EL2_TDRA |
-		     MDCR_EL2_TDOSA |
-		     MDCR_EL2_TDA |
-		     MDCR_EL2_TDE);
-	write_sysreg(mdcr_el2, mdcr_el2);
+	set_mdcr_el2(HYPSEC_MDCR_EL2_FLAG);
 }
 
 static void __hyp_text __deactivate_traps_common(void)
@@ -133,14 +124,12 @@ static void __hyp_text __activate_traps(struct kvm_vcpu *vcpu)
 
 static void __hyp_text __deactivate_traps_nvhe(void)
 {
-	u64 mdcr_el2 = get_mdcr_el2();
-
 	__deactivate_traps_common();
-
-	mdcr_el2 &= MDCR_EL2_HPMN_MASK;
-	mdcr_el2 |= MDCR_EL2_E2PB_MASK << MDCR_EL2_E2PB_SHIFT;
-
-	set_mdcr_el2(mdcr_el2);
+	/*
+	 * Don't trap host access to debug related registers
+	 * but clear all available counters.
+	 */
+	set_mdcr_el2(0);
 
 	set_cptr_el2(CPTR_EL2_DEFAULT);
 }

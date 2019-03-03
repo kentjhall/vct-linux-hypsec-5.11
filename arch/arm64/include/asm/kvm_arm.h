@@ -211,6 +211,11 @@
 #define MDCR_EL2_TPM		(1 << 6)
 #define MDCR_EL2_TPMCR		(1 << 5)
 #define MDCR_EL2_HPMN_MASK	(0x1F)
+#ifdef CONFIG_STAGE2_KERNEL
+#define HYPSEC_MDCR_EL2_FLAG	(MDCR_EL2_TPM | MDCR_EL2_TPMS | MDCR_EL2_TPMCR | \
+				MDCR_EL2_TDRA | MDCR_EL2_TDOSA | MDCR_EL2_TDA | \
+				MDCR_EL2_TDE)
+#endif
 
 /* For compatibility with fault code shared with 32-bit */
 #define FSC_FAULT	ESR_ELx_FSC_FAULT
