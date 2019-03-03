@@ -144,15 +144,6 @@ static void __hyp_text __deactivate_traps_nvhe(void)
 
 static void __hyp_text __deactivate_traps(struct kvm_vcpu *vcpu)
 {
-	/*
-	 * If we pended a virtual abort, preserve it until it gets
-	 * cleared. See D1.14.3 (Virtual Interrupts) for details, but
-	 * the crucial bit is "On taking a vSError interrupt,
-	 * HCR_EL2.VSE is cleared to 0."
-	 */
-	if (vcpu->arch.hcr_el2 & HCR_VSE)
-		vcpu->arch.hcr_el2 = get_hcr_el2();
-
 	__deactivate_traps_nvhe();
 }
 
