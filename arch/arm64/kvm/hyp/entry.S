@@ -54,7 +54,7 @@
  *		     struct kvm_cpu_context *host_ctxt);
  */
 ENTRY(__guest_enter)
-	// x0: vcpu
+	// x0: shadow vcpu context
 	// x1: host context
 	// x2-x17: clobbered by macros
 	// x18: guest context
@@ -67,9 +67,7 @@ ENTRY(__guest_enter)
 #else
 	// Store the host_ctxt for use at exit time
 	str	x1, [sp, #-16]!
-
-	add	x18, x0, #SHADOW_VCPU_CONTEXT
-	ldr	x18, [x18]
+	mov	x18, x0
 #endif
 
 	// Restore guest regs x0-x17
@@ -95,15 +93,12 @@ ENDPROC(__guest_enter)
 
 ENTRY(__guest_exit)
 	// x0: return code
-	// x1: vcpu
+	// x1: shadow vcpu context
 	// x2-x29,lr: vcpu regs
 	// vcpu x0-x1 on the stack
 
 #ifndef CONFIG_STAGE2_KERNEL
 	add	x1, x1, #VCPU_CONTEXT
-#else
-	add	x1, x1, #SHADOW_VCPU_CONTEXT
-	ldr	x1, [x1]
 #endif
 
 	ALTERNATIVE(nop, SET_PSTATE_PAN(1), ARM64_HAS_PAN, CONFIG_ARM64_PAN)

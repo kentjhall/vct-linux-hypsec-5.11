@@ -341,7 +341,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 
 	__sysreg_save_state_nvhe(host_ctxt);
 
-	set_tpidr_el2((u64)vcpu);
+	set_tpidr_el2((u64)shadow_ctxt);
 	__restore_shadow_kvm_regs(vcpu);
 
 	__activate_traps(vcpu);
@@ -359,7 +359,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 
 	do {
 		/* Jump in the fire! */
-		exit_code = __guest_enter(vcpu, &core_ctxt);
+		exit_code = __guest_enter(shadow_ctxt, &core_ctxt);
 
 		/* And we're baaack! */
 	} while (fixup_guest_exit(vcpu, &exit_code));
