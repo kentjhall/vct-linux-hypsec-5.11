@@ -256,6 +256,9 @@ u32 __hyp_text __hypsec_register_kvm(void)
 	u32 vmid;
 	struct el2_data *el2_data;
 
+	if (!system_supports_fpsimd())
+		return 0;
+
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	vmid = hypsec_gen_vmid(el2_data);
 	if (vmid < 0)

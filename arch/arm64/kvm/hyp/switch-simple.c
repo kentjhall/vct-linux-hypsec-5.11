@@ -25,31 +25,6 @@
 
 #include "switch-simple.h"
 
-/* Check whether the FP regs were dirtied while in the host-side run loop: */
-static bool __hyp_text update_fp_enabled(struct kvm_vcpu *vcpu)
-{
-	return !!(vcpu->arch.flags & KVM_ARM64_FP_ENABLED);
-}
-
-/* We don't support 32-bit VM so no need to save FPSIMD system register state */
-static void __hyp_text __fpsimd_save_fpexc32(struct kvm_vcpu *vcpu)
-{
-}
-
-/* We don't support 32-bit VM so no need to set FPEXC.EN here */
-static void __hyp_text __activate_traps_fpsimd32(struct kvm_vcpu *vcpu)
-{
-	/*
-	 * We are about to set CPTR_EL2.TFP to trap all floating point
-	 * register accesses to EL2, however, the ARM ARM clearly states that
-	 * traps are only taken to EL2 if the operation would not otherwise
-	 * trap to EL1.  Therefore, always make sure that for 32-bit guests,
-	 * we set FPEXC.EN to prevent traps to EL1, when setting the TFP bit.
-	 * If FP/ASIMD is not implemented, FPEXC is UNDEFINED and any access to
-	 * it will cause an exception.
-	 */
-}
-
 static void __hyp_text __activate_traps_common(struct kvm_vcpu *vcpu)
 {
 	/*
@@ -77,8 +52,6 @@ static void __hyp_text __activate_traps_nvhe(struct kvm_vcpu *vcpu)
 
 	val = CPTR_EL2_DEFAULT;
 	val |= CPTR_EL2_TTA | CPTR_EL2_TZ;
-	if (!update_fp_enabled(vcpu))
-		val |= CPTR_EL2_TFP;
 
 	set_cptr_el2(val);
 }
@@ -97,7 +70,6 @@ static void __hyp_text __activate_traps(struct kvm_vcpu *vcpu)
 
 	/* We don't support RAS_EXTN for now in HypSec */
 
-	__activate_traps_fpsimd32(vcpu);
 	__activate_traps_nvhe(vcpu);
 }
 
@@ -231,29 +203,6 @@ static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu, u64 esr)
 	return true;
 }
 
-static bool __hyp_text __hyp_switch_fpsimd(struct kvm_vcpu *vcpu)
-{
-	struct kvm_cpu_context *host_ctxt = kern_hyp_va(vcpu->arch.host_cpu_context);
-	struct user_fpsimd_state *host_fpsimd = &host_ctxt->gp_regs.fp_regs;
-
-	set_cptr_el2(get_cptr_el2() & ~(u64)CPTR_EL2_TFP);
-
-	isb();
-
-	if (vcpu->arch.flags & KVM_ARM64_FP_HOST) {
-		__fpsimd_save_state(host_fpsimd);
-
-		vcpu->arch.flags &= ~KVM_ARM64_FP_HOST;
-	}
-	__fpsimd_restore_state(&vcpu->arch.shadow_vcpu_ctxt->gp_regs.fp_regs);
-
-	/* No need to restore fpexc32 since we don't support AArch64 guests */
-
-	vcpu->arch.flags |= KVM_ARM64_FP_ENABLED;
-
-	return true;
-}
-
 /*
  * Return true when we were able to fixup the guest exit and should return to
  * the guest, false when we should restore the host state and return to the
@@ -285,15 +234,6 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 			return true;
 		else
 			return false;
-	} else if (ec == ESR_ELx_EC_FP_ASIMD) {
-		/*
-		 * We trap the first access to the FP/SIMD to save the host context
-		 * and restore the guest context lazily.
-		 * If FP/SIMD is not implemented, handle the trap and inject an
-		 * undefined instruction exception to the guest.
-		 */
-		if (hypsec_supports_fpsimd())
-			return __hyp_switch_fpsimd(vcpu);
 	} else if (ec == ESR_ELx_EC_DABT_LOW || ec == ESR_ELx_EC_IABT_LOW) {
 		if (!__populate_fault_info(vcpu, esr_el2))
 			return true;
@@ -327,8 +267,8 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 	struct kvm_cpu_context core_ctxt;
 	struct el2_data *el2_data;
 	u32 vmid = vcpu->arch.vmid;
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	host_ctxt = kern_hyp_va(vcpu->arch.host_cpu_context);
 	host_ctxt->__hyp_running_vcpu = vcpu;
 	guest_ctxt = &vcpu->arch.ctxt;
@@ -353,6 +293,9 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 	__sysreg32_restore_state(vcpu);
 	__sysreg_restore_state_nvhe(shadow_ctxt);
 
+	__fpsimd_save_state(&host_ctxt->gp_regs.fp_regs);
+	__fpsimd_restore_state(&shadow_ctxt->gp_regs.fp_regs);
+
 	do {
 		/* Jump in the fire! */
 		exit_code = __guest_enter(shadow_ctxt, &core_ctxt);
@@ -372,13 +315,8 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 
 	__sysreg_restore_state_nvhe(host_ctxt);
 
-	if (vcpu->arch.flags & KVM_ARM64_FP_ENABLED) {
-		__fpsimd_save_fpexc32(vcpu);
-		__fpsimd_save_state(&shadow_ctxt->gp_regs.fp_regs);
-		__fpsimd_restore_state(&host_ctxt->gp_regs.fp_regs);
-		vcpu->arch.flags &= ~KVM_ARM64_FP_ENABLED;
-		vcpu->arch.flags |= KVM_ARM64_FP_HOST;
-	}
+	__fpsimd_save_state(&shadow_ctxt->gp_regs.fp_regs);
+	__fpsimd_restore_state(&host_ctxt->gp_regs.fp_regs);
 
 	__save_shadow_kvm_regs(vcpu, exit_code);
 
