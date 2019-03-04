@@ -52,9 +52,6 @@ static void __hyp_text __activate_traps_fpsimd32(struct kvm_vcpu *vcpu)
 
 static void __hyp_text __activate_traps_common(struct kvm_vcpu *vcpu)
 {
-	/* Trap on AArch32 cp15 c15 (impdef sysregs) accesses (EL1 or EL0) */
-	set_hstr_el2(1 << 15);
-
 	/*
 	 * Make sure we trap PMU access from EL0 to EL2. Also sanitize
 	 * PMSELR_EL0 to make sure it never contains the cycle
@@ -69,7 +66,6 @@ static void __hyp_text __activate_traps_common(struct kvm_vcpu *vcpu)
 
 static void __hyp_text __deactivate_traps_common(void)
 {
-	set_hstr_el2(0);
 	set_pmuserenr_el0(0);
 }
 
