@@ -158,6 +158,9 @@ void init_el2_data_page(void)
 	       sizeof(struct el2_vm_info) * EL2_VM_INFO_SIZE);
 	el2_data->used_vm_info = 0;
 	el2_data->last_remap_ptr = 0;
+	el2_data->vm_info[0].vttbr = el2_data->host_vttbr;
+	el2_data->vm_info[0].shadow_pt_lock =
+		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
 	memset(el2_data->smmu_cfg, 0,
 		sizeof(struct el2_smmu_cfg) * EL2_SMMU_CFG_SIZE);

@@ -443,9 +443,11 @@ void __hyp_text __set_pfn_host(phys_addr_t start, u64 size,
 	phys_addr_t addr = start, end = start + size;
 	phys_addr_t next;
 	struct el2_data *el2_data;
+	arch_spinlock_t *lock;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	stage2_spin_lock(&el2_data->fault_lock);
+	lock = get_shadow_pt_lock(0);
+	stage2_spin_lock(lock);
 
 	vttbr = (pgd_t *)el2_data->host_vttbr;
 	vttbr = __el2_va(vttbr);
@@ -457,27 +459,33 @@ void __hyp_text __set_pfn_host(phys_addr_t start, u64 size,
 			set_pfn_host_puds(pgd, addr, next, pfn, prot);
 	} while (pgd++, addr = next, addr != end);
 
-	stage2_spin_unlock(&el2_data->fault_lock);
+	stage2_spin_unlock(lock);
 }
 
-static void __hyp_text handle_host_stage2_trans_fault(unsigned host_lr,
-					phys_addr_t addr,
-					struct el2_data *el2_data,
-					pte_t new_pte)
+static void __hyp_text mmap_s2pt(phys_addr_t addr,
+				 struct el2_data *el2_data,
+				 u64 desc,
+				 int level,
+				 u32 vmid)
 {
 	pgd_t *pgd;
 	pgd_t *vttbr;
 	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte;
+	arch_spinlock_t *lock;
 
+	BUG_ON(addr >= KVM_PHYS_SIZE);
+
+	if (!level)
+		return;
 	/* We assume paging is enabled in EL2 at the point we call this
 	 * function.
 	 */
-	vttbr = (pgd_t *)el2_data->host_vttbr;
-	BUG_ON(addr >= KVM_PHYS_SIZE);
+	lock = get_shadow_pt_lock(vmid);
+	vttbr = (pgd_t *)get_shadow_vttbr(vmid);
 
-	stage2_spin_lock(&el2_data->fault_lock);
+	stage2_spin_lock(lock);
 
 	vttbr = __el2_va(vttbr);
 	pgd = vttbr + stage2_pgd_index(addr);
@@ -493,15 +501,21 @@ static void __hyp_text handle_host_stage2_trans_fault(unsigned host_lr,
 	}
 
 	pmd = pmd_offset_el2(pud, addr);
+	if (level == 2) {
+		kvm_set_pmd(pmd, __pmd(desc));
+		goto out;
+	}
+
 	if (pmd_none(*pmd)) {
 		pte = alloc_stage2_page(1);
 		__pmd_populate(pmd, (phys_addr_t)pte, PMD_TYPE_TABLE);
 	}
 	
 	pte = pte_offset_el2(pmd, addr);
-	kvm_set_pte(pte, new_pte);
+	kvm_set_pte(pte, __pte(desc));
 
-	stage2_spin_unlock(&el2_data->fault_lock);
+out:
+	stage2_spin_unlock(lock);
 }
 
 static int __hyp_text stage2_emul_mmio(struct el2_data *el2_data,
@@ -562,7 +576,7 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 			return;
 	}
 
-	handle_host_stage2_trans_fault(host_lr, addr, el2_data, new_pte);
+	mmap_s2pt(addr, el2_data, pte_val(new_pte), 3, 0);
 
 out:
 	return;
@@ -1093,7 +1107,7 @@ void __hyp_text __el2_encrypt_buf(u32 vmid, void *buf, uint32_t len)
 	encrypt_buf(vmid, __el2_va(tmp_pa), len);
 	new_pte = pfn_pte(tmp_pa >> PAGE_SHIFT, PAGE_S2_KERNEL);
 
-	handle_host_stage2_trans_fault(0, hpa, el2_data, new_pte);
+	mmap_s2pt(hpa, el2_data, pte_val(new_pte), 3, 0);
 	__kvm_tlb_flush_vmid_el2();
 }
 
