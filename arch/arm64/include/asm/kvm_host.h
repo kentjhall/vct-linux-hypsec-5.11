@@ -215,9 +215,11 @@ typedef struct kvm_cpu_context kvm_cpu_context_t;
 #define	PENDING_DABT_INJECT		1UL << 33
 #define	PENDING_IABT_INJECT		1UL << 34
 #define	PENDING_UNDEF_INJECT		1UL << 35
+#define PENDING_FSC_FAULT		1UL << 1
 #define PENDING_EXCEPT_INJECT_FLAG	(PENDING_DABT_INJECT | \
 					 PENDING_IABT_INJECT | \
 					 PENDING_UNDEF_INJECT)
+
 
 struct shadow_vcpu_context {
 	struct kvm_regs gp_regs;
@@ -230,6 +232,7 @@ struct shadow_vcpu_context {
 	u64 dirty;
 	u64 hpfar;
 	u64 hcr_el2;
+	u64 flags;
 	unsigned long far_el2;
 };
 #endif

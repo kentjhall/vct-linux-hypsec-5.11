@@ -357,9 +357,10 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
 	shadow_ctxt->dirty = 0;
 	shadow_ctxt->far_el2 = 0;
 
-	if (shadow_ctxt->hpfar)
+	if (shadow_ctxt->flags & PENDING_FSC_FAULT)
 		post_handle_shadow_s2pt_fault(vcpu, shadow_ctxt->hpfar);
-	shadow_ctxt->hpfar = 0;
+
+	shadow_ctxt->flags = 0;
 }
 
 void __hyp_text __save_encrypted_vcpu(u32 vmid, int vcpu_id)

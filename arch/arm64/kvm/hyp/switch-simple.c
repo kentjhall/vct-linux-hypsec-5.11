@@ -160,6 +160,7 @@ static bool __hyp_text __translate_far_to_hpfar(u64 far, u64 *hpfar)
 static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu, u64 esr)
 {
 	u64 hpfar, far;
+	struct shadow_vcpu_context *shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
 
 	far = get_far_el2();
 
@@ -184,7 +185,8 @@ static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu, u64 esr)
 
 	vcpu->arch.fault.far_el2 = far;
 	vcpu->arch.fault.hpfar_el2 = hpfar;
-	vcpu->arch.shadow_vcpu_ctxt->far_el2 = far;
+	shadow_ctxt->far_el2 = far;
+	shadow_ctxt->hpfar = hpfar;
 
 	if ((esr & ESR_ELx_FSC_TYPE) == FSC_FAULT) {
 		if (pre_handle_shadow_s2pt_fault(vcpu, hpfar) > 0)
@@ -195,8 +197,8 @@ static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu, u64 esr)
 		 * should be built anyway.
 		 */
 		else if (!is_mmio_gpa((hpfar & HPFAR_MASK) << 8)) {
-			vcpu->arch.shadow_vcpu_ctxt->hpfar = hpfar;
 			el2_memset(&vcpu->arch.walk_result, 0, sizeof(struct s2_trans));
+			shadow_ctxt->flags |= PENDING_FSC_FAULT;
 		}
 	}
 
