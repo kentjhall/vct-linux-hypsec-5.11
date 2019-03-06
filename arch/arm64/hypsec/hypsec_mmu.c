@@ -479,6 +479,7 @@ static void __hyp_text mmap_s2pt(phys_addr_t addr,
 
 	if (!level)
 		return;
+
 	/* We assume paging is enabled in EL2 at the point we call this
 	 * function.
 	 */
@@ -582,94 +583,44 @@ out:
 	return;
 }
 
-static void __hyp_text map_shadow_s2pt_mem(u32 vmid,
-					  struct el2_data *el2_data,
-					  phys_addr_t addr,
-					  struct s2_trans result,
-					  bool exec_fault)
+static u64 __hyp_text result_to_desc(struct s2_trans result, bool exec)
 {
-	pgd_t *pgd;
-	pgd_t *vttbr;
-	pud_t *pud;
-	pmd_t *pmd, *old_pmd;
-	pte_t *pte;
-	pte_t new_pte;
-	kvm_pfn_t pfn;
-	arch_spinlock_t *lock;
+	u64 desc = 0;
+	pte_t pte;
+	pmd_t pmd;
 
-	lock = get_shadow_pt_lock(vmid);
-
-	vttbr = (pgd_t *)get_shadow_vttbr(vmid);
-	vttbr = __el2_va(vttbr);
-
-	stage2_spin_lock(lock);
-
-	pgd = vttbr + stage2_pgd_index(addr);
-	if (stage2_pgd_none(*pgd)) {
-		pud = alloc_stage2_page(1);
-		__pgd_populate(pgd, (phys_addr_t)pud, PUD_TYPE_TABLE);
-	}
-
-	pud = stage2_pud_offset(pgd, addr);
-	if (stage2_pud_none(*pud)) {
-		pmd = alloc_stage2_page(1);
-		__pud_populate(pud, (phys_addr_t)pmd, PMD_TYPE_TABLE);
-	}
-
-	pmd = pmd_offset_el2(pud, addr);
 	if (result.level == 2) {
-		pmd_t new_pmd = pfn_pmd(result.output >> PAGE_SHIFT, PAGE_S2);
-		new_pmd = pmd_mkhuge(new_pmd);
+		pmd = pfn_pmd(result.output >> PAGE_SHIFT, PAGE_S2);
+		pmd = pmd_mkhuge(pmd);
 		if (result.writable)
-			new_pmd = kvm_s2pmd_mkwrite(new_pmd);
-		if (exec_fault)
-			new_pmd = kvm_s2pmd_mkexec(new_pmd);
-		old_pmd = pmd;
-		if (pmd_present(*old_pmd)) {
-			goto out;
+			pmd = kvm_s2pmd_mkwrite(pmd);
+		if (exec)
+			pmd = kvm_s2pmd_mkexec(pmd);
+		desc = pmd_val(pmd);
+	} else if (result.level == 3) {
+		if (stage2_is_map_memory(result.output)) {
+			pte = pfn_pte(result.pfn, PAGE_S2);
+			if (result.writable)
+				pte = kvm_s2pte_mkwrite(pte);
+			if (exec)
+				pte = kvm_s2pte_mkexec(pte);
+		} else {
+			pte = pfn_pte(result.pfn, PAGE_S2_DEVICE);
+			pte = kvm_s2pte_mkwrite(pte);
 		}
-		//new_pmd.pmd = result.desc;
-		kvm_set_pmd(pmd, new_pmd);
-		__kvm_tlb_flush_vmid_ipa_shadow(addr);
-
-		goto out;
+		desc = pte_val(pte);
 	}
 
-	/* Now we know the host uses pte mapping */
-	if (pmd_none(*pmd)) {
-		pte = alloc_stage2_page(1);
-		__pmd_populate(pmd, (phys_addr_t)pte, PMD_TYPE_TABLE);
-	}
-
-	pte = pte_offset_el2(pmd, addr);
-	if (!pte_none(*pte)) {
-		goto out;
-	}
-
-	pfn = result.pfn;
-	if (stage2_is_map_memory(result.output)) {
-		new_pte = pfn_pte(pfn, PAGE_S2);
-		if (result.writable)
-			new_pte = kvm_s2pte_mkwrite(new_pte);
-		if (exec_fault)
-			new_pte = kvm_s2pte_mkexec(new_pte);
-	} else {
-		new_pte = pfn_pte(pfn, PAGE_S2_DEVICE);
-		new_pte = kvm_s2pte_mkwrite(new_pte);
-	}
-
-	kvm_set_pte(pte, new_pte);
-	__kvm_tlb_flush_vmid_ipa_shadow(addr);
-out:
-	stage2_spin_unlock(lock);
+	return desc;
 }
 
 static int __hyp_text prot_and_map_to_s2pt(struct s2_trans result,
 					   struct el2_data *el2_data,
 					   struct kvm_vcpu *vcpu,
-					   phys_addr_t faulted_ipa)
+					   phys_addr_t fault_ipa)
 {
 	u32 vmid = vcpu->arch.vmid, target_vmid;
+	u64 desc;
 	int ret = -ENOMEM;
 
 	if (stage2_is_map_memory(result.output)) {
@@ -679,10 +630,11 @@ static int __hyp_text prot_and_map_to_s2pt(struct s2_trans result,
 			return ret;
 	}
 
-	map_shadow_s2pt_mem(vmid, el2_data, faulted_ipa, result,
-			    hypsec_vcpu_trap_is_iabt(vcpu));
+	desc = result_to_desc(result,hypsec_vcpu_trap_is_iabt(vcpu));
+	mmap_s2pt(fault_ipa, el2_data, desc, result.level, vmid);
+
 	ret = 1;
-	if (result.pfn && !is_mmio_gpa(faulted_ipa)) {
+	if (result.pfn && !is_mmio_gpa(fault_ipa)) {
 		if (result.level == 2) {
 			set_pfn_owner(el2_data, result.output, PMD_SIZE, vmid);
 			__set_pfn_host(result.output, PMD_SIZE, 0, PAGE_GUEST);
@@ -1031,6 +983,7 @@ void __hyp_text load_image_to_shadow_s2pt(u32 vmid,
 	struct s2_trans result;
 	int i = 0;
 	unsigned long addr, ipa;
+	u64 desc;
 
 	while (i < pgnum) {
 		addr = el2_remap_addr + (i * PAGE_SIZE);
@@ -1046,7 +999,9 @@ void __hyp_text load_image_to_shadow_s2pt(u32 vmid,
 		result.pfn = result.output >> PAGE_SHIFT;
 		result.writable = true;
 		result.level = 2;
-		map_shadow_s2pt_mem(vmid, el2_data, ipa, result, true);
+
+		desc = result_to_desc(result, true);
+		mmap_s2pt(ipa, el2_data, desc, result.level, vmid);
 
 		i += (PMD_SIZE >> PAGE_SHIFT);
 	}
@@ -1058,6 +1013,7 @@ void __hyp_text map_vgic_cpu_to_shadow_s2pt(u32 vmid, struct el2_data *el2_data)
 	/* We now hardcode the GPA here to be the same as QEMU. */
 	unsigned long vgic_cpu_gpa = 0x08010000;
 	int i = 0;
+	u64 desc;
 
 	result.output = el2_data->vgic_cpu_base;
 	result.pfn = result.output >> PAGE_SHIFT;
@@ -1065,7 +1021,8 @@ void __hyp_text map_vgic_cpu_to_shadow_s2pt(u32 vmid, struct el2_data *el2_data)
 	result.level = 3;
 
 	while (i < KVM_VGIC_V2_CPU_SIZE) {
-		map_shadow_s2pt_mem(vmid, el2_data, vgic_cpu_gpa, result, false);
+		desc = result_to_desc(result, false);
+		mmap_s2pt(vgic_cpu_gpa, el2_data, desc, result.level, vmid);
 
 		i += PAGE_SIZE;
 		vgic_cpu_gpa += PAGE_SIZE;
