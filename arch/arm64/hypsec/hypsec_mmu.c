@@ -614,37 +614,62 @@ static u64 __hyp_text result_to_desc(struct s2_trans result, bool exec)
 	return desc;
 }
 
+static int __hyp_text assign_pfn_to_vm(struct s2_trans result,
+				       struct el2_data *el2_data,
+				       u32 vmid)
+{
+	u32 target_vmid;
+	u64 addr, end, size = 0;
+	int ret = -ENOMEM;
+	unsigned long index;
+
+	if (result.level == 2)
+		size = PMD_SIZE;
+	else if (result.level == 3)
+		size = PAGE_SIZE;
+
+	addr = result.output;
+	end = addr + size;
+	do {
+		if (stage2_is_map_memory(addr)) {
+			stage2_spin_lock(&el2_data->s2pages_lock);
+
+			index = get_s2_page_index(el2_data, addr);
+			target_vmid = el2_data->s2_pages[index].vmid;
+
+			/* Check if a page is owned by EL2 or already belongs to a VM */
+			if (target_vmid == HYPSEC_VMID ||
+			    (target_vmid && target_vmid != vmid)) {
+				stage2_spin_unlock(&el2_data->s2pages_lock);
+				return ret;
+			}
+			__set_pfn_host(addr, PAGE_SIZE, 0, PAGE_GUEST);
+
+			if (!el2_data->s2_pages[index].count)
+				el2_data->s2_pages[index].vmid = vmid;
+
+			stage2_spin_unlock(&el2_data->s2pages_lock);
+		}
+	} while (addr += PAGE_SIZE, addr < end);
+
+	return 1;
+}
+
 static int __hyp_text prot_and_map_to_s2pt(struct s2_trans result,
 					   struct el2_data *el2_data,
 					   struct kvm_vcpu *vcpu,
 					   phys_addr_t fault_ipa)
 {
-	u32 vmid = vcpu->arch.vmid, target_vmid;
+	u32 vmid = vcpu->arch.vmid;
 	u64 desc;
-	int ret = -ENOMEM;
+	int ret;
 
-	if (stage2_is_map_memory(result.output)) {
-		/* Check if a page is owned by EL2 or already belongs to a VM */
-		target_vmid = get_hpa_owner(result.output);
-		if (target_vmid == HYPSEC_VMID || (target_vmid && target_vmid != vmid))
-			return ret;
+	ret = assign_pfn_to_vm(result, el2_data, vmid);
+	if (ret > 0) {
+		desc = result_to_desc(result, hypsec_vcpu_trap_is_iabt(vcpu));
+		mmap_s2pt(fault_ipa, el2_data, desc, result.level, vmid);
+		__kvm_flush_vm_context();
 	}
-
-	desc = result_to_desc(result,hypsec_vcpu_trap_is_iabt(vcpu));
-	mmap_s2pt(fault_ipa, el2_data, desc, result.level, vmid);
-
-	ret = 1;
-	if (result.pfn && !is_mmio_gpa(fault_ipa)) {
-		if (result.level == 2) {
-			set_pfn_owner(el2_data, result.output, PMD_SIZE, vmid);
-			__set_pfn_host(result.output, PMD_SIZE, 0, PAGE_GUEST);
-		} else if (result.level == 3) {
-			set_pfn_owner(el2_data, result.output, PAGE_SIZE, vmid);
-			__set_pfn_host(result.output, PAGE_SIZE, 0, PAGE_GUEST);
-		}
-	}
-
-	__kvm_flush_vm_context();
 
 	return ret;
 }
