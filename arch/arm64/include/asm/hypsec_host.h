@@ -9,7 +9,7 @@
 #include <asm/hypsec_mmio.h>
 
 /* Handler for ACTLR_EL1 is not defined */
-#define SHADOW_SYS_REGS_SIZE		(PAR_EL1)
+#define SHADOW_SYS_REGS_SIZE		(DISR_EL1)
 #define SHADOW_32BIT_REGS_SIZE		3
 #define SHADOW_SYS_REGS_DESC_SIZE	(SHADOW_SYS_REGS_SIZE + SHADOW_32BIT_REGS_SIZE)
 #define NUM_SHADOW_VCPU_CTXT		128

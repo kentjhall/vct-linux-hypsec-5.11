@@ -125,20 +125,20 @@ static void __hyp_text prep_sys_reg(struct kvm_vcpu *vcpu, u32 esr)
 	shadow_ctxt->dirty = 0;
 	smp_wmb();
 	shadow_ctxt->dirty |= DIRTY_PC_FLAG;
+
 	if (!is_write) {
 		if (ret > 0)
 			gp_regs->regs.regs[Rt] = shadow_ctxt->sys_regs[ret];
-		/* The guest can trap on accessing id, debug, pmu registers */
-		else
-			shadow_ctxt->dirty |= (1UL << Rt);
 	} else {
 		if (ret > 0)
 			shadow_ctxt->sys_regs[ret] = gp_regs->regs.regs[Rt];
-		/* The guest can trap on accessing id, debug, pmu registers */
-		else {
-			printhex_ul(*shadow_vcpu_pc(vcpu));
-			vcpu_set_reg(vcpu, Rt, gp_regs->regs.regs[Rt]);
-		}
+		/*
+		 * The guest can trap on accessing id, debug, pmu registers.
+		 * We zero out the target register before entering host because
+		 * we do not support the functionality anyway.
+		 */
+		else
+			vcpu_set_reg(vcpu, Rt, 0);
 	}
 }
 

@@ -23,6 +23,11 @@
 #define CRm(_x) 	.CRm = _x
 #define Op2(_x) 	.Op2 = _x
 
+#define SYS_DESC(reg)					\
+	Op0(sys_reg_Op0(reg)), Op1(sys_reg_Op1(reg)),	\
+	CRn(sys_reg_CRn(reg)), CRm(sys_reg_CRm(reg)),	\
+	Op2(sys_reg_Op2(reg))
+
 static struct s2_sys_reg_desc host_sys_reg_descs[] = {
 	/* TTBR0_EL1 */
 	{ Op0(0b11), Op1(0b000), CRn(0b0010), CRm(0b0000), Op2(0b000),
@@ -87,6 +92,9 @@ static struct s2_sys_reg_desc host_sys_reg_descs[] = {
 	/* CNTKCTL_EL1 */
 	{ Op0(0b11), Op1(0b000), CRn(0b1110), CRm(0b0001), Op2(0b000),
 	  CNTKCTL_EL1, 0 },
+	{ SYS_DESC(SYS_MDSCR_EL1), MDSCR_EL1, 0 },
+	{ SYS_DESC(SYS_MDCCINT_EL1), MDCCINT_EL1, 0 },
+	{ SYS_DESC(SYS_DISR_EL1), DISR_EL1, 0 },
 	/* DACR32_EL2 */
 	{ Op0(0b11), Op1(0b100), CRn(0b0011), CRm(0b0000), Op2(0b000),
 	  DACR32_EL2, 0x1de7ec7edbadc0deULL },
