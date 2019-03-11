@@ -120,8 +120,6 @@ static void __hyp_text prep_sys_reg(struct kvm_vcpu *vcpu, u32 esr)
 	int Rt = (esr >> 5) & 0x1f, ret;
 	bool is_write = !(esr & 1);
 
-	vcpu_set_reg(vcpu, Rt, gp_regs->regs.regs[Rt]);
-
 	ret = sec_el2_handle_sys_reg(vcpu, esr);
 
 	shadow_ctxt->dirty = 0;
@@ -136,6 +134,11 @@ static void __hyp_text prep_sys_reg(struct kvm_vcpu *vcpu, u32 esr)
 	} else {
 		if (ret > 0)
 			shadow_ctxt->sys_regs[ret] = gp_regs->regs.regs[Rt];
+		/* The guest can trap on accessing id, debug, pmu registers */
+		else {
+			printhex_ul(*shadow_vcpu_pc(vcpu));
+			vcpu_set_reg(vcpu, Rt, gp_regs->regs.regs[Rt]);
+		}
 	}
 }
 
