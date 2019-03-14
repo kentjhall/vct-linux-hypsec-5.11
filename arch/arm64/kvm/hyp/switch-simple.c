@@ -239,6 +239,10 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 	} else if (ec == ESR_ELx_EC_DABT_LOW || ec == ESR_ELx_EC_IABT_LOW) {
 		if (!__populate_fault_info(vcpu, esr_el2))
 			return true;
+	} else if (ec == ESR_ELx_EC_SYS64) {
+		u64 elr = read_sysreg(elr_el2);
+		write_sysreg(elr + 4, elr_el2);
+		return true;
 	}
 
 exit:
