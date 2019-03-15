@@ -16,33 +16,6 @@
 #include <asm/hypsec_host.h>
 #include <asm/spinlock_types.h>
 
-void __hyp_text set_stage2_vring_gpa(struct kvm_vcpu *vcpu)
-{
-	struct el2_data *el2_data;
-	unsigned long addr, npages, index;
-	size_t size_in_bytes;
-	int i;
-	struct s2_trans result;
-
-	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
-
-	addr = shadow_vcpu_get_reg(vcpu, 1) & PAGE_MASK;
-	size_in_bytes = shadow_vcpu_get_reg(vcpu, 2);
-	npages = (size_in_bytes >> PAGE_SHIFT) + 1;
-
-	for (i = 0; i < npages; i++) {
-		result = walk_stage2_pgd(vcpu->arch.vmid, addr);
-		if (!result.level)
-			return;
-
-		index = get_s2_page_index(el2_data, result.pfn << PAGE_SHIFT);
-		set_pfn_owner(el2_data, result.pfn << PAGE_SHIFT, PAGE_SIZE, 0);
-		el2_data->s2_pages[index].count++;
-		addr += PAGE_SIZE;
-	}
-
-	return;
-}
 
 void __hyp_text set_balloon_pfn(struct kvm_vcpu *vcpu)
 {
