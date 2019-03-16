@@ -321,8 +321,6 @@ void __hyp_text walk_el2_pte(pmd_t *pmd, unsigned long addr, struct s2_trans *re
 	result->output = result->pfn << PAGE_SHIFT;
 	desc = pte_val(*pte);
 	result->level = 3;
-	result->readable = desc & (0b01 << 6);
-	result->writable = desc & (0b10 << 6);
 	result->desc = desc;
 }
 
@@ -1017,18 +1015,13 @@ void __hyp_text load_image_to_shadow_s2pt(u32 vmid,
 		walk_el2_pgd(addr, &result);
 		if (!result.level) {
 			print_string("\rWe cannot retrieve the PTE\n");
-			return;
+			__hyp_panic();
 		}
-
-		result.output &= PMD_MASK;
-		result.pfn = result.output >> PAGE_SHIFT;
 		result.writable = true;
-		result.level = 2;
 
 		desc = result_to_desc(result, true);
 		mmap_s2pt(ipa, el2_data, desc, result.level, vmid);
-
-		i += (PMD_SIZE >> PAGE_SHIFT);
+		i++;
 	}
 }
 
