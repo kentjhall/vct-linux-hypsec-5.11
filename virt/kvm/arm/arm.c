@@ -448,9 +448,6 @@ void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 	vcpu->cpu = -1;
 
 	kvm_arm_set_running_vcpu(NULL);
-#ifdef CONFIG_STAGE2_KERNEL
-	vcpu->arch.was_preempted = false;
-#endif
 }
 
 static void vcpu_power_off(struct kvm_vcpu *vcpu)
