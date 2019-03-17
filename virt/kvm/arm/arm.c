@@ -583,8 +583,6 @@ static void update_vttbr(struct kvm *kvm)
 		 */
 #ifndef CONFIG_STAGE2_KERNEL
 		kvm_call_hyp(__kvm_flush_vm_context);
-#else
-		kvm_call_core(HVC_FLUSH_VM_CTXT);
 #endif
 	}
 
