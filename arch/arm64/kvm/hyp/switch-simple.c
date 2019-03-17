@@ -288,6 +288,8 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 
 	__activate_traps(vcpu);
 	__activate_vm(vmid & 0xff);
+	if (vcpu->arch.was_preempted)
+		hypsec_tlb_flush_local_vmid();
 
 	__hyp_vgic_restore_state(vcpu);
 	__timer_enable_traps(vcpu);

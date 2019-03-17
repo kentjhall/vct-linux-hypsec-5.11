@@ -129,7 +129,6 @@ extern int __hypsec_init_vm(u32 vmid);
 
 struct el2_vm_info* vmid_to_vm_info(u32 vmid);
 
-void hypsec_tlb_flush_helper(u32 vmid, int mode);
 extern void map_vgic_cpu_to_shadow_s2pt(u32 vmid, struct el2_data *el2_data);
 
 static inline int is_smmu_range(struct el2_data *el2_data, phys_addr_t addr)

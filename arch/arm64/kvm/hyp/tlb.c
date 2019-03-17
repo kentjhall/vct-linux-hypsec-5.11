@@ -167,21 +167,11 @@ void __hyp_text __kvm_tlb_flush_local_vmid(struct kvm_vcpu *vcpu)
 }
 
 #ifdef CONFIG_STAGE2_KERNEL
-void __hyp_text hypsec_tlb_flush_helper(u32 vmid, int mode)
+void __hyp_text hypsec_tlb_flush_local_vmid(void)
 {
-	/* Switch to requested VMID */
-	write_sysreg(get_shadow_vttbr(vmid), vttbr_el2);
-	isb();
-
-	if (mode == 0) /* HVC_TLB_FLUSH_VMID */
-		__tlbi(vmalls12e1is);
-	else if (mode == 1) /* HVC_TLB_FLUSH_LOCAL_VMID */
-		__tlbi(vmalle1);
-
+	__tlbi(vmalle1);
 	dsb(nsh);
 	isb();
-
-	__tlb_switch_to_host()(NULL);
 }
 #endif
 

@@ -307,9 +307,6 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 	case HVC_TIMER_SET_CNTVOFF:
 		__kvm_timer_set_cntvoff((u32)hr->regs[1], (u32)hr->regs[2]);
 		break;
-	case HVC_TLB_FLUSH_LOCAL_VMID:
-		hypsec_tlb_flush_helper((u32)hr->regs[1], 1);
-		break;
 	/* The following can only be called when VM terminates. */
 	case HVC_CLEAR_VM_S2_RANGE:
 		__clear_vm_stage2_range((u32)hr->regs[1],

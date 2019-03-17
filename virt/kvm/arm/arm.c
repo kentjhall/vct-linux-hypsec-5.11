@@ -419,8 +419,7 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 #ifndef CONFIG_STAGE2_KERNEL
 		kvm_call_hyp(__kvm_tlb_flush_local_vmid, vcpu);
 #else
-		kvm_call_core(HVC_TLB_FLUSH_LOCAL_VMID,
-				vcpu->kvm->arch.vmid, vcpu->vcpu_id);
+		vcpu->arch.was_preempted = true;
 #endif
 		*last_ran = vcpu->vcpu_id;
 	}
@@ -445,6 +444,9 @@ void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 	vcpu->cpu = -1;
 
 	kvm_arm_set_running_vcpu(NULL);
+#ifdef CONFIG_STAGE2_KERNEL
+	vcpu->arch.was_preempted = false;
+#endif
 }
 
 static void vcpu_power_off(struct kvm_vcpu *vcpu)
