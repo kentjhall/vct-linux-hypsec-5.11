@@ -430,14 +430,18 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 	kvm_arm_set_running_vcpu(vcpu);
 	kvm_vgic_load(vcpu);
 	kvm_timer_vcpu_load(vcpu);
+#ifndef CONFIG_STAGE2_KERNEL
 	kvm_vcpu_load_sysregs(vcpu);
 	kvm_arch_vcpu_load_fp(vcpu);
+#endif
 }
 
 void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	kvm_arch_vcpu_put_fp(vcpu);
 	kvm_vcpu_put_sysregs(vcpu);
+#endif
 	kvm_timer_vcpu_put(vcpu);
 	kvm_vgic_put(vcpu);
 
