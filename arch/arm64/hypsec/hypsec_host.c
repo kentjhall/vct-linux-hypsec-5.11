@@ -108,10 +108,9 @@ static struct s2_sys_reg_desc host_sys_reg_descs[] = {
 
 void init_el2_data_page(void)
 {
-	int i = 0, index = 0, err;
+	int i = 0, index = 0;
 	struct el2_data *el2_data;
 	struct memblock_region *r;
-	struct el2_arm_smmu_device *smmu;
 
 	memset((void *)kvm_ksym_ref(stage2_pgs_start), 0, STAGE2_PAGES_SIZE);
 	__flush_dcache_area((void *)kvm_ksym_ref(stage2_pgs_start), STAGE2_PAGES_SIZE);
@@ -143,14 +142,6 @@ void init_el2_data_page(void)
 	el2_data->shadow_vcpu_ctxt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	el2_data->vmid_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
-	err = create_hypsec_io_mappings((phys_addr_t)el2_data->pl011_base,
-					 PAGE_SIZE,
-					 &el2_data->pl011_base);
-	if (err) {
-		kvm_err("Cannot map pl011\n");
-		goto out_err;
-	}
-
 	memset(&el2_data->arch, 0, sizeof(struct s2_cpu_arch));
 
 	memset(el2_data->s2_pages, 0, sizeof(struct s2_page) * S2_PFN_SIZE);
@@ -172,6 +163,31 @@ void init_el2_data_page(void)
 
 	memset(el2_data->smmu_cfg, 0,
 		sizeof(struct el2_smmu_cfg) * EL2_SMMU_CFG_SIZE);
+
+	for (i = 0; i < SHADOW_SYS_REGS_DESC_SIZE; i++)
+		el2_data->s2_sys_reg_descs[i] = host_sys_reg_descs[i];
+
+	el2_data->next_vmid = 1;
+
+	return;
+}
+
+void init_hypsec_io(void)
+{
+	int i = 0, err;
+	struct el2_data *el2_data;
+	struct el2_arm_smmu_device *smmu;
+
+	el2_data = (void *)kvm_ksym_ref(el2_data_start);
+	err = create_hypsec_io_mappings((phys_addr_t)el2_data->pl011_base,
+					 PAGE_SIZE,
+					 &el2_data->pl011_base);
+	if (err) {
+		kvm_err("Cannot map pl011\n");
+		goto out_err;
+	}
+
+
 	for (i = 0; i < el2_data->el2_smmu_num; i++) {
 		smmu = &el2_data->smmus[i];
 		err = create_hypsec_io_mappings(smmu->phys_base, smmu->size,
@@ -181,11 +197,6 @@ void init_el2_data_page(void)
 			goto out_err;
 		}
 	}
-
-	for (i = 0; i < SHADOW_SYS_REGS_DESC_SIZE; i++)
-		el2_data->s2_sys_reg_descs[i] = host_sys_reg_descs[i];
-
-	el2_data->next_vmid = 1;
 
 out_err:
 	return;
@@ -266,7 +277,7 @@ err_unlock:
 	return ret;
 }
 
-static void __hyp_text hvc_enable_s2_trans(unsigned long stack_addr)
+static void __hyp_text hvc_enable_s2_trans(void)
 {
 	struct el2_data *el2_data;
 
@@ -276,8 +287,6 @@ static void __hyp_text hvc_enable_s2_trans(unsigned long stack_addr)
 		protect_el2_mem();
 		el2_data->installed = true;
 	}
-
-	protect_el2_stack_page(stack_addr);
 
 	__init_stage2_translation();
 
@@ -296,7 +305,7 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 	/* FIXME: we write return val to reg[31] as this will be restored to x0 */
 	switch (callno) {
 	case HVC_ENABLE_S2_TRANS:
-		hvc_enable_s2_trans((unsigned long)hr->regs[1]);
+		hvc_enable_s2_trans();
 		break;
 	case HVC_VCPU_RUN:
 		vcpu = hypsec_vcpu_id_to_vcpu((u32)hr->regs[1], (int)hr->regs[2]);

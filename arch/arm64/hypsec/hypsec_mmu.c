@@ -114,6 +114,37 @@ static void __hyp_text clear_vm_pfn_owner(struct el2_data *el2_data, u32 vmid)
 	}
 }
 
+phys_addr_t host_alloc_stage2_page(unsigned int num)
+{
+	u64 p_addr, start, unaligned, append;
+	struct el2_data *el2_data;
+
+	if (!num)
+		return NULL;
+
+	el2_data = kvm_ksym_ref(el2_data_start);
+	stage2_spin_lock(&el2_data->page_pool_lock);
+
+	/* Check if we're out of memory in the reserved area */
+	BUG_ON(el2_data->used_pages >= STAGE2_NUM_NORM_PAGES);
+
+	/* Start allocating memory from the normal page pool */
+	start = el2_data->page_pool_start;
+	p_addr = (u64)start + (PAGE_SIZE * el2_data->used_pages);
+
+	unaligned = p_addr % (PAGE_SIZE * num);
+	/* Append to make p_addr aligned with (PAGE_SIZE * num) */
+	if (unaligned) {
+		append = num - (unaligned >> PAGE_SHIFT);
+		p_addr += append * PAGE_SIZE;
+		num += append;
+	}
+	el2_data->used_pages += num;
+
+	stage2_spin_unlock(&el2_data->page_pool_lock);
+	return (void *)p_addr;
+}
+
 void* __hyp_text alloc_stage2_page(unsigned int num)
 {
 	u64 p_addr, start, unaligned, append;
@@ -879,16 +910,6 @@ void __hyp_text protect_el2_mem(void)
 		el2_data->s2_pages[index].vmid = HYPSEC_VMID;
 		addr += PAGE_SIZE;
 	} while (addr < end);
-}
-
-void __hyp_text protect_el2_stack_page(unsigned long addr)
-{
-	unsigned long index;
-	struct el2_data *el2_data;
-
-	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	index = get_s2_page_index(el2_data, addr & PAGE_MASK);
-	el2_data->s2_pages[index].vmid = HYPSEC_VMID;
 }
 
 static void __hyp_text map_el2_pte_mem(pmd_t *pmd, unsigned long start,

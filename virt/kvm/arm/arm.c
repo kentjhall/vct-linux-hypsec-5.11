@@ -110,10 +110,7 @@ int kvm_arch_vcpu_should_kick(struct kvm_vcpu *vcpu)
 #ifdef CONFIG_STAGE2_KERNEL
 static void install_el2_runtime(void *discard)
 {
-	unsigned long stack_page;
-
-	stack_page = __this_cpu_read(kvm_arm_hyp_stack_page);
-	kvm_call_core(HVC_ENABLE_S2_TRANS, __pa(stack_page));
+	kvm_call_core(HVC_ENABLE_S2_TRANS);
 }
 #endif
 
@@ -337,7 +334,7 @@ struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
 #else
 	err = hypsec_register_vcpu(kvm->arch.vmid, id);
 	if (err < 0)
-		goto free_vcpu;
+		goto vcpu_uninit;
 
 	err = map_vcpu_page_to_hyp(kvm->arch.vmid, id, vcpu, vcpu + 1);
 	if (err < 0)
@@ -1576,6 +1573,9 @@ static int init_hyp_mode(void)
 	int cpu;
 	int err = 0;
 
+#ifdef CONFIG_STAGE2_KERNEL
+	init_el2_data_page();
+#endif
 	/*
 	 * Allocate Hyp PGD and setup Hyp identity mapping
 	 */
@@ -1591,7 +1591,11 @@ static int init_hyp_mode(void)
 	for_each_possible_cpu(cpu) {
 		unsigned long stack_page;
 
+#ifndef CONFIG_STAGE2_KERNEL
 		stack_page = __get_free_page(GFP_KERNEL);
+#else
+		stack_page = (unsigned long)phys_to_virt(host_alloc_stage2_page(1));
+#endif
 		if (!stack_page) {
 			err = -ENOMEM;
 			goto out_err;
@@ -1601,7 +1605,7 @@ static int init_hyp_mode(void)
 	}
 
 #ifdef CONFIG_STAGE2_KERNEL
-	init_el2_data_page();
+	init_hypsec_io();
 	/* Map the entire memblocks to EL2's address space */
 	map_mem_el2();
 #endif

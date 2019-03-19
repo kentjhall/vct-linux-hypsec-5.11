@@ -113,6 +113,9 @@ void save_encrypted_vcpu(struct kvm_vcpu *vcpu);
 extern void set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,
 				size_t len, u32 vmid);
 
+extern phys_addr_t host_alloc_stage2_page(unsigned int num);
+extern void init_hypsec_io(void);
+
 /* VM Bootstrap */
 extern int hypsec_register_kvm(void);
 extern int hypsec_register_vcpu(u32 vmid, int vcpu_id);
