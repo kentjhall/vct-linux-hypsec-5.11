@@ -25,7 +25,6 @@ struct el2_data {
 
 	unsigned long used_pages;
 	unsigned long used_tmp_pages;
-	unsigned long used_pgd_pages;
 	unsigned long pl011_base;
 
 	arch_spinlock_t fault_lock;

@@ -835,47 +835,6 @@ void __hyp_text __clear_vm_stage2_range(u32 vmid,
 	clear_vm_pfn_owner(el2_data, vmid);
 }
 
-static void __hyp_text protect_el2_pmd_mem(pud_t *pud, unsigned long start,
-				   unsigned long end,
-				   struct el2_data *el2_data)
-{
-	pmd_t *pmd;
-	u64 pte;
-	unsigned long addr, next, index;
-
-	addr = start;
-	pmd = pmd_offset_el2(pud, addr);
-	do {
-		next = pmd_addr_end(addr, end);
-		if (pmd_val(*pmd) & PMD_TYPE_TABLE) {
-			pte = pmd_val(*pmd);
-			index = get_s2_page_index(el2_data, pte & PAGE_MASK);
-			el2_data->s2_pages[index].vmid = HYPSEC_VMID;
-		}
-	} while (pmd++, addr = next, addr != end);
-}
-
-static void __hyp_text protect_el2_pud_mem(pgd_t *pgd, unsigned long start,
-				   unsigned long end,
-				   struct el2_data *el2_data)
-{
-	pud_t *pud;
-	u64 pmd;
-	unsigned long addr, next, index;
-
-	addr = start;
-	pud = pud_offset_el2(pgd, addr);
-	do {
-		next = pud_addr_end(addr, end);
-		if (pud_val(*pud) & PUD_TYPE_TABLE) {
-			protect_el2_pmd_mem(pud, addr, next, el2_data);
-			pmd = pud_val(*pud);
-			index = get_s2_page_index(el2_data, pmd & PAGE_MASK);
-			el2_data->s2_pages[index].vmid = HYPSEC_VMID;
-		}
-	} while (pud++, addr = next, addr != end);
-}
-
 /*
  * Since EL2 page tables were allocated in EL2, here we need to protect
  * them by setting the ownership of the pages to HYPSEC_VMID. This allows
@@ -883,25 +842,10 @@ static void __hyp_text protect_el2_pud_mem(pgd_t *pgd, unsigned long start,
  */
 void __hyp_text protect_el2_mem(void)
 {
-	pgd_t *pgd, *pgdp;
-	unsigned long addr, next, end, index;
+	unsigned long addr, end, index;
 	struct el2_data *el2_data;
 
-	addr = 0;
-	end = TASK_SIZE_64 - PGDIR_SIZE;
-
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	pgdp = (pgd_t *)read_sysreg(ttbr0_el2);
-	pgd = __el2_va(pgdp) + pgd_index(addr);
-	do {
-		next = pgd_addr_end(addr, end);
-		if (!pgd_none(*pgd))
-			protect_el2_pud_mem(pgd, addr, next, el2_data);
-	} while (pgd++, addr = next, addr != end);
-
-	index = get_s2_page_index(el2_data, read_sysreg(ttbr0_el2) & PAGE_MASK);
-	el2_data->s2_pages[index].vmid = HYPSEC_VMID;
-
 	/* Protect stage2 data */
 	addr = __pa(kvm_ksym_ref(stage2_pgs_start));
 	end = __pa(kvm_ksym_ref(el2_data_end));

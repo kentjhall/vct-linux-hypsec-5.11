@@ -130,8 +130,7 @@ void init_el2_data_page(void)
 	}
 	el2_data->regions_cnt = i;
 
-	el2_data->used_pages = 0;
-	el2_data->used_pgd_pages = 2;
+	el2_data->used_pages = 2;
 	el2_data->used_tmp_pages = 0;
 	el2_data->page_pool_start = (u64)__pa(stage2_pgs_start);
 
