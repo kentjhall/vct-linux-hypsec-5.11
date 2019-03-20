@@ -110,7 +110,7 @@ int handle_pvops(struct kvm_vcpu *vcpu);
 void save_encrypted_vcpu(struct kvm_vcpu *vcpu);
 
 extern void set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,
-				size_t len, u32 vmid);
+				unsigned long pgnum, u32 vmid);
 
 extern phys_addr_t host_alloc_stage2_page(unsigned int num);
 extern void init_hypsec_io(void);

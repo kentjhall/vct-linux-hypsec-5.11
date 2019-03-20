@@ -50,14 +50,13 @@ bool __hyp_text stage2_is_map_memory(phys_addr_t addr)
 }
 
 void __hyp_text set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,
-				size_t len, u32 vmid)
+				unsigned long pgnum, u32 vmid)
 {
 	kvm_pfn_t pfn;
 	struct s2_page *s2_pages = el2_data->s2_pages;
-	unsigned long index, end;
+	unsigned long index, i = 0;
 
 	pfn = addr >> PAGE_SHIFT;
-	end = addr + len;
 
 	stage2_spin_lock(&el2_data->s2pages_lock);
 	do {
@@ -70,7 +69,7 @@ void __hyp_text set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,
 		*/
 		if (!vmid || !s2_pages[index].count)
 			s2_pages[index].vmid = vmid;
-	} while (addr += PAGE_SIZE, addr < end);
+	} while (++i < pgnum);
 	stage2_spin_unlock(&el2_data->s2pages_lock);
 }
 
@@ -403,7 +402,7 @@ void __hyp_text unmap_image_from_host_s2pt(u32 vmid,
 		if (!result.level)
 			__hyp_panic();
 		__set_pfn_host(result.output, PAGE_SIZE, 0, PAGE_GUEST);
-		set_pfn_owner(el2_data, result.output, PAGE_SIZE, vmid);
+		set_pfn_owner(el2_data, result.output, 1, vmid);
 		__kvm_flush_vm_context();
 
 		i++;
@@ -661,7 +660,7 @@ static void __hyp_text assign_pfn_to_vm(struct s2_trans result,
 	   (target_vmid && target_vmid != vmid))
 		__hyp_panic();
 
-	set_pfn_owner(el2_data, result.output, size, vmid);
+	set_pfn_owner(el2_data, result.output, size / PAGE_SIZE, vmid);
 	__set_pfn_host(result.output, size, 0, PAGE_GUEST);
 
 }

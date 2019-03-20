@@ -37,7 +37,7 @@ void __hyp_text set_balloon_pfn(struct kvm_vcpu *vcpu)
 		el2_memset((void *)__el2_va(pfn << PAGE_SHIFT), 0, PAGE_SIZE);
 		__set_pfn_host(pfn << PAGE_SHIFT, PAGE_SIZE,
 			pfn, PAGE_S2_KERNEL);
-		set_pfn_owner(el2_data, pfn << PAGE_SHIFT, PAGE_SIZE, 0);
+		set_pfn_owner(el2_data, pfn << PAGE_SHIFT, 1, 0);
 	}
 
 	return;
@@ -73,7 +73,7 @@ out:
 	stage2_spin_unlock(&el2_data->s2pages_lock);
 	if (pfn && !count) {
 		__set_pfn_host(pfn << PAGE_SHIFT, PAGE_SIZE, pfn, mem_type);
-		set_pfn_owner(el2_data, pfn << PAGE_SHIFT, PAGE_SIZE, 0);
+		set_pfn_owner(el2_data, pfn << PAGE_SHIFT, 1, 0);
 	}
 
 	return;
@@ -137,7 +137,7 @@ out:
 
 	if (pfn && !count) {
 		__set_pfn_host(pfn << PAGE_SHIFT, PAGE_SIZE, 0, PAGE_GUEST);
-		set_pfn_owner(el2_data, pfn << PAGE_SHIFT, PAGE_SIZE, vmid);
+		set_pfn_owner(el2_data, pfn << PAGE_SHIFT, 1, vmid);
 	}
 }
 
