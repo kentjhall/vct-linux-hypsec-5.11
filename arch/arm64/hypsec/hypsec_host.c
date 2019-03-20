@@ -140,6 +140,7 @@ void init_el2_data_page(void)
 	el2_data->tmp_page_pool_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	el2_data->shadow_vcpu_ctxt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	el2_data->vmid_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->remap_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
 	memset(&el2_data->arch, 0, sizeof(struct s2_cpu_arch));
 

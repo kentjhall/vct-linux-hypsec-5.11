@@ -33,14 +33,15 @@ static u32 __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
 
 static unsigned long __hyp_text alloc_remap_addr(unsigned long size)
 {
-	struct el2_data *el2_data;
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	unsigned long ret, page_count;
 
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+
+	stage2_spin_lock(&el2_data->remap_lock);
 	ret = EL2_REMAP_START + el2_data->last_remap_ptr;
 	page_count = (size >> PAGE_SHIFT) + ((size & (PAGE_SIZE - 1)) ? 1 : 0);
-
 	el2_data->last_remap_ptr += (page_count * PAGE_SIZE);
+	stage2_spin_unlock(&el2_data->remap_lock);
 
 	return ret;
 }
@@ -208,15 +209,21 @@ void __hyp_text __el2_boot_from_inc_exe(u32 vmid)
 #define EL2_REMAP_VCPU_BASE	0x40000000
 static void* __hyp_text get_el2_kvm_addr(struct el2_data *el2_data)
 {
-	unsigned long npages = N_KVM_PAGES;
-	unsigned long offset = (PAGE_SIZE * npages) * el2_data->kvm_cnt++;
+	unsigned long npages = N_KVM_PAGES, offset;
+
+	stage2_spin_lock(&el2_data->remap_lock);
+	offset = (PAGE_SIZE * npages) * el2_data->kvm_cnt++;
+	stage2_spin_unlock(&el2_data->remap_lock);
 	return (void*)((unsigned long)EL2_REMAP_KVM_BASE | offset);
 }
 
 static void* __hyp_text get_el2_vcpu_addr(struct el2_data *el2_data)
 {
-	unsigned long npages = N_VCPU_PAGES;
-	unsigned long offset = (PAGE_SIZE * npages) * el2_data->vcpu_cnt++;
+	unsigned long npages = N_VCPU_PAGES, offset;
+
+	stage2_spin_lock(&el2_data->remap_lock);
+	offset = (PAGE_SIZE * npages) * el2_data->vcpu_cnt++;
+	stage2_spin_unlock(&el2_data->remap_lock);
 	return (void*)((unsigned long)EL2_REMAP_VCPU_BASE | offset);
 }
 

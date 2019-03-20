@@ -33,6 +33,7 @@ struct el2_data {
 	arch_spinlock_t tmp_page_pool_lock;
 	arch_spinlock_t shadow_vcpu_ctxt_lock;
 	arch_spinlock_t vmid_lock;
+	arch_spinlock_t remap_lock;
 
 	kvm_pfn_t ram_start_pfn;
 	struct s2_page s2_pages[S2_PFN_SIZE];
