@@ -35,9 +35,9 @@ void __hyp_text set_balloon_pfn(struct kvm_vcpu *vcpu)
 		/* FIXME: Do we really need to flush the entire thing? */
 		clear_shadow_stage2_range(vcpu->arch.vmid, 0, KVM_PHYS_SIZE);
 		el2_memset((void *)__el2_va(pfn << PAGE_SHIFT), 0, PAGE_SIZE);
+		set_pfn_owner(el2_data, pfn << PAGE_SHIFT, 1, 0);
 		__set_pfn_host(pfn << PAGE_SHIFT, PAGE_SIZE,
 			pfn, PAGE_S2_KERNEL);
-		set_pfn_owner(el2_data, pfn << PAGE_SHIFT, 1, 0);
 	}
 
 	return;
@@ -69,12 +69,12 @@ static void __hyp_text __grant_stage2_sg_gpa(struct el2_data *el2_data,
 
 	count = s2_pages[index].count++;
 
+	if (pfn && !count) {
+		s2_pages[index].vmid = 0;
+		__set_pfn_host(pfn << PAGE_SHIFT, PAGE_SIZE, pfn, mem_type);
+	}
 out:
 	stage2_spin_unlock(&el2_data->s2pages_lock);
-	if (pfn && !count) {
-		__set_pfn_host(pfn << PAGE_SHIFT, PAGE_SIZE, pfn, mem_type);
-		set_pfn_owner(el2_data, pfn << PAGE_SHIFT, 1, 0);
-	}
 
 	return;
 }
@@ -132,13 +132,12 @@ static void __hyp_text __revoke_stage2_sg_gpa(struct el2_data *el2_data,
 
 	count = --s2_pages[index].count;
 
+	if (pfn && !count) {
+		s2_pages[index].vmid = vmid;
+		__set_pfn_host(pfn << PAGE_SHIFT, PAGE_SIZE, 0, PAGE_GUEST);
+	}
 out:
 	stage2_spin_unlock(&el2_data->s2pages_lock);
-
-	if (pfn && !count) {
-		__set_pfn_host(pfn << PAGE_SHIFT, PAGE_SIZE, 0, PAGE_GUEST);
-		set_pfn_owner(el2_data, pfn << PAGE_SHIFT, 1, vmid);
-	}
 }
 
 void __hyp_text revoke_stage2_sg_gpa(struct kvm_vcpu *vcpu)
