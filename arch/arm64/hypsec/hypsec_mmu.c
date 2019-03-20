@@ -120,7 +120,7 @@ phys_addr_t host_alloc_stage2_page(unsigned int num)
 	struct el2_data *el2_data;
 
 	if (!num)
-		return NULL;
+		return 0;
 
 	el2_data = kvm_ksym_ref(el2_data_start);
 	stage2_spin_lock(&el2_data->page_pool_lock);
@@ -142,7 +142,7 @@ phys_addr_t host_alloc_stage2_page(unsigned int num)
 	el2_data->used_pages += num;
 
 	stage2_spin_unlock(&el2_data->page_pool_lock);
-	return (void *)p_addr;
+	return (phys_addr_t)p_addr;
 }
 
 void* __hyp_text alloc_stage2_page(unsigned int num)
@@ -643,64 +643,43 @@ static u64 __hyp_text result_to_desc(struct s2_trans result, bool exec)
 	return desc;
 }
 
-static int __hyp_text assign_pfn_to_vm(struct s2_trans result,
+static void __hyp_text assign_pfn_to_vm(struct s2_trans result,
 				       struct el2_data *el2_data,
 				       u32 vmid)
 {
 	u32 target_vmid;
-	u64 addr, end, size = 0;
-	int ret = -ENOMEM;
-	unsigned long index;
+	u64 size = 0;
 
 	if (result.level == 2)
 		size = PMD_SIZE;
 	else if (result.level == 3)
 		size = PAGE_SIZE;
 
-	addr = result.output;
-	end = addr + size;
-	do {
-		if (stage2_is_map_memory(addr)) {
-			stage2_spin_lock(&el2_data->s2pages_lock);
+	target_vmid = get_hpa_owner(result.output);
+	/* Check if a page is owned by EL2 or already belongs to a VM */
+	if (target_vmid == HYPSEC_VMID ||
+	   (target_vmid && target_vmid != vmid))
+		__hyp_panic();
 
-			index = get_s2_page_index(el2_data, addr);
-			target_vmid = el2_data->s2_pages[index].vmid;
+	set_pfn_owner(el2_data, result.output, size, vmid);
+	__set_pfn_host(result.output, size, 0, PAGE_GUEST);
 
-			/* Check if a page is owned by EL2 or already belongs to a VM */
-			if (target_vmid == HYPSEC_VMID ||
-			    (target_vmid && target_vmid != vmid)) {
-				stage2_spin_unlock(&el2_data->s2pages_lock);
-				return ret;
-			}
-			__set_pfn_host(addr, PAGE_SIZE, 0, PAGE_GUEST);
-
-			if (!el2_data->s2_pages[index].count)
-				el2_data->s2_pages[index].vmid = vmid;
-
-			stage2_spin_unlock(&el2_data->s2pages_lock);
-		}
-	} while (addr += PAGE_SIZE, addr < end);
-
-	return 1;
 }
 
-static int __hyp_text prot_and_map_to_s2pt(struct s2_trans result,
+static void __hyp_text prot_and_map_to_s2pt(struct s2_trans result,
 					   struct el2_data *el2_data,
 					   struct kvm_vcpu *vcpu,
 					   phys_addr_t fault_ipa)
 {
 	u32 vmid = vcpu->arch.vmid;
 	u64 desc;
-	int ret;
 
-	ret = assign_pfn_to_vm(result, el2_data, vmid);
-	if (ret > 0) {
-		desc = result_to_desc(result, hypsec_vcpu_trap_is_iabt(vcpu));
-		mmap_s2pt(fault_ipa, el2_data, desc, result.level, vmid);
-		__kvm_flush_vm_context();
-	}
+	if (stage2_is_map_memory(result.output))
+		assign_pfn_to_vm(result, el2_data, vmid);
 
-	return ret;
+	desc = result_to_desc(result, hypsec_vcpu_trap_is_iabt(vcpu));
+	mmap_s2pt(fault_ipa, el2_data, desc, result.level, vmid);
+	__kvm_flush_vm_context();
 }
 
 int __hyp_text pre_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
@@ -720,10 +699,11 @@ int __hyp_text pre_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 	else
 		return -ENOMEM;
 
-	return prot_and_map_to_s2pt(result, el2_data, vcpu, addr);
+	prot_and_map_to_s2pt(result, el2_data, vcpu, addr);
+	return 1;
 }
 
-int __hyp_text post_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
+void __hyp_text post_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 {
 	phys_addr_t addr;
 	struct el2_data *el2_data;
@@ -733,10 +713,12 @@ int __hyp_text post_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 	addr = (hpfar & HPFAR_MASK) << 8;
 
 	result = vcpu->arch.walk_result;
-	if (!result.level)
-		return -ENOMEM;
+	if (!result.level) {
+		print_string("\rhost did not allocate a page for us\n");
+		return;
+	}
 
-	return prot_and_map_to_s2pt(result, el2_data, vcpu, addr);
+	prot_and_map_to_s2pt(result, el2_data, vcpu, addr);
 }
 
 void __hyp_text clear_vm_stage2_ptes(pmd_t *pmd, phys_addr_t addr,
