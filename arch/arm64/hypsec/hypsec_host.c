@@ -265,8 +265,13 @@ static int __hyp_text __hypsec_init_vcpu(u32 vmid, int vcpu_id)
 
 	vm_info = vmid_to_vm_info(vmid);
 	stage2_spin_lock(&vm_info->vm_lock);
-	int_vcpu = &vm_info->int_vcpus[vcpu_id];
-	if (int_vcpu->state != MAPPED)
+	if (vm_info->state != READY) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	int_vcpu = vcpu_id_to_int_vcpu(vm_info, vcpu_id);
+	if (!int_vcpu || int_vcpu->state != MAPPED)
 		goto out;
 
 	new_ctxt = alloc_shadow_ctxt(el2_data);

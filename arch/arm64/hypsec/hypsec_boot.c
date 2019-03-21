@@ -57,6 +57,15 @@ struct el2_vm_info* __hyp_text vmid_to_vm_info(u32 vmid)
 		__hyp_panic();
 }
 
+struct int_vcpu* __hyp_text vcpu_id_to_int_vcpu(
+			struct el2_vm_info *vm_info, int vcpu_id)
+{
+	if (vcpu_id < 0 || vcpu_id >= HYPSEC_MAX_VCPUS)
+		return NULL;
+	else
+		return &vm_info->int_vcpus[vcpu_id];
+}
+
 arch_spinlock_t* __hyp_text get_shadow_pt_lock(u32 vmid)
 {
 	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
@@ -241,15 +250,12 @@ int __hyp_text __hypsec_register_vcpu(u32 vmid, int vcpu_id)
 	 * kvm is remapped.
 	 */
 	vm_info = vmid_to_vm_info(vmid);
-	if (vm_info->state != READY || vcpu_id < 0
-	    || vcpu_id >= HYPSEC_MAX_VCPUS ) {
-		ret = -EINVAL;
-		goto out;
-	}
+	if (vm_info->state != READY)
+		return -EINVAL;
 
 	stage2_spin_lock(&vm_info->vm_lock);
-	int_vcpu = &vm_info->int_vcpus[vcpu_id];
-	if (int_vcpu->state != INVALID) {
+	int_vcpu = vcpu_id_to_int_vcpu(vm_info, vcpu_id);
+	if (!int_vcpu || int_vcpu->state != INVALID) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -299,15 +305,12 @@ int __hyp_text __hypsec_map_one_vcpu_page(u32 vmid, int vcpu_id, unsigned long p
 
 	vm_info = vmid_to_vm_info(vmid);
 	/* Return if vm_info has not been allocated OR kvm is remapped */
-	if (vm_info->state != READY || vcpu_id < 0 ||
-	    vcpu_id >= HYPSEC_MAX_VCPUS ) {
-		ret = -EINVAL;
-		goto out;
-	}
+	if (vm_info->state != READY)
+		return -EINVAL;
 
 	stage2_spin_lock(&vm_info->vm_lock);
-	int_vcpu = &vm_info->int_vcpus[vcpu_id];
-	if (int_vcpu->state != USED) {
+	int_vcpu = vcpu_id_to_int_vcpu(vm_info, vcpu_id);
+	if (!int_vcpu || int_vcpu->state != USED) {
 		ret = -EINVAL;
 		goto out;
 	}
