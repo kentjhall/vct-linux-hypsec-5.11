@@ -428,6 +428,8 @@ void __hyp_text  __el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid, u6
 	struct el2_smmu_cfg *smmu_cfg;
 	struct el2_arm_smmu_device *smmu;
 
+	if (vmid >= EL2_MAX_VMID)
+		__hyp_panic();
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	smmu = base_to_el2_smmu(el2_data, base);
 	if (!smmu) {

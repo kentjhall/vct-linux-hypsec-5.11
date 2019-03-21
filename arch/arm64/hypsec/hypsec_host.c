@@ -240,10 +240,7 @@ static int __hyp_text __hypsec_init_vcpu(u32 vmid, int vcpu_id)
 	if ((u64)vcpu & (PAGE_SIZE -1))
 		return ret;
 
-	if (vmid >= EL2_VM_INFO_SIZE)
-		return ret;
-
-	vm_info = &el2_data->vm_info[vmid];
+	vm_info = vmid_to_vm_info(vmid);
 	vcpu->arch.vmid = vmid;
 
 	stage2_spin_lock(&el2_data->shadow_vcpu_ctxt_lock);

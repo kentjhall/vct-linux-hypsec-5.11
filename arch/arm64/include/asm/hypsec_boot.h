@@ -53,6 +53,7 @@ struct el2_vm_info {
 	struct el2_load_info load_info[5];
 	arch_spinlock_t shadow_pt_lock;
 	arch_spinlock_t boot_lock;
+	arch_spinlock_t kvm_lock;
 	struct kvm *kvm;
 	struct int_vcpu int_vcpus[HYPSEC_MAX_VCPUS];
 	struct shadow_vcpu_context *shadow_ctxt[HYPSEC_MAX_VCPUS];
