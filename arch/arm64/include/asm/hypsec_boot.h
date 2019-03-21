@@ -21,6 +21,13 @@ typedef enum {
 	FIXUP_MAX,
 } FixupType;
 
+enum hypsec_init_state {
+	INVALID = 0,
+	USED,
+	MAPPED,
+	READY
+};
+
 typedef struct ARMInsnFixup {
 	uint32_t insn;
 	FixupType fixup;
@@ -37,8 +44,7 @@ struct el2_load_info {
 struct int_vcpu {
 	struct kvm_vcpu *vcpu;
 	int vcpu_pg_cnt;
-	bool ready;
-	bool used;
+	enum hypsec_init_state state;
 };
 
 struct el2_vm_info {
@@ -48,12 +54,11 @@ struct el2_vm_info {
 	int kvm_pg_cnt;
 	bool is_valid_vm;
 	bool inc_exe;
-	bool used;
-	bool kvm_ready;
+	enum hypsec_init_state state;
 	struct el2_load_info load_info[5];
 	arch_spinlock_t shadow_pt_lock;
 	arch_spinlock_t boot_lock;
-	arch_spinlock_t kvm_lock;
+	arch_spinlock_t vm_lock;
 	struct kvm *kvm;
 	struct int_vcpu int_vcpus[HYPSEC_MAX_VCPUS];
 	struct shadow_vcpu_context *shadow_ctxt[HYPSEC_MAX_VCPUS];

@@ -232,32 +232,36 @@ int __hyp_text __hypsec_register_vcpu(u32 vmid, int vcpu_id)
 	struct el2_data *el2_data;
 	struct int_vcpu *int_vcpu;
 	struct el2_vm_info *vm_info;
+	int ret = 1;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
-	if (vmid >= EL2_VM_INFO_SIZE)
-		return -EINVAL;
-	vm_info = &el2_data->vm_info[vmid];
 	/*
 	 * We can only register a vcpu if its vm_info has been allocated and
 	 * kvm is remapped.
 	 */
-	if (!vm_info->used || !vm_info->kvm_ready)
-		return -EINVAL;
+	vm_info = vmid_to_vm_info(vmid);
+	if (vm_info->state != READY || vcpu_id < 0
+	    || vcpu_id >= HYPSEC_MAX_VCPUS ) {
+		ret = -EINVAL;
+		goto out;
+	}
 
-	if (vcpu_id < 0 || vcpu_id >= HYPSEC_MAX_VCPUS)
-		return -EINVAL;
+	stage2_spin_lock(&vm_info->vm_lock);
 	int_vcpu = &vm_info->int_vcpus[vcpu_id];
-	if (int_vcpu->used)
-		return -EINVAL;
+	if (int_vcpu->state != INVALID) {
+		ret = -EINVAL;
+		goto out;
+	}
 
 	int_vcpu->vcpu = get_el2_vcpu_addr(el2_data);
-	int_vcpu->ready = false;
-	int_vcpu->used = true;
-	return 1;
+	int_vcpu->state = USED;
+
+out:
+	stage2_spin_unlock(&vm_info->vm_lock);
+	return ret;
 }
 
-//got to check vmid/vcpu id bounds somewhere
 u32 __hyp_text __hypsec_register_kvm(void)
 {
 	u32 vmid;
@@ -267,14 +271,17 @@ u32 __hyp_text __hypsec_register_kvm(void)
 		return 0;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	/*
+	 * We guarantee vmid is always unique so we don't need
+	 * to check the state here.
+	 */
 	vmid = hypsec_gen_vmid(el2_data);
 	if (vmid < 0)
 		return 0;
 
-	el2_data->vm_info[vmid].kvm_lock =
+	el2_data->vm_info[vmid].vm_lock =
 		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->vm_info[vmid].used = true;
-	el2_data->vm_info[vmid].kvm_ready = false;
+	el2_data->vm_info[vmid].state = USED;
 	el2_data->vm_info[vmid].kvm = get_el2_kvm_addr(el2_data);
 	el2_data->vm_info[vmid].vmid = vmid;
 	return vmid;
@@ -286,27 +293,34 @@ int __hyp_text __hypsec_map_one_vcpu_page(u32 vmid, int vcpu_id, unsigned long p
 	struct el2_vm_info *vm_info;
 	struct int_vcpu *int_vcpu;
 	unsigned long target;
+	int ret = 1;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	vm_info = vmid_to_vm_info(vmid);
 	/* Return if vm_info has not been allocated OR kvm is remapped */
-	if (!vm_info->used || !vm_info->kvm_ready)
-		return -EINVAL;
+	if (vm_info->state != READY || vcpu_id < 0 ||
+	    vcpu_id >= HYPSEC_MAX_VCPUS ) {
+		ret = -EINVAL;
+		goto out;
+	}
 
-	if (vcpu_id < 0 || vcpu_id >= HYPSEC_MAX_VCPUS)
-		return -EINVAL;
+	stage2_spin_lock(&vm_info->vm_lock);
 	int_vcpu = &vm_info->int_vcpus[vcpu_id];
-	if (int_vcpu->ready)
-		return -EINVAL;
+	if (int_vcpu->state != USED) {
+		ret = -EINVAL;
+		goto out;
+	}
 
 	target = (unsigned long)int_vcpu->vcpu + (int_vcpu->vcpu_pg_cnt * PAGE_SIZE);
 	map_el2_mem(target, target + PAGE_SIZE, pfn, PAGE_HYP);
 	int_vcpu->vcpu_pg_cnt++;
 	if (int_vcpu->vcpu_pg_cnt == N_VCPU_PAGES)
-		int_vcpu->ready = true;
+		int_vcpu->state = MAPPED;
 
-	return 1;
+out:
+	stage2_spin_unlock(&vm_info->vm_lock);
+	return ret;
 }
 
 int __hyp_text __hypsec_map_one_kvm_page(u32 vmid, unsigned long pfn)
@@ -318,10 +332,10 @@ int __hyp_text __hypsec_map_one_kvm_page(u32 vmid, unsigned long pfn)
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	vm_info = vmid_to_vm_info(vmid);
-	stage2_spin_lock(&vm_info->kvm_lock);
+	stage2_spin_lock(&vm_info->vm_lock);
 
 	/* Return if vm_info has not been allocated OR kvm is remapped */
-	if (!vm_info->used || vm_info->kvm_ready) {
+	if (vm_info->state != USED) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -330,10 +344,10 @@ int __hyp_text __hypsec_map_one_kvm_page(u32 vmid, unsigned long pfn)
 	map_el2_mem(target, target + PAGE_SIZE, pfn, PAGE_HYP);
 	vm_info->kvm_pg_cnt++;
 	if (vm_info->kvm_pg_cnt == N_KVM_PAGES)
-		vm_info->kvm_ready = true;
+		vm_info->state = MAPPED;
 
 out:
-	stage2_spin_unlock(&vm_info->kvm_lock);
+	stage2_spin_unlock(&vm_info->vm_lock);
 	return ret;
 }
 
@@ -349,11 +363,14 @@ int __hyp_text __hypsec_init_vm(u32 vmid)
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	vm_info = vmid_to_vm_info(vmid);
 
+	stage2_spin_lock(&vm_info->vm_lock);
+	if (vm_info->state != MAPPED)
+		goto out_unlock;
+
 	vm_info->is_valid_vm = false;
 	vm_info->inc_exe = false;
 	vm_info->shadow_pt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	vm_info->boot_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	vm_info->kvm_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
 	/* Hardcoded VM's keys for now. */
 	el2_memcpy(vm_info->key, key, 16);
@@ -369,6 +386,10 @@ int __hyp_text __hypsec_init_vm(u32 vmid)
 
 	map_vgic_cpu_to_shadow_s2pt(vmid, el2_data);
 
+	vm_info->state = READY;
+
+out_unlock:
+	stage2_spin_unlock(&vm_info->vm_lock);
 	return 0;
 }
 
