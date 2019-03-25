@@ -827,7 +827,7 @@ void __hyp_text protect_el2_mem(void)
 	struct el2_data *el2_data;
 
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	/* Protect stage2 data */
+	/* Protect stage2 data and page pool. */
 	addr = __pa(kvm_ksym_ref(stage2_pgs_start));
 	end = __pa(kvm_ksym_ref(el2_data_end));
 	do {

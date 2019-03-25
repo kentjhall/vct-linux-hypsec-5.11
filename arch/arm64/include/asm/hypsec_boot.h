@@ -8,6 +8,7 @@
 #define EL2_VM_INFO_SIZE	EL2_MAX_VMID
 
 #define HYPSEC_MAX_VCPUS	32
+#define HYPSEC_MAX_LOAD_IMG	5
 /* Below is copied from QEMU  */
 typedef enum {
 	FIXUP_NONE = 0,   /* do nothing */
@@ -55,7 +56,7 @@ struct el2_vm_info {
 	bool is_valid_vm;
 	bool inc_exe;
 	enum hypsec_init_state state;
-	struct el2_load_info load_info[5];
+	struct el2_load_info load_info[HYPSEC_MAX_LOAD_IMG];
 	arch_spinlock_t shadow_pt_lock;
 	arch_spinlock_t boot_lock;
 	arch_spinlock_t vm_lock;
