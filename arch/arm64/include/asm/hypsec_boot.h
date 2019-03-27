@@ -26,7 +26,8 @@ enum hypsec_init_state {
 	INVALID = 0,
 	USED,
 	MAPPED,
-	READY
+	READY,
+	VERIFIED
 };
 
 typedef struct ARMInsnFixup {
@@ -53,7 +54,6 @@ struct el2_vm_info {
 	int vmid;
 	int load_info_cnt;
 	int kvm_pg_cnt;
-	bool is_valid_vm;
 	bool inc_exe;
 	enum hypsec_init_state state;
 	struct el2_load_info load_info[HYPSEC_MAX_LOAD_IMG];

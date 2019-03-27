@@ -91,7 +91,7 @@ void __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 	 * If we have validated the images then the host is not
 	 * allowed to add stuff to boot_info.
 	 */
-	if (vm_info->is_valid_vm)
+	if (vm_info->state != READY)
 		goto out;
 
 	load_count = vm_info->load_info_cnt;
@@ -140,7 +140,7 @@ bool __hyp_text __el2_verify_and_load_images(u32 vmid)
 	lock = &vm_info->boot_lock;
 	stage2_spin_lock(lock);
 
-	if (vm_info->is_valid_vm)
+	if (vm_info->state != READY)
 		goto out;
 	/* Traverse through the load info list and check the integrity of images. */
 	for (i = 0; i < vm_info->load_info_cnt; i++) {
@@ -162,7 +162,7 @@ bool __hyp_text __el2_verify_and_load_images(u32 vmid)
 			load_info.el2_remap_addr, load_info.el2_mapped_pages);
 	}
 
-	vm_info->is_valid_vm = true;
+	vm_info->state = VERIFIED;
 
 out:
 	stage2_spin_unlock(lock);
@@ -370,7 +370,6 @@ int __hyp_text __hypsec_init_vm(u32 vmid)
 	if (vm_info->state != MAPPED)
 		goto out_unlock;
 
-	vm_info->is_valid_vm = false;
 	vm_info->inc_exe = false;
 	vm_info->shadow_pt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	vm_info->boot_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
