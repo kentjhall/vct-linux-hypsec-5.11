@@ -332,6 +332,10 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		hvc_enable_s2_trans();
 		break;
 	case HVC_VCPU_RUN:
+		if (hypsec_get_vm_state((u32)hr->regs[1]) != VERIFIED) {
+			hr->regs[31] = 0;
+			break;
+		}
 		vcpu = hypsec_vcpu_id_to_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
 		shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt((u32)hr->regs[1], (int)hr->regs[2]);
 		ret = (u64)__kvm_vcpu_run_nvhe(vcpu, shadow_ctxt);

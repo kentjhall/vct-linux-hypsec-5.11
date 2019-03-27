@@ -73,6 +73,7 @@ extern void el2_set_boot_info(u32 vmid, unsigned long load_addr,
 			unsigned long size, int image_type);
 extern int el2_remap_vm_image(u32 vmid, unsigned long pfn);
 extern int el2_verify_and_load_images(u32 vmid);
+extern int hypsec_get_vm_state(u32 vmid);
 
 extern bool is_valid_vm(struct kvm_vcpu *vcpu);
 extern arch_spinlock_t* get_shadow_pt_lock(u32 vmid);

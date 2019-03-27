@@ -66,6 +66,12 @@ struct int_vcpu* __hyp_text vcpu_id_to_int_vcpu(
 		return &vm_info->int_vcpus[vcpu_id];
 }
 
+int __hyp_text hypsec_get_vm_state(u32 vmid)
+{
+	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
+	return vm_info->state;
+}
+
 arch_spinlock_t* __hyp_text get_shadow_pt_lock(u32 vmid)
 {
 	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
