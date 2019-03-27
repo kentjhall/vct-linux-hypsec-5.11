@@ -642,11 +642,38 @@ static u64 __hyp_text result_to_desc(struct s2_trans result, bool exec)
 	return desc;
 }
 
+static void __hyp_text check_and_assign_pfn(struct s2_trans result,
+					    struct el2_data *el2_data,
+					    u64 size, u32 vmid)
+{
+	u32 target_vmid;
+	u64 addr = result.output, end = result.output + size;
+	unsigned long index;
+
+	stage2_spin_lock(&el2_data->s2pages_lock);
+	while (addr < end) {
+		/* By the time when we're here, index is always valid. */
+		index = get_s2_page_index(el2_data, addr);
+		target_vmid = el2_data->s2_pages[index].vmid;
+		if (target_vmid == HYPSEC_VMID ||
+		   (target_vmid && target_vmid != vmid)) {
+			stage2_spin_unlock(&el2_data->s2pages_lock);
+			print_string("\rinvalid hostvisor mapping\n");
+			__hyp_panic();
+		}
+
+		if (!el2_data->s2_pages[index].count)
+			el2_data->s2_pages[index].vmid = vmid;
+
+		addr += PAGE_SIZE;
+	}
+	stage2_spin_unlock(&el2_data->s2pages_lock);
+}
+
 static void __hyp_text assign_pfn_to_vm(struct s2_trans result,
 				       struct el2_data *el2_data,
 				       u32 vmid)
 {
-	u32 target_vmid;
 	u64 size = 0;
 
 	if (result.level == 2)
@@ -654,13 +681,8 @@ static void __hyp_text assign_pfn_to_vm(struct s2_trans result,
 	else if (result.level == 3)
 		size = PAGE_SIZE;
 
-	target_vmid = get_hpa_owner(result.output);
 	/* Check if a page is owned by EL2 or already belongs to a VM */
-	if (target_vmid == HYPSEC_VMID ||
-	   (target_vmid && target_vmid != vmid))
-		__hyp_panic();
-
-	set_pfn_owner(el2_data, result.output, size / PAGE_SIZE, vmid);
+	check_and_assign_pfn(result, el2_data, size, vmid);
 	__set_pfn_host(result.output, size, 0, PAGE_GUEST);
 
 }
