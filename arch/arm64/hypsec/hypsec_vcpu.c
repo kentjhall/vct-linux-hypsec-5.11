@@ -142,7 +142,7 @@ static void __hyp_text prep_abort(struct kvm_vcpu *vcpu,
 				  struct shadow_vcpu_context *shadow_ctxt)
 {
 	struct kvm_regs *gp_regs = &shadow_ctxt->gp_regs;
-	int Rd = hypsec_vcpu_dabt_get_rd(vcpu);
+	int Rd = hypsec_vcpu_dabt_get_rd(shadow_ctxt);
 	phys_addr_t fault_ipa = (read_sysreg(hpfar_el2) & HPFAR_MASK) << 8;
 
 	/* We only have to care about regiters if it's MMIO */
@@ -150,7 +150,7 @@ static void __hyp_text prep_abort(struct kvm_vcpu *vcpu,
 		return;
 
 	shadow_ctxt->dirty |= DIRTY_PC_FLAG;
-	if (hypsec_vcpu_dabt_iswrite(vcpu))
+	if (hypsec_vcpu_dabt_iswrite(shadow_ctxt))
 		vcpu_set_reg(vcpu, Rd, gp_regs->regs.regs[Rd]);
 	else
 		shadow_ctxt->dirty |= (1UL << Rd);
@@ -300,9 +300,9 @@ void __hyp_text __save_shadow_kvm_regs(struct kvm_vcpu *vcpu,
 	};
 }
 
-void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu)
+void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu,
+					  struct shadow_vcpu_context *shadow_ctxt)
 {
-	struct shadow_vcpu_context *shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
 	u64 ec;
 	size_t shadow_sys_regs_len = sizeof(u64) * (SHADOW_SYS_REGS_SIZE + 1);
 	struct el2_data *el2_data;

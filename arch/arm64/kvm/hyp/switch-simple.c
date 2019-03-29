@@ -286,7 +286,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 	__sysreg_save_state_nvhe(host_ctxt);
 
 	set_tpidr_el2((u64)shadow_ctxt);
-	__restore_shadow_kvm_regs(vcpu);
+	__restore_shadow_kvm_regs(vcpu, prot_ctxt);
 
 	__activate_traps(vcpu);
 	__activate_vm(vmid & 0xff);

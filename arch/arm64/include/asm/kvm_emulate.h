@@ -340,20 +340,20 @@ static inline u8 hypsec_vcpu_trap_get_class(const struct kvm_vcpu *vcpu)
 	return ESR_ELx_EC(hypsec_vcpu_get_hsr(vcpu));
 }
 
-static inline int hypsec_vcpu_dabt_get_rd(const struct kvm_vcpu *vcpu)
+static inline int hypsec_vcpu_dabt_get_rd(struct shadow_vcpu_context *shadow_ctxt)
 {
-	return (hypsec_vcpu_get_hsr(vcpu) & ESR_ELx_SRT_MASK) >> ESR_ELx_SRT_SHIFT;
+	return (shadow_ctxt->esr & ESR_ELx_SRT_MASK) >> ESR_ELx_SRT_SHIFT;
 }
 
-static inline bool hypsec_vcpu_dabt_iss1tw(const struct kvm_vcpu *vcpu)
+static inline bool hypsec_vcpu_dabt_iss1tw(u32 hsr)
 {
-	return !!(hypsec_vcpu_get_hsr(vcpu) & ESR_ELx_S1PTW);
+	return !!(hsr & ESR_ELx_S1PTW);
 }
 
-static inline bool hypsec_vcpu_dabt_iswrite(const struct kvm_vcpu *vcpu)
+static inline bool hypsec_vcpu_dabt_iswrite(struct shadow_vcpu_context *shadow_ctxt)
 {
-	return !!(hypsec_vcpu_get_hsr(vcpu) & ESR_ELx_WNR) ||
-		hypsec_vcpu_dabt_iss1tw(vcpu); /* AF/DBM update */
+	return !!(shadow_ctxt->esr & ESR_ELx_WNR) ||
+		hypsec_vcpu_dabt_iss1tw(shadow_ctxt->esr); /* AF/DBM update */
 }
 
 static inline bool hypsec_vcpu_trap_is_iabt(const struct kvm_vcpu *vcpu)

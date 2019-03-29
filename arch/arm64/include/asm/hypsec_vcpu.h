@@ -36,8 +36,9 @@ struct s2_sys_reg_desc {
 };
 
 void __save_shadow_kvm_regs(struct kvm_vcpu *vcpu,
-		struct shadow_vcpu_context *shadow_ctxt, u64 ec);
-void __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu);
+			    struct shadow_vcpu_context *shadow_ctxt, u64 ec);
+void __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu,
+			       struct shadow_vcpu_context *shadow_ctxt);
 
 void update_exception_gp_regs(struct kvm_vcpu *vcpu);
 extern int sec_el2_handle_sys_reg(u32 esr);
