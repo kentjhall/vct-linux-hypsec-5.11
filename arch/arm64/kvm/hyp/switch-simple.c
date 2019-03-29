@@ -330,7 +330,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 	__fpsimd_save_state(&shadow_ctxt->gp_regs.fp_regs);
 	__fpsimd_restore_state(&host_ctxt->gp_regs.fp_regs);
 
-	__save_shadow_kvm_regs(vcpu, exit_code);
+	__save_shadow_kvm_regs(vcpu, prot_ctxt, exit_code);
 
 	return exit_code;
 }

@@ -72,11 +72,10 @@ static void __hyp_text decrypt_kvm_regs(u32 vmid, struct kvm_regs *kvm_regs)
 	decrypt_buf(vmid, &kvm_regs->fp_regs, sizeof(struct user_fpsimd_state));
 }
 
-static void __hyp_text prep_hvc(struct kvm_vcpu *vcpu)
+static void __hyp_text prep_hvc(struct kvm_vcpu *vcpu,
+				struct shadow_vcpu_context *shadow_ctxt)
 {
 	/* We care only about hvc for psci now. */
-	struct shadow_vcpu_context *shadow_ctxt =
-		vcpu->arch.shadow_vcpu_ctxt;
 	struct kvm_regs *gp_regs = &shadow_ctxt->gp_regs;
 	unsigned long psci_fn = gp_regs->regs.regs[0] & ~((u32) 0);
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -105,22 +104,19 @@ static void __hyp_text prep_hvc(struct kvm_vcpu *vcpu)
 	}
 }
 
-static void __hyp_text prep_wfx(struct kvm_vcpu *vcpu)
+static void __hyp_text prep_wfx(struct shadow_vcpu_context *shadow_ctxt)
 {
 	// We should make sure we skip the WFx instruction later
-	struct shadow_vcpu_context *shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
 	shadow_ctxt->dirty |= DIRTY_PC_FLAG;
 }
 
-static void __hyp_text prep_sys_reg(struct kvm_vcpu *vcpu, u32 esr)
+static void __hyp_text prep_sys_reg(struct shadow_vcpu_context *shadow_ctxt, u32 esr)
 {
-	struct shadow_vcpu_context *shadow_ctxt =
-		vcpu->arch.shadow_vcpu_ctxt;
 	struct kvm_regs *gp_regs = &shadow_ctxt->gp_regs;
 	int Rt = (esr >> 5) & 0x1f, ret;
 	bool is_write = !(esr & 1);
 
-	ret = sec_el2_handle_sys_reg(vcpu, esr);
+	ret = sec_el2_handle_sys_reg(esr);
 
 	shadow_ctxt->dirty = 0;
 	smp_wmb();
@@ -137,15 +133,14 @@ static void __hyp_text prep_sys_reg(struct kvm_vcpu *vcpu, u32 esr)
 		 * We zero out the target register before entering host because
 		 * we do not support the functionality anyway.
 		 */
-		else
-			vcpu_set_reg(vcpu, Rt, 0);
+		//else
+		//	vcpu_set_reg(vcpu, Rt, 0);
 	}
 }
 
-static void __hyp_text prep_abort(struct kvm_vcpu *vcpu)
+static void __hyp_text prep_abort(struct kvm_vcpu *vcpu,
+				  struct shadow_vcpu_context *shadow_ctxt)
 {
-	struct shadow_vcpu_context *shadow_ctxt =
-		vcpu->arch.shadow_vcpu_ctxt;
 	struct kvm_regs *gp_regs = &shadow_ctxt->gp_regs;
 	int Rd = hypsec_vcpu_dabt_get_rd(vcpu);
 	phys_addr_t fault_ipa = (read_sysreg(hpfar_el2) & HPFAR_MASK) << 8;
@@ -176,24 +171,26 @@ static void __hyp_text sync_dirty_to_shadow(struct kvm_vcpu *vcpu)
 			gp_regs->regs.regs[i] = vcpu_get_reg(vcpu, i);
 }
 
-static void __hyp_text el2_prepare_exit_ctxt(struct kvm_vcpu *vcpu, u32 hsr)
+static void __hyp_text el2_prepare_exit_ctxt(struct kvm_vcpu *vcpu,
+					     struct shadow_vcpu_context *shadow_ctxt,
+					     u32 hsr)
 {
 	u8 hsr_ec = ESR_ELx_EC(hsr);
 
 	switch (hsr_ec) {
 		case ESR_ELx_EC_WFx:
-			prep_wfx(vcpu);
+			prep_wfx(shadow_ctxt);
 			break;
 		case ESR_ELx_EC_HVC32:
 		case ESR_ELx_EC_HVC64:
-			prep_hvc(vcpu);
+			prep_hvc(vcpu, shadow_ctxt);
 			break;
 		case ESR_ELx_EC_SYS64:
-			prep_sys_reg(vcpu, hsr);
+			prep_sys_reg(shadow_ctxt, hsr);
 			break;
 		case ESR_ELx_EC_IABT_LOW:
 		case ESR_ELx_EC_DABT_LOW:
-			prep_abort(vcpu);
+			prep_abort(vcpu, shadow_ctxt);
 			break;
 		case ESR_ELx_EC_CP15_32:
 		case ESR_ELx_EC_CP15_64:
@@ -287,14 +284,14 @@ static void __hyp_text el2_reset_gp_regs(struct kvm_vcpu *vcpu,
 					sizeof(struct user_fpsimd_state));
 }
 
-void __hyp_text __save_shadow_kvm_regs(struct kvm_vcpu *vcpu, u64 ec)
+void __hyp_text __save_shadow_kvm_regs(struct kvm_vcpu *vcpu,
+				       struct shadow_vcpu_context *shadow_ctxt, u64 ec)
 {
-	struct shadow_vcpu_context *shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
 	shadow_ctxt->ec = ec;
 
 	switch (ec) {
 		case ARM_EXCEPTION_TRAP:
-			el2_prepare_exit_ctxt(vcpu, shadow_ctxt->esr);
+			el2_prepare_exit_ctxt(vcpu, shadow_ctxt, shadow_ctxt->esr);
 			break;
 		case ARM_EXCEPTION_IRQ:
 		case ARM_EXCEPTION_EL1_SERROR:

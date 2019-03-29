@@ -35,11 +35,12 @@ struct s2_sys_reg_desc {
 	u64 val;
 };
 
-void __save_shadow_kvm_regs(struct kvm_vcpu *vcpu, u64 ec);
+void __save_shadow_kvm_regs(struct kvm_vcpu *vcpu,
+		struct shadow_vcpu_context *shadow_ctxt, u64 ec);
 void __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu);
 
 void update_exception_gp_regs(struct kvm_vcpu *vcpu);
-extern int sec_el2_handle_sys_reg(struct kvm_vcpu *vcpu, u32 esr);
+extern int sec_el2_handle_sys_reg(u32 esr);
 
 void __save_encrypted_vcpu(u32 vmid, int vcpu_id);
 void hypsec_inject_undef(struct kvm_vcpu *vcpu);

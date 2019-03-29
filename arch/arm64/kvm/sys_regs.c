@@ -2093,7 +2093,7 @@ int __hyp_text find_s2_sys_reg(struct sys_reg_params *params)
 	return -EINVAL;
 }
 
-int __hyp_text sec_el2_handle_sys_reg(struct kvm_vcpu *vcpu, u32 esr)
+int __hyp_text sec_el2_handle_sys_reg(u32 esr)
 {
 	struct sys_reg_params params;
 
