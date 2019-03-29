@@ -268,7 +268,6 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 {
 	u64 exit_code;
 	struct kvm_cpu_context *host_ctxt;
-	struct kvm_cpu_context *guest_ctxt;
 	struct kvm_cpu_context *shadow_ctxt;
 	struct kvm_cpu_context core_ctxt;
 	struct el2_data *el2_data;
@@ -277,7 +276,6 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	host_ctxt = kern_hyp_va(vcpu->arch.host_cpu_context);
 	host_ctxt->__hyp_running_vcpu = vcpu;
-	guest_ctxt = &vcpu->arch.ctxt;
 	shadow_ctxt =
 		(struct kvm_cpu_context *)prot_ctxt;
 
