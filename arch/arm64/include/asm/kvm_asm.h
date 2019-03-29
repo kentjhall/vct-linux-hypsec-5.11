@@ -67,8 +67,7 @@ extern int kvm_vcpu_run_vhe(struct kvm_vcpu *vcpu);
 extern int __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu);
 #else
 struct shadow_vcpu_context;
-extern int __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
-			       struct shadow_vcpu_context *prot_ctxt);
+extern int __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id);
 #endif
 
 extern u64 __vgic_v3_get_ich_vtr_el2(void);

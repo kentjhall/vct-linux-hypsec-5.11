@@ -157,12 +157,10 @@ static bool __hyp_text __translate_far_to_hpfar(u64 far, u64 *hpfar)
 	return true;
 }
 
-static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu, u64 esr)
+static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu, u64 esr,
+					     struct shadow_vcpu_context *shadow_ctxt)
 {
-	u64 hpfar, far;
-	struct shadow_vcpu_context *shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
-
-	far = get_far_el2();
+	u64 hpfar, far = get_far_el2();
 
 	/*
 	 * The HPFAR can be invalid if the stage 2 fault did not
@@ -210,7 +208,8 @@ static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu, u64 esr)
  * the guest, false when we should restore the host state and return to the
  * main run loop. We try to handle VM exit early here.
  */
-static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
+static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code,
+					struct shadow_vcpu_context *shadow_ctxt)
 {
 	u32 esr_el2 = 0;
 	u8 ec;
@@ -218,7 +217,7 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 	if (ARM_EXCEPTION_CODE(*exit_code) != ARM_EXCEPTION_IRQ) {
 		esr_el2 = get_esr_el2();
 		vcpu->arch.fault.esr_el2 = esr_el2;
-		vcpu->arch.shadow_vcpu_ctxt->esr = esr_el2;
+		shadow_ctxt->esr = esr_el2;
 	}
 
 	/*
@@ -230,14 +229,14 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 	if (*exit_code != ARM_EXCEPTION_TRAP)
 		goto exit;
 
-	ec = hypsec_vcpu_trap_get_class(vcpu);
+	ec = ESR_ELx_EC(esr_el2);
 	if (ec == ESR_ELx_EC_HVC64) {
 		if (handle_pvops(vcpu) > 0)
 			return true;
 		else
 			return false;
 	} else if (ec == ESR_ELx_EC_DABT_LOW || ec == ESR_ELx_EC_IABT_LOW) {
-		if (!__populate_fault_info(vcpu, esr_el2))
+		if (!__populate_fault_info(vcpu, esr_el2, shadow_ctxt))
 			return true;
 	} else if (ec == ESR_ELx_EC_SYS64) {
 		u64 elr = read_sysreg(elr_el2);
@@ -263,21 +262,26 @@ int kvm_vcpu_run_vhe(struct kvm_vcpu *vcpu)
 }
 
 /* Switch to the guest for legacy non-VHE systems */
-int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
-				   struct shadow_vcpu_context *prot_ctxt)
+int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 {
 	u64 exit_code;
 	struct kvm_cpu_context *host_ctxt;
 	struct kvm_cpu_context *shadow_ctxt;
 	struct kvm_cpu_context core_ctxt;
 	struct el2_data *el2_data;
-	u32 vmid = vcpu->arch.vmid;
+	struct kvm_vcpu *vcpu;
+	struct shadow_vcpu_context *prot_ctxt;
+
+	if (hypsec_get_vm_state(vmid) != VERIFIED)
+		return 0;
+
+	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
+	prot_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	host_ctxt = kern_hyp_va(vcpu->arch.host_cpu_context);
 	host_ctxt->__hyp_running_vcpu = vcpu;
-	shadow_ctxt =
-		(struct kvm_cpu_context *)prot_ctxt;
+	shadow_ctxt = (struct kvm_cpu_context *)prot_ctxt;
 
 	__sysreg_save_state_nvhe(host_ctxt);
 
@@ -309,7 +313,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu,
 		exit_code = __guest_enter(shadow_ctxt, &core_ctxt);
 
 		/* And we're baaack! */
-	} while (fixup_guest_exit(vcpu, &exit_code));
+	} while (fixup_guest_exit(vcpu, &exit_code, prot_ctxt));
 
 
 	__sysreg_save_state_nvhe(shadow_ctxt);
