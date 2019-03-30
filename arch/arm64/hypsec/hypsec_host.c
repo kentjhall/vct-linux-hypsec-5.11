@@ -283,19 +283,7 @@ static int __hyp_text __hypsec_init_vcpu(u32 vmid, int vcpu_id)
 	}
 
 	ret = 1;
-	/*
-	 *Make the shadow structures in VCPU RO, We now move vcpu_arch
-	 * as we moved it to the start of the vcpu structure.
-	 */
-	//__set_pfn_host(addr, PAGE_SIZE, addr >> PAGE_SHIFT, PAGE_S2);
-	/*
-	 * Make the page that contains shadow structure a guest page,
-	 * so it can be cleaned up later on when VM terminates.
-	 */
-	//set_pfn_owner(el2_data, addr, PAGE_SIZE, vmid);
 
-	/* TODO: Needs to change all access to shadow_ctxt. */
-	vcpu->arch.shadow_vcpu_ctxt = new_ctxt;
 	int_vcpu->state = READY;
 
 out:

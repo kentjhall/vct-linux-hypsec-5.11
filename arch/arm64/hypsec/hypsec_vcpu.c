@@ -156,10 +156,9 @@ static void __hyp_text prep_abort(struct kvm_vcpu *vcpu,
 		shadow_ctxt->dirty |= (1UL << Rd);
 }
 
-static void __hyp_text sync_dirty_to_shadow(struct kvm_vcpu *vcpu)
+static void __hyp_text sync_dirty_to_shadow(struct kvm_vcpu *vcpu,
+					    struct shadow_vcpu_context *shadow_ctxt)
 {
-	struct shadow_vcpu_context *shadow_ctxt =
-		vcpu->arch.shadow_vcpu_ctxt;
 	struct kvm_regs *gp_regs = &shadow_ctxt->gp_regs;
 	int i;
 
@@ -341,7 +340,7 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu,
 	ec = shadow_ctxt->ec;
 	switch (ec) {
 		case ARM_EXCEPTION_TRAP:
-			sync_dirty_to_shadow(vcpu);
+			sync_dirty_to_shadow(vcpu, shadow_ctxt);
 			break;
 		case ARM_EXCEPTION_IRQ:
 		case ARM_EXCEPTION_EL1_SERROR:
@@ -374,7 +373,7 @@ void __hyp_text __save_encrypted_vcpu(u32 vmid, int vcpu_id)
 	struct kvm_regs gp_local;
 	u64 sr_local[SHADOW_SYS_REGS_SIZE + 1];
 
-	shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
+	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
 
 	el2_memcpy(&gp_local, &shadow_ctxt->gp_regs, sizeof(struct kvm_regs));
 	el2_memcpy(sr_local, &shadow_ctxt->sys_regs, shadow_sys_regs_len);
