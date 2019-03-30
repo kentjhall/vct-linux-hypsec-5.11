@@ -97,7 +97,7 @@ static void __hyp_text prep_hvc(struct kvm_vcpu *vcpu,
 			vcpu_set_reg(vcpu, 2, gp_regs->regs.regs[2]);
 			break;
 		case PSCI_0_2_FN_SYSTEM_OFF:
-			el2_data->vm_info[vcpu->arch.vmid].powered_on = false;
+			el2_data->vm_info[shadow_ctxt->vmid].powered_on = false;
 			break;
 		default:
 			break;
@@ -275,7 +275,7 @@ static void __hyp_text el2_reset_gp_regs(struct kvm_vcpu *vcpu,
 	el2_memset(&shadow_ctxt->gp_regs, 0, sizeof(struct kvm_regs));
 	shadow_ctxt->gp_regs.regs.pstate = kvm_regs->regs.pstate;
 
-	if (search_load_info(vcpu->arch.vmid, el2_data, pc))
+	if (search_load_info(shadow_ctxt->vmid, el2_data, pc))
 		shadow_ctxt->gp_regs.regs.pc = pc;
 	else
 		__hyp_panic();
@@ -304,6 +304,7 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu,
 					  struct shadow_vcpu_context *shadow_ctxt)
 {
 	u64 ec;
+	u32 vmid = shadow_ctxt->vmid;
 	size_t shadow_sys_regs_len = sizeof(u64) * (SHADOW_SYS_REGS_SIZE + 1);
 	struct el2_data *el2_data;
 
@@ -313,9 +314,9 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu,
 	 */
 	if (shadow_ctxt->dirty == -1) {
 		el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-		if (el2_use_inc_exe(vcpu->arch.vmid)) {
-			decrypt_kvm_regs(vcpu->arch.vmid, &vcpu->arch.ctxt.gp_regs);
-			decrypt_buf(vcpu->arch.vmid, &vcpu->arch.ctxt.sys_regs,
+		if (el2_use_inc_exe(vmid)) {
+			decrypt_kvm_regs(vmid, &vcpu->arch.ctxt.gp_regs);
+			decrypt_buf(vmid, &vcpu->arch.ctxt.sys_regs,
 					shadow_sys_regs_len);
 			el2_memcpy(&shadow_ctxt->sys_regs, &vcpu->arch.ctxt.sys_regs,
 					shadow_sys_regs_len);
@@ -331,8 +332,8 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu,
 		el2_save_sys_regs_32(vcpu, shadow_ctxt);
 		shadow_ctxt->dirty = 0;
 
-		if (!el2_data->vm_info[vcpu->arch.vmid].powered_on)
-			el2_data->vm_info[vcpu->arch.vmid].powered_on = true;
+		if (!el2_data->vm_info[vmid].powered_on)
+			el2_data->vm_info[vmid].powered_on = true;
 
 		return;
 	}
