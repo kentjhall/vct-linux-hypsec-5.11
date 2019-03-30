@@ -87,14 +87,14 @@ static inline void vcpu_set_vsesr(struct kvm_vcpu *vcpu, u64 vsesr)
 }
 
 #ifdef CONFIG_STAGE2_KERNEL
-static inline unsigned long *shadow_vcpu_pc(const struct kvm_vcpu *vcpu)
+static inline unsigned long *shadow_vcpu_pc(struct shadow_vcpu_context *shadow_ctxt)
 {
-	return (unsigned long *)&vcpu_shadow_gp_regs(vcpu)->regs.pc;
+	return (unsigned long *)&vcpu_shadow_gp_regs(shadow_ctxt)->regs.pc;
 }
 
-static inline unsigned long *shadow_vcpu_cpsr(const struct kvm_vcpu *vcpu)
+static inline unsigned long *shadow_vcpu_cpsr(struct shadow_vcpu_context *shadow_ctxt)
 {
-	return (unsigned long *)&vcpu_shadow_gp_regs(vcpu)->regs.pstate;
+	return (unsigned long *)&vcpu_shadow_gp_regs(shadow_ctxt)->regs.pstate;
 }
 #endif
 
@@ -133,13 +133,6 @@ static inline bool vcpu_mode_is_32bit(const struct kvm_vcpu *vcpu)
 {
 	return !!(*vcpu_cpsr(vcpu) & PSR_MODE32_BIT);
 }
-
-#ifdef CONFIG_STAGE2_KERNEL
-static inline bool shadow_vcpu_mode_is_32bit(const struct kvm_vcpu *vcpu)
-{
-	return !!(*shadow_vcpu_cpsr(vcpu) & PSR_MODE32_BIT);
-}
-#endif
 
 static inline bool kvm_condition_valid(const struct kvm_vcpu *vcpu)
 {
@@ -181,17 +174,17 @@ static inline void vcpu_set_reg(struct kvm_vcpu *vcpu, u8 reg_num,
 }
 
 #ifdef CONFIG_STAGE2_KERNEL
-static inline unsigned long shadow_vcpu_get_reg(const struct kvm_vcpu *vcpu,
+static inline unsigned long shadow_vcpu_get_reg(struct shadow_vcpu_context *shadow_ctxt,
                                                 u8 reg_num)
 {
-	return (reg_num == 31) ? 0 : vcpu_shadow_gp_regs(vcpu)->regs.regs[reg_num];
+	return (reg_num == 31) ? 0 : vcpu_shadow_gp_regs(shadow_ctxt)->regs.regs[reg_num];
 }
 
-static inline void shadow_vcpu_set_reg(struct kvm_vcpu *vcpu, u8 reg_num,
-                                       unsigned long val)
+static inline void shadow_vcpu_set_reg(struct shadow_vcpu_context *shadow_ctxt,
+				       u8 reg_num, unsigned long val)
 {
 	if (reg_num != 31)
-		vcpu_shadow_gp_regs(vcpu)->regs.regs[reg_num] = val;
+		vcpu_shadow_gp_regs(shadow_ctxt)->regs.regs[reg_num] = val;
 }
 #endif
 

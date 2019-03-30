@@ -17,23 +17,23 @@
 #include <asm/spinlock_types.h>
 
 
-void __hyp_text set_balloon_pfn(struct kvm_vcpu *vcpu)
+void __hyp_text set_balloon_pfn(struct shadow_vcpu_context *shadow_ctxt)
 {
 	struct s2_trans result;
 	struct el2_data *el2_data;
-	unsigned long gpa = shadow_vcpu_get_reg(vcpu, 1);
+	unsigned long gpa = shadow_vcpu_get_reg(shadow_ctxt, 1);
 	kvm_pfn_t pfn;
 
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
-	result = walk_stage2_pgd(vcpu->arch.vmid, gpa);
+	result = walk_stage2_pgd(shadow_ctxt->vmid, gpa);
 	if (!result.level)
 		return;
 
 	pfn = result.pfn;
 	if (pfn) {
 		/* FIXME: Do we really need to flush the entire thing? */
-		clear_shadow_stage2_range(vcpu->arch.vmid, 0, KVM_PHYS_SIZE);
+		clear_shadow_stage2_range(shadow_ctxt->vmid, 0, KVM_PHYS_SIZE);
 		el2_memset((void *)__el2_va(pfn << PAGE_SHIFT), 0, PAGE_SIZE);
 		set_pfn_owner(el2_data, pfn << PAGE_SHIFT, 1, 0);
 		__set_pfn_host(pfn << PAGE_SHIFT, PAGE_SIZE,
@@ -79,7 +79,7 @@ out:
 	return;
 }
 
-void __hyp_text grant_stage2_sg_gpa(struct kvm_vcpu *vcpu)
+void __hyp_text grant_stage2_sg_gpa(struct shadow_vcpu_context *shadow_ctxt)
 {
 	struct el2_data *el2_data;
 	unsigned long addr;
@@ -90,18 +90,18 @@ void __hyp_text grant_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
-	addr = shadow_vcpu_get_reg(vcpu, 1);
-	arg2 = shadow_vcpu_get_reg(vcpu, 2);
+	addr = shadow_vcpu_get_reg(shadow_ctxt, 1);
+	arg2 = shadow_vcpu_get_reg(shadow_ctxt, 2);
 	len += (arg2 & (PAGE_SIZE - 1) ? 1 : 0);
 	if (arg2 >> PAGE_SHIFT)
 		len += arg2 >> PAGE_SHIFT;
 
-	writable = shadow_vcpu_get_reg(vcpu, 3);
+	writable = shadow_vcpu_get_reg(shadow_ctxt, 3);
 	if (writable == 1)
 		mem_type = PAGE_S2_KERNEL;
 
 	while (len > 0) {
-		__grant_stage2_sg_gpa(el2_data, addr, mem_type, vcpu->arch.vmid);
+		__grant_stage2_sg_gpa(el2_data, addr, mem_type, shadow_ctxt->vmid);
 		addr += PAGE_SIZE;
 		len--;
 	};
@@ -140,7 +140,7 @@ out:
 	stage2_spin_unlock(&el2_data->s2pages_lock);
 }
 
-void __hyp_text revoke_stage2_sg_gpa(struct kvm_vcpu *vcpu)
+void __hyp_text revoke_stage2_sg_gpa(struct shadow_vcpu_context *shadow_ctxt)
 {
 	struct el2_data *el2_data;
 	unsigned long addr;
@@ -149,14 +149,14 @@ void __hyp_text revoke_stage2_sg_gpa(struct kvm_vcpu *vcpu)
 
 	el2_data = (void *)kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
-	addr = shadow_vcpu_get_reg(vcpu, 1);
-	arg2 = shadow_vcpu_get_reg(vcpu, 2);
+	addr = shadow_vcpu_get_reg(shadow_ctxt, 1);
+	arg2 = shadow_vcpu_get_reg(shadow_ctxt, 2);
 	len += (arg2 & (PAGE_SIZE - 1) ? 1 : 0);
 	if (arg2 >> PAGE_SHIFT)
 		len += arg2 >> PAGE_SHIFT;
 
 	while (len > 0) {
-		__revoke_stage2_sg_gpa(el2_data, addr, vcpu->arch.vmid);
+		__revoke_stage2_sg_gpa(el2_data, addr, shadow_ctxt->vmid);
 		addr += PAGE_SIZE;
 		len--;
 	};

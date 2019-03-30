@@ -11,19 +11,19 @@
 
 #include <kvm/pvops.h>
 
-int __hyp_text handle_pvops(struct kvm_vcpu *vcpu)
+int __hyp_text handle_pvops(struct shadow_vcpu_context *shadow_ctxt)
 {
-	unsigned long call_num = shadow_vcpu_get_reg(vcpu, 0);
+	unsigned long call_num = shadow_vcpu_get_reg(shadow_ctxt, 0);
 
 	switch (call_num) {
 		case KVM_SET_DESC_PFN:
-			grant_stage2_sg_gpa(vcpu);
+			grant_stage2_sg_gpa(shadow_ctxt);
 			break;
 		case KVM_UNSET_DESC_PFN:
-			revoke_stage2_sg_gpa(vcpu);
+			revoke_stage2_sg_gpa(shadow_ctxt);
 			break;
 		case KVM_SET_BALLOON_PFN:
-			set_balloon_pfn(vcpu);
+			set_balloon_pfn(shadow_ctxt);
 			break;
 		default:
 			return -EINVAL;

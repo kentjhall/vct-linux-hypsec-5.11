@@ -353,7 +353,7 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu,
 		update_exception_gp_regs(vcpu);
 
 	if (shadow_ctxt->dirty & DIRTY_PC_FLAG)
-		*shadow_vcpu_pc(vcpu) += 4;
+		*shadow_vcpu_pc(shadow_ctxt) += 4;
 
 	shadow_ctxt->dirty = 0;
 	shadow_ctxt->far_el2 = 0;
@@ -381,7 +381,7 @@ void __hyp_text __save_encrypted_vcpu(u32 vmid, int vcpu_id)
 
 	encrypt_kvm_regs(vmid, &gp_local);
 	encrypt_buf(vmid, sr_local, shadow_sys_regs_len);
-	gp_local.regs.pstate = *shadow_vcpu_cpsr(vcpu);
+	gp_local.regs.pstate = *shadow_vcpu_cpsr(shadow_ctxt);
 
 	el2_memcpy(&vcpu->arch.ctxt.gp_regs, &gp_local,
 					sizeof(struct kvm_regs));
