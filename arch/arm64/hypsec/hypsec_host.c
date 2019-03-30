@@ -277,8 +277,10 @@ static int __hyp_text __hypsec_init_vcpu(u32 vmid, int vcpu_id)
 	new_ctxt = alloc_shadow_ctxt(el2_data);
 	if (!new_ctxt)
 		goto out;
-	else
+	else {
+		new_ctxt->vmid = vmid;
 		vm_info->shadow_ctxt[vcpu_id] = new_ctxt;
+	}
 
 	ret = 1;
 	/*

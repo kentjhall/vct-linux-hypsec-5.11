@@ -228,6 +228,7 @@ struct shadow_vcpu_context {
 		u32 copro[NR_COPRO_REGS];
 	};
 	u32 esr;
+	u32 vmid;
 	u64 ec;
 	u64 dirty;
 	u64 hpfar;

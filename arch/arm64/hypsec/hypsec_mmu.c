@@ -689,27 +689,28 @@ static void __hyp_text assign_pfn_to_vm(struct s2_trans result,
 
 static void __hyp_text prot_and_map_to_s2pt(struct s2_trans result,
 					   struct el2_data *el2_data,
-					   struct kvm_vcpu *vcpu,
+					   struct shadow_vcpu_context *shadow_ctxt,
 					   phys_addr_t fault_ipa)
 {
-	u32 vmid = vcpu->arch.vmid;
+	u32 vmid = shadow_ctxt->vmid;
 	u64 desc;
 
 	if (stage2_is_map_memory(result.output))
 		assign_pfn_to_vm(result, el2_data, vmid);
 
-	desc = result_to_desc(result, hypsec_vcpu_trap_is_iabt(vcpu));
+	desc = result_to_desc(result, hypsec_vcpu_trap_is_iabt(shadow_ctxt));
 	mmap_s2pt(fault_ipa, el2_data, desc, result.level, vmid);
 	__kvm_flush_vm_context();
 }
 
-int __hyp_text pre_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
+int __hyp_text pre_handle_shadow_s2pt_fault(struct shadow_vcpu_context *shadow_ctxt)
 {
 	phys_addr_t addr;
 	struct el2_data *el2_data;
 	struct s2_trans result;
 	unsigned long remapped_va;
-	u32 vmid = vcpu->arch.vmid;
+	u64 hpfar = shadow_ctxt->hpfar;
+	u32 vmid = shadow_ctxt->vmid;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	addr = (hpfar & HPFAR_MASK) << 8;
@@ -720,15 +721,17 @@ int __hyp_text pre_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 	else
 		return -ENOMEM;
 
-	prot_and_map_to_s2pt(result, el2_data, vcpu, addr);
+	prot_and_map_to_s2pt(result, el2_data, shadow_ctxt, addr);
 	return 1;
 }
 
-void __hyp_text post_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
+void __hyp_text post_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu,
+					struct shadow_vcpu_context *shadow_ctxt)
 {
 	phys_addr_t addr;
 	struct el2_data *el2_data;
 	struct s2_trans result;
+	u64 hpfar = shadow_ctxt->hpfar;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	addr = (hpfar & HPFAR_MASK) << 8;
@@ -739,7 +742,7 @@ void __hyp_text post_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu, u64 hpfar)
 		return;
 	}
 
-	prot_and_map_to_s2pt(result, el2_data, vcpu, addr);
+	prot_and_map_to_s2pt(result, el2_data, shadow_ctxt, addr);
 }
 
 void __hyp_text clear_vm_stage2_ptes(pmd_t *pmd, phys_addr_t addr,
