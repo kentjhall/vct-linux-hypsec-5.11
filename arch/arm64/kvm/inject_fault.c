@@ -45,11 +45,7 @@ enum exception_type {
 	except_type_serror	= 0x180,
 };
 
-#ifndef CONFIG_STAGE2_KERNEL
 static u64 get_except_vector(struct kvm_vcpu *vcpu, enum exception_type type)
-#else
-static u64 __hyp_text get_except_vector(struct kvm_vcpu *vcpu, enum exception_type type)
-#endif
 {
 	u64 exc_offset;
 
@@ -69,51 +65,66 @@ static u64 __hyp_text get_except_vector(struct kvm_vcpu *vcpu, enum exception_ty
 
 	return vcpu_read_sys_reg(vcpu, VBAR_EL1) + exc_offset + type;
 }
+#ifdef CONFIG_STAGE2_KERNEL
+static u64 __hyp_text hypsec_get_except_vector(struct shadow_vcpu_context *shadow_ctxt,
+					enum exception_type type)
+{
+	u64 exc_offset;
+
+	switch (*shadow_vcpu_cpsr(shadow_ctxt) & (PSR_MODE_MASK | PSR_MODE32_BIT)) {
+	case PSR_MODE_EL1t:
+		exc_offset = CURRENT_EL_SP_EL0_VECTOR;
+		break;
+	case PSR_MODE_EL1h:
+		exc_offset = CURRENT_EL_SP_ELx_VECTOR;
+		break;
+	case PSR_MODE_EL0t:
+		exc_offset = LOWER_EL_AArch64_VECTOR;
+		break;
+	default:
+		exc_offset = LOWER_EL_AArch32_VECTOR;
+	}
+
+	return shadow_ctxt->sys_regs[VBAR_EL1] + exc_offset + type;
+}
+#endif
 
 #ifdef CONFIG_STAGE2_KERNEL
 /* We only inject UNDEF fault to VM now. */
-void __hyp_text update_exception_gp_regs(struct kvm_vcpu *vcpu)
+void __hyp_text update_exception_gp_regs(struct shadow_vcpu_context *shadow_ctxt)
 {
-	struct shadow_vcpu_context *shadow_ctxt;
 	struct kvm_regs *gp_regs;
 	unsigned long cpsr;
 	u64 flag;
 	u32 esr = 0;
 	bool is_aarch32;
 
-	shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
 	flag = shadow_ctxt->dirty;
-	if (flag & PENDING_UNDEF_INJECT) {
+	if (flag & PENDING_UNDEF_INJECT)
 		esr = (ESR_ELx_EC_UNKNOWN << ESR_ELx_EC_SHIFT);
-		if (kvm_vcpu_trap_il_is32bit(vcpu))
-			esr |= ESR_ELx_IL;
-	} else
-		return;
+	else
+		BUG();
 
 	gp_regs = &shadow_ctxt->gp_regs;
 	cpsr = gp_regs->regs.pstate;
 	is_aarch32 = (cpsr & PSR_MODE32_BIT);
 
-	*__vcpu_elr_el1(vcpu) = gp_regs->regs.pc;
+	*__shadow_vcpu_elr_el1(shadow_ctxt) = gp_regs->regs.pc;
 
 	/* Setup cpsr temporarily before calling get_except_vector */
-	*vcpu_cpsr(vcpu) = cpsr;
-	gp_regs->regs.pc = get_except_vector(vcpu, 0);
-	*vcpu_cpsr(vcpu) = 0;
+	*shadow_vcpu_cpsr(shadow_ctxt) = cpsr;
+	gp_regs->regs.pc = hypsec_get_except_vector(shadow_ctxt, 0);
+	*shadow_vcpu_cpsr(shadow_ctxt) = 0;
 
 	gp_regs->regs.pstate = PSTATE_FAULT_BITS_64;
-	vcpu_write_spsr(vcpu, cpsr);
+	shadow_vcpu_write_spsr(shadow_ctxt, cpsr);
 
 	shadow_ctxt->sys_regs[ESR_EL1] = esr;
 }
 
-void __hyp_text hypsec_inject_undef(struct kvm_vcpu *vcpu)
+void __hyp_text hypsec_inject_undef(struct shadow_vcpu_context *shadow_ctxt)
 {
 	/* We currently support injecting UNDEF to 64-bit VM */
-	struct shadow_vcpu_context *shadow_ctxt;
-
-	vcpu = kern_hyp_va(vcpu);
-	shadow_ctxt = vcpu->arch.shadow_vcpu_ctxt;
 	shadow_ctxt->dirty |= PENDING_UNDEF_INJECT;
 }
 #endif

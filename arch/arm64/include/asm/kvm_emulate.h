@@ -96,6 +96,11 @@ static inline unsigned long *shadow_vcpu_cpsr(struct shadow_vcpu_context *shadow
 {
 	return (unsigned long *)&vcpu_shadow_gp_regs(shadow_ctxt)->regs.pstate;
 }
+
+static inline unsigned long *__shadow_vcpu_elr_el1(struct shadow_vcpu_context *shadow_ctxt)
+{
+	return (unsigned long *)&vcpu_shadow_gp_regs(shadow_ctxt)->elr_el1;
+}
 #endif
 
 static inline unsigned long *vcpu_pc(const struct kvm_vcpu *vcpu)
@@ -185,6 +190,12 @@ static inline void shadow_vcpu_set_reg(struct shadow_vcpu_context *shadow_ctxt,
 {
 	if (reg_num != 31)
 		vcpu_shadow_gp_regs(shadow_ctxt)->regs.regs[reg_num] = val;
+}
+
+static inline void shadow_vcpu_write_spsr(struct shadow_vcpu_context *shadow_ctxt,
+					  unsigned long v)
+{
+	vcpu_shadow_gp_regs(shadow_ctxt)->spsr[KVM_SPSR_EL1] = v;
 }
 #endif
 

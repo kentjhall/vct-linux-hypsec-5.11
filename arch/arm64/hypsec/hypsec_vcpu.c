@@ -204,11 +204,11 @@ static void __hyp_text el2_prepare_exit_ctxt(struct kvm_vcpu *vcpu,
 		case ESR_ELx_EC_BREAKPT_LOW:
 		case ESR_ELx_EC_BKPT32:
 		case ESR_ELx_EC_BRK64:
-			hypsec_inject_undef(vcpu);
+			hypsec_inject_undef(shadow_ctxt);
 			break;
 		default:
 			print_string("\runknown exception\n");
-			hypsec_inject_undef(vcpu);
+			hypsec_inject_undef(shadow_ctxt);
 	}
 }
 
@@ -350,7 +350,7 @@ void __hyp_text __restore_shadow_kvm_regs(struct kvm_vcpu *vcpu,
 	};
 
 	if (shadow_ctxt->dirty & PENDING_EXCEPT_INJECT_FLAG)
-		update_exception_gp_regs(vcpu);
+		update_exception_gp_regs(shadow_ctxt);
 
 	if (shadow_ctxt->dirty & DIRTY_PC_FLAG)
 		*shadow_vcpu_pc(shadow_ctxt) += 4;
