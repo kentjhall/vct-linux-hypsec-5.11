@@ -1028,7 +1028,7 @@ struct s2_trans __hyp_text handle_from_vm_info(struct el2_data *el2_data,
 	walk_el2_pgd(el2_va, &result);
 	if (!result.level) {
 		print_string("\rWe cannot retrieve the PTE for vm_info\n");
-		goto out;
+		__hyp_panic();
 	}
 
 	/* Aligned to 2MB size */

@@ -186,7 +186,7 @@ unsigned long __hyp_text search_load_info(u32 vmid,
 
 	for (i = 0; i < vm_info->load_info_cnt; i++) {
 		li = vm_info->load_info[i];
-		if (addr >= li.load_addr && (li.load_addr + li.size) >= addr) {
+		if (addr >= li.load_addr && (li.load_addr + li.size) > addr) {
 			el2_va = (addr - li.load_addr) + li.el2_remap_addr;
 			break;
 		}
