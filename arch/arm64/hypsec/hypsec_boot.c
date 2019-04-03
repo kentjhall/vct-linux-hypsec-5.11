@@ -68,8 +68,12 @@ struct int_vcpu* __hyp_text vcpu_id_to_int_vcpu(
 
 int __hyp_text hypsec_get_vm_state(u32 vmid)
 {
+	int ret;
 	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
-	return vm_info->state;
+	stage2_spin_lock(&vm_info->vm_lock);
+	ret = vm_info->state;
+	stage2_spin_unlock(&vm_info->vm_lock);
+	return ret;
 }
 
 arch_spinlock_t* __hyp_text get_shadow_pt_lock(u32 vmid)
@@ -93,12 +97,6 @@ void __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 
 	vm_info = vmid_to_vm_info(vmid);
 	stage2_spin_lock(&vm_info->boot_lock);
-	/*
-	 * If we have validated the images then the host is not
-	 * allowed to add stuff to boot_info.
-	 */
-	if (vm_info->state != READY)
-		goto out;
 
 	load_count = vm_info->load_info_cnt;
 	vm_info->load_info[load_count].load_addr = load_addr;
@@ -106,7 +104,7 @@ void __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 	vm_info->load_info[load_count].el2_remap_addr = alloc_remap_addr(size);
 	vm_info->load_info[load_count].el2_mapped_pages = 0;
 	el2_hex2bin(vm_info->load_info[load_count].signature, signature_hex, 64);
-out:
+
 	stage2_spin_unlock(&vm_info->boot_lock);
 }
 
@@ -146,8 +144,6 @@ bool __hyp_text __el2_verify_and_load_images(u32 vmid)
 	lock = &vm_info->boot_lock;
 	stage2_spin_lock(lock);
 
-	if (vm_info->state != READY)
-		goto out;
 	/* Traverse through the load info list and check the integrity of images. */
 	for (i = 0; i < vm_info->load_info_cnt; i++) {
 		/* Call to the crypto authentication function here. */
@@ -168,9 +164,10 @@ bool __hyp_text __el2_verify_and_load_images(u32 vmid)
 			load_info.el2_remap_addr, load_info.el2_mapped_pages);
 	}
 
+	stage2_spin_lock(&vm_info->vm_lock);
 	vm_info->state = VERIFIED;
+	stage2_spin_unlock(&vm_info->vm_lock);
 
-out:
 	stage2_spin_unlock(lock);
 	return res;
 }

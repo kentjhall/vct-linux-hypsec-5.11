@@ -314,6 +314,11 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 {
 	u64 ret = 0, callno = hr->regs[0];
 
+	if (callno >= HVC_SET_BOOT_INFO && callno <= HVC_VERIFY_VM_IMAGES) {
+		if (hypsec_get_vm_state((u32)hr->regs[1]) != READY)
+			return;
+	}
+
 	/* FIXME: we write return val to reg[31] as this will be restored to x0 */
 	switch (callno) {
 	case HVC_ENABLE_S2_TRANS:
