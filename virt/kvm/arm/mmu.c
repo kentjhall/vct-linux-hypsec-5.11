@@ -1665,6 +1665,7 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 		hugetlb = transparent_hugepage_adjust(&pfn, &fault_ipa);
 
 	if (hugetlb) {
+#if 0
 		pmd_t new_pmd = pfn_pmd(pfn, mem_type);
 		new_pmd = pmd_mkhuge(new_pmd);
 		if (writable) {
@@ -1683,12 +1684,13 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 			if (stage2_is_exec(kvm, fault_ipa))
 				new_pmd = kvm_s2pmd_mkexec(new_pmd);
 		}
-
+		ret = stage2_set_pmd_huge(kvm, memcache, fault_ipa, &new_pmd);
+#endif
 #ifdef CONFIG_STAGE2_KERNEL
 		set_s2_trans_result(vcpu, pfn, pfn << PAGE_SHIFT, writable, 2);
 #endif
-		ret = stage2_set_pmd_huge(kvm, memcache, fault_ipa, &new_pmd);
 	} else {
+#if 0
 		pte_t new_pte = pfn_pte(pfn, mem_type);
 
 		if (writable) {
@@ -1708,11 +1710,11 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 			if (stage2_is_exec(kvm, fault_ipa))
 				new_pte = kvm_s2pte_mkexec(new_pte);
 		}
-
+		ret = stage2_set_pte(kvm, memcache, fault_ipa, &new_pte, flags);
+#endif
 #ifdef CONFIG_STAGE2_KERNEL
 		set_s2_trans_result(vcpu, pfn, pfn << PAGE_SHIFT, writable, 3);
 #endif
-		ret = stage2_set_pte(kvm, memcache, fault_ipa, &new_pte, flags);
 	}
 
 out_unlock:
