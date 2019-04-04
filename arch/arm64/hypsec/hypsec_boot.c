@@ -103,6 +103,12 @@ int __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 	stage2_spin_lock(&vm_info->boot_lock);
 
 	load_count = vm_info->load_info_cnt++;
+	if (load_count == HYPSEC_MAX_LOAD_IMG) {
+		print_string("\rHostvisor loads more than 5 VM images\n");
+		load_count = -EINVAL;
+		goto out;
+	}
+
 	page_count = (size >> PAGE_SHIFT) + ((size & (PAGE_SIZE - 1)) ? 1 : 0);
 	vm_info->load_info[load_count].load_addr = load_addr;
 	vm_info->load_info[load_count].size = size;
@@ -110,6 +116,7 @@ int __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 	vm_info->load_info[load_count].el2_mapped_pages = 0;
 	el2_hex2bin(vm_info->load_info[load_count].signature, signature_hex, 64);
 
+out:
 	stage2_spin_unlock(&vm_info->boot_lock);
 	return load_count;
 }
@@ -121,12 +128,16 @@ void __hyp_text __el2_remap_vm_image(u32 vmid, unsigned long pfn, int id)
 	struct el2_data *el2_data;
 	unsigned long target, page_count, size;
 
+	if (hypsec_get_vm_state(vmid) != READY)
+		return -EINVAL;
+
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	vm_info = vmid_to_vm_info(vmid);
+
+	stage2_spin_lock(&vm_info->boot_lock);
 	load_info = &vm_info->load_info[id];
 	if (!load_info->size)
-		return;
-
+		goto out;
 	size = load_info->size;
 	page_count = (size >> PAGE_SHIFT) + ((size & (PAGE_SIZE - 1)) ? 1 : 0);
 
@@ -134,11 +145,13 @@ void __hyp_text __el2_remap_vm_image(u32 vmid, unsigned long pfn, int id)
 	if ((load_info->el2_mapped_pages + 1) > page_count) {
 		print_string("Hostvisor tried to remap more than it told us\n");
 		printhex_ul(id);
-		return;
+		goto out;
 	}
 	map_el2_mem(target, target + PAGE_SIZE, pfn, PAGE_HYP);
 
 	load_info->el2_mapped_pages++; 
+out:
+	stage2_spin_unlock(&vm_info->boot_lock);
 }
 
 bool __hyp_text __el2_verify_and_load_images(u32 vmid)
