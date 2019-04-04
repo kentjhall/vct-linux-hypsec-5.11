@@ -88,7 +88,7 @@ u64 __hyp_text get_shadow_vttbr(u32 vmid)
 	return vm_info->vttbr;
 }
 
-void __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
+int __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 				unsigned long size, int image_type)
 {
 	struct el2_vm_info *vm_info;
@@ -97,7 +97,7 @@ void __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 	unsigned char *signature_hex = "3f8e027d94055d36a8a12de3472970e7072897a0700d09e8fd03ff78dcbeb939723ff81f098db82a1562dfd3cf1794aa61a210c733d849bcdfdf55f69014780a";
 
 	if (hypsec_get_vm_state(vmid) != READY)
-		return;
+		return -EINVAL;
 
 	vm_info = vmid_to_vm_info(vmid);
 	stage2_spin_lock(&vm_info->boot_lock);
@@ -111,9 +111,10 @@ void __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 	el2_hex2bin(vm_info->load_info[load_count].signature, signature_hex, 64);
 
 	stage2_spin_unlock(&vm_info->boot_lock);
+	return load_count;
 }
 
-void __hyp_text __el2_remap_vm_image(u32 vmid, unsigned long pfn)
+void __hyp_text __el2_remap_vm_image(u32 vmid, unsigned long pfn, int id)
 {
 	struct el2_vm_info *vm_info;
 	struct el2_load_info *load_info;
@@ -471,15 +472,15 @@ void __hyp_text decrypt_buf(u32 vmid, void *buf, uint32_t len)
 	AES_CBC_decrypt_buffer(&ctx, (uint8_t *)buf, len);
 }
 
-void el2_set_boot_info(u32 vmid, unsigned long load_addr,
+int el2_set_boot_info(u32 vmid, unsigned long load_addr,
 			unsigned long size, int type)
 {
-	kvm_call_core(HVC_SET_BOOT_INFO, vmid, load_addr, size, type);
+	return kvm_call_core(HVC_SET_BOOT_INFO, vmid, load_addr, size, type);
 }
 
-int el2_remap_vm_image(u32 vmid, unsigned long pfn)
+int el2_remap_vm_image(u32 vmid, unsigned long pfn, int id)
 {
-	return kvm_call_core(HVC_REMAP_VM_IMAGE, vmid, pfn);
+	return kvm_call_core(HVC_REMAP_VM_IMAGE, vmid, pfn, id);
 }
 
 int el2_verify_and_load_images(u32 vmid)
