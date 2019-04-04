@@ -102,7 +102,7 @@ int __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 	vm_info = vmid_to_vm_info(vmid);
 	stage2_spin_lock(&vm_info->boot_lock);
 
-	load_count = vm_info->load_info_cnt;
+	load_count = vm_info->load_info_cnt++;
 	page_count = (size >> PAGE_SHIFT) + ((size & (PAGE_SIZE - 1)) ? 1 : 0);
 	vm_info->load_info[load_count].load_addr = load_addr;
 	vm_info->load_info[load_count].size = size;
@@ -119,19 +119,24 @@ void __hyp_text __el2_remap_vm_image(u32 vmid, unsigned long pfn, int id)
 	struct el2_vm_info *vm_info;
 	struct el2_load_info *load_info;
 	struct el2_data *el2_data;
-	int count;
-	unsigned long target;
+	unsigned long target, page_count, size;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	vm_info = vmid_to_vm_info(vmid);
-	count = vm_info->load_info_cnt;
-	load_info = &vm_info->load_info[count];
+	load_info = &vm_info->load_info[id];
+	if (!load_info->size)
+		return;
+
+	size = load_info->size;
+	page_count = (size >> PAGE_SHIFT) + ((size & (PAGE_SIZE - 1)) ? 1 : 0);
 
 	target = load_info->el2_remap_addr + (load_info->el2_mapped_pages * PAGE_SIZE);
+	if ((load_info->el2_mapped_pages + 1) > page_count) {
+		print_string("Hostvisor tried to remap more than it told us\n");
+		printhex_ul(id);
+		return;
+	}
 	map_el2_mem(target, target + PAGE_SIZE, pfn, PAGE_HYP);
-
-	if ((el2_data->last_remap_ptr + EL2_REMAP_START) == (target + PAGE_SIZE))
-		vm_info->load_info_cnt++;
 
 	load_info->el2_mapped_pages++; 
 }
