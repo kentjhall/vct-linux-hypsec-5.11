@@ -31,15 +31,15 @@ static u32 __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
 		return -1;
 }
 
-static unsigned long __hyp_text alloc_remap_addr(unsigned long size)
+static unsigned long __hyp_text alloc_remap_addr(unsigned long size,
+						 unsigned long page_count)
 {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	unsigned long ret, page_count;
+	unsigned long ret;
 
 
 	stage2_spin_lock(&el2_data->remap_lock);
 	ret = EL2_REMAP_START + el2_data->last_remap_ptr;
-	page_count = (size >> PAGE_SHIFT) + ((size & (PAGE_SIZE - 1)) ? 1 : 0);
 	el2_data->last_remap_ptr += (page_count * PAGE_SIZE);
 	stage2_spin_unlock(&el2_data->remap_lock);
 
@@ -93,15 +93,20 @@ void __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 {
 	struct el2_vm_info *vm_info;
 	int load_count;
+	unsigned long page_count;
 	unsigned char *signature_hex = "3f8e027d94055d36a8a12de3472970e7072897a0700d09e8fd03ff78dcbeb939723ff81f098db82a1562dfd3cf1794aa61a210c733d849bcdfdf55f69014780a";
+
+	if (hypsec_get_vm_state(vmid) != READY)
+		return;
 
 	vm_info = vmid_to_vm_info(vmid);
 	stage2_spin_lock(&vm_info->boot_lock);
 
 	load_count = vm_info->load_info_cnt;
+	page_count = (size >> PAGE_SHIFT) + ((size & (PAGE_SIZE - 1)) ? 1 : 0);
 	vm_info->load_info[load_count].load_addr = load_addr;
 	vm_info->load_info[load_count].size = size;
-	vm_info->load_info[load_count].el2_remap_addr = alloc_remap_addr(size);
+	vm_info->load_info[load_count].el2_remap_addr = alloc_remap_addr(size, page_count);
 	vm_info->load_info[load_count].el2_mapped_pages = 0;
 	el2_hex2bin(vm_info->load_info[load_count].signature, signature_hex, 64);
 
@@ -143,6 +148,8 @@ bool __hyp_text __el2_verify_and_load_images(u32 vmid)
 
 	lock = &vm_info->boot_lock;
 	stage2_spin_lock(lock);
+	if (hypsec_get_vm_state(vmid) != READY)
+		goto out;
 
 	/* Traverse through the load info list and check the integrity of images. */
 	for (i = 0; i < vm_info->load_info_cnt; i++) {
@@ -168,6 +175,7 @@ bool __hyp_text __el2_verify_and_load_images(u32 vmid)
 	vm_info->state = VERIFIED;
 	stage2_spin_unlock(&vm_info->vm_lock);
 
+out:
 	stage2_spin_unlock(lock);
 	return res;
 }

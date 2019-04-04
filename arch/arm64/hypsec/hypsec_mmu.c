@@ -1037,7 +1037,7 @@ struct s2_trans __hyp_text handle_from_vm_info(struct el2_data *el2_data,
 	result.level = 2;
 	result.readable = true;
 	result.writable = true;
-out:
+
 	return result;
 }
 
