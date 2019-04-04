@@ -47,9 +47,6 @@ struct el2_data {
 	int used_vm_info;
 	unsigned long last_remap_ptr;
 
-	int kvm_cnt;
-	int vcpu_cnt;
-
 	struct el2_smmu_cfg smmu_cfg[EL2_SMMU_CFG_SIZE];
 	struct el2_arm_smmu_device smmu;
 	struct el2_arm_smmu_device smmus[SMMU_NUM];

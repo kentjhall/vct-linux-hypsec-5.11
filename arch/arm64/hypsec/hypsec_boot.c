@@ -31,8 +31,7 @@ static u32 __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
 		return -1;
 }
 
-static unsigned long __hyp_text alloc_remap_addr(unsigned long size,
-						 unsigned long page_count)
+static unsigned long __hyp_text alloc_remap_addr(unsigned long page_count)
 {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	unsigned long ret;
@@ -88,6 +87,11 @@ u64 __hyp_text get_shadow_vttbr(u32 vmid)
 	return vm_info->vttbr;
 }
 
+static unsigned long __hyp_text size_to_page_count(unsigned long size)
+{
+	return ((size >> PAGE_SHIFT) + ((size & (PAGE_SIZE - 1)) ? 1 : 0));
+}
+
 int __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 				unsigned long size, int image_type)
 {
@@ -109,10 +113,10 @@ int __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 		goto out;
 	}
 
-	page_count = (size >> PAGE_SHIFT) + ((size & (PAGE_SIZE - 1)) ? 1 : 0);
+	page_count = size_to_page_count(size);
 	vm_info->load_info[load_count].load_addr = load_addr;
 	vm_info->load_info[load_count].size = size;
-	vm_info->load_info[load_count].el2_remap_addr = alloc_remap_addr(size, page_count);
+	vm_info->load_info[load_count].el2_remap_addr = alloc_remap_addr(page_count);
 	vm_info->load_info[load_count].el2_mapped_pages = 0;
 	el2_hex2bin(vm_info->load_info[load_count].signature, signature_hex, 64);
 
@@ -126,7 +130,7 @@ void __hyp_text __el2_remap_vm_image(u32 vmid, unsigned long pfn, int id)
 	struct el2_vm_info *vm_info;
 	struct el2_load_info *load_info;
 	struct el2_data *el2_data;
-	unsigned long target, page_count, size;
+	unsigned long target, page_count;
 
 	if (hypsec_get_vm_state(vmid) != READY)
 		return;
@@ -138,8 +142,7 @@ void __hyp_text __el2_remap_vm_image(u32 vmid, unsigned long pfn, int id)
 	load_info = &vm_info->load_info[id];
 	if (!load_info->size)
 		goto out;
-	size = load_info->size;
-	page_count = (size >> PAGE_SHIFT) + ((size & (PAGE_SIZE - 1)) ? 1 : 0);
+	page_count = size_to_page_count(load_info->size);
 	if ((load_info->el2_mapped_pages + 1) > page_count) {
 		print_string("hostvisor tried to remap more than it told us\n");
 		printhex_ul(id);
@@ -244,37 +247,17 @@ void __hyp_text __el2_boot_from_inc_exe(u32 vmid)
 	vm_info->inc_exe = true;
 }
 
-#define KVM_SIZE	sizeof(struct kvm)
-#define VCPU_SIZE	sizeof(struct kvm_vcpu)
-#define N_KVM_PAGES	(KVM_SIZE >> PAGE_SHIFT) + ((KVM_SIZE % PAGE_SIZE) ? 1 : 0)
-#define N_VCPU_PAGES	(VCPU_SIZE >> PAGE_SHIFT) + ((VCPU_SIZE % PAGE_SIZE) ? 1 : 0)
-#define EL2_REMAP_KVM_BASE	0x10000000
-#define EL2_REMAP_VCPU_BASE	0x40000000
-static void* __hyp_text get_el2_kvm_addr(struct el2_data *el2_data)
-{
-	unsigned long npages = N_KVM_PAGES, offset;
-
-	stage2_spin_lock(&el2_data->remap_lock);
-	offset = (PAGE_SIZE * npages) * el2_data->kvm_cnt++;
-	stage2_spin_unlock(&el2_data->remap_lock);
-	return (void*)((unsigned long)EL2_REMAP_KVM_BASE | offset);
-}
-
-static void* __hyp_text get_el2_vcpu_addr(struct el2_data *el2_data)
-{
-	unsigned long npages = N_VCPU_PAGES, offset;
-
-	stage2_spin_lock(&el2_data->remap_lock);
-	offset = (PAGE_SIZE * npages) * el2_data->vcpu_cnt++;
-	stage2_spin_unlock(&el2_data->remap_lock);
-	return (void*)((unsigned long)EL2_REMAP_VCPU_BASE | offset);
-}
+#define KVM_SIZE       sizeof(struct kvm)
+#define VCPU_SIZE      sizeof(struct kvm_vcpu)
+#define N_KVM_PAGES    (KVM_SIZE >> PAGE_SHIFT) + ((KVM_SIZE % PAGE_SIZE) ? 1 : 0)
+#define N_VCPU_PAGES   (VCPU_SIZE >> PAGE_SHIFT) + ((VCPU_SIZE % PAGE_SIZE) ? 1 : 0)
 
 int __hyp_text __hypsec_register_vcpu(u32 vmid, int vcpu_id)
 {
 	struct el2_data *el2_data;
 	struct int_vcpu *int_vcpu;
 	struct el2_vm_info *vm_info;
+	void *addr;
 	int ret = 1;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -294,7 +277,8 @@ int __hyp_text __hypsec_register_vcpu(u32 vmid, int vcpu_id)
 		goto out;
 	}
 
-	int_vcpu->vcpu = get_el2_vcpu_addr(el2_data);
+	addr = (void *)alloc_remap_addr(size_to_page_count(sizeof(struct kvm_vcpu)));
+	int_vcpu->vcpu = addr;
 	int_vcpu->state = USED;
 
 out:
@@ -306,6 +290,7 @@ u32 __hyp_text __hypsec_register_kvm(void)
 {
 	u32 vmid;
 	struct el2_data *el2_data;
+	void *addr;
 
 	if (!system_supports_fpsimd())
 		return 0;
@@ -322,7 +307,8 @@ u32 __hyp_text __hypsec_register_kvm(void)
 	el2_data->vm_info[vmid].vm_lock =
 		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	el2_data->vm_info[vmid].state = USED;
-	el2_data->vm_info[vmid].kvm = get_el2_kvm_addr(el2_data);
+	addr = (void *)alloc_remap_addr(size_to_page_count(sizeof(struct kvm)));
+	el2_data->vm_info[vmid].kvm = addr;
 	el2_data->vm_info[vmid].vmid = vmid;
 	return vmid;
 }
