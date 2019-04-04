@@ -129,7 +129,7 @@ void __hyp_text __el2_remap_vm_image(u32 vmid, unsigned long pfn, int id)
 	unsigned long target, page_count, size;
 
 	if (hypsec_get_vm_state(vmid) != READY)
-		return -EINVAL;
+		return;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	vm_info = vmid_to_vm_info(vmid);
@@ -140,11 +140,15 @@ void __hyp_text __el2_remap_vm_image(u32 vmid, unsigned long pfn, int id)
 		goto out;
 	size = load_info->size;
 	page_count = (size >> PAGE_SHIFT) + ((size & (PAGE_SIZE - 1)) ? 1 : 0);
+	if ((load_info->el2_mapped_pages + 1) > page_count) {
+		print_string("hostvisor tried to remap more than it told us\n");
+		printhex_ul(id);
+		goto out;
+	}
 
 	target = load_info->el2_remap_addr + (load_info->el2_mapped_pages * PAGE_SIZE);
-	if ((load_info->el2_mapped_pages + 1) > page_count) {
-		print_string("Hostvisor tried to remap more than it told us\n");
-		printhex_ul(id);
+	if (get_hpa_owner(pfn << PAGE_SHIFT)) {
+		print_string("map_images: hostvisor tried to map invalid page\n");
 		goto out;
 	}
 	map_el2_mem(target, target + PAGE_SIZE, pfn, PAGE_HYP);
@@ -346,6 +350,10 @@ int __hyp_text __hypsec_map_one_vcpu_page(u32 vmid, int vcpu_id, unsigned long p
 	}
 
 	target = (unsigned long)int_vcpu->vcpu + (int_vcpu->vcpu_pg_cnt * PAGE_SIZE);
+	if (get_hpa_owner(pfn << PAGE_SHIFT)) {
+		print_string("\rmap_vcpu: hostvisor tried to map invalid page\n");
+		goto out;
+	}
 	map_el2_mem(target, target + PAGE_SIZE, pfn, PAGE_HYP);
 	int_vcpu->vcpu_pg_cnt++;
 	if (int_vcpu->vcpu_pg_cnt == N_VCPU_PAGES)
@@ -374,6 +382,10 @@ int __hyp_text __hypsec_map_one_kvm_page(u32 vmid, unsigned long pfn)
 	}
 
 	target = (unsigned long)vm_info->kvm + (vm_info->kvm_pg_cnt * PAGE_SIZE);
+	if (get_hpa_owner(pfn << PAGE_SHIFT)) {
+		print_string("\rmap_kvm:  hostvisor tried to map invalid page\n");
+		goto out;
+	}
 	map_el2_mem(target, target + PAGE_SIZE, pfn, PAGE_HYP);
 	vm_info->kvm_pg_cnt++;
 	if (vm_info->kvm_pg_cnt == N_KVM_PAGES)

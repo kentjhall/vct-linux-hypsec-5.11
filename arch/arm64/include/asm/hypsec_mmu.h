@@ -129,5 +129,7 @@ int map_el2_mem(unsigned long start, unsigned long end,
 void  __clear_vm_stage2_range(u32 vmid, phys_addr_t start, u64 size);
 void  __el2_encrypt_buf(u32 vmid, void *buf, uint32_t len);
 void  __el2_decrypt_buf(u32 vmid, void *buf, uint32_t len);
+
+u32 get_hpa_owner(phys_addr_t addr);
 #endif /* __ARM_STAGE2_MMU__ */
 

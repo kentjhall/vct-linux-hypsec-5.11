@@ -200,7 +200,7 @@ void * __hyp_text alloc_tmp_page(void)
 	return (void *)p_addr;
 }
 
-static u32 __hyp_text get_hpa_owner(phys_addr_t addr)
+u32 __hyp_text get_hpa_owner(phys_addr_t addr)
 {
 	u32 ret;
 	unsigned long index;
