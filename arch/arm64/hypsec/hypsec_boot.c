@@ -184,7 +184,7 @@ int __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 		return -EINVAL;
 
 	vm_info = vmid_to_vm_info(vmid);
-	stage2_spin_lock(&vm_info->boot_lock);
+	stage2_spin_lock(&vm_info->vm_lock);
 
 	load_count = vm_info->load_info_cnt++;
 	if (load_count == HYPSEC_MAX_LOAD_IMG) {
@@ -201,7 +201,7 @@ int __hyp_text __el2_set_boot_info(u32 vmid, unsigned long load_addr,
 	el2_hex2bin(vm_info->load_info[load_count].signature, signature_hex, 64);
 
 out:
-	stage2_spin_unlock(&vm_info->boot_lock);
+	stage2_spin_unlock(&vm_info->vm_lock);
 	return load_count;
 }
 
@@ -218,7 +218,7 @@ void __hyp_text __el2_remap_vm_image(u32 vmid, unsigned long pfn, int id)
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	vm_info = vmid_to_vm_info(vmid);
 
-	stage2_spin_lock(&vm_info->boot_lock);
+	stage2_spin_lock(&vm_info->vm_lock);
 	load_info = &vm_info->load_info[id];
 	if (!load_info->size)
 		goto out;
@@ -238,7 +238,7 @@ void __hyp_text __el2_remap_vm_image(u32 vmid, unsigned long pfn, int id)
 
 	load_info->el2_mapped_pages++; 
 out:
-	stage2_spin_unlock(&vm_info->boot_lock);
+	stage2_spin_unlock(&vm_info->vm_lock);
 }
 
 bool __hyp_text __el2_verify_and_load_images(u32 vmid)
