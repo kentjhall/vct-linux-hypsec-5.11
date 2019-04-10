@@ -272,7 +272,8 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 	struct kvm_vcpu *vcpu;
 	struct shadow_vcpu_context *prot_ctxt;
 
-	if (hypsec_get_vm_state(vmid) != VERIFIED)
+	/* check if vm is verified and vcpu is already active. */
+	if (!hypsec_set_vcpu_active(vmid, vcpu_id))
 		return 0;
 
 	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
@@ -331,6 +332,8 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 	__fpsimd_restore_state(&host_ctxt->gp_regs.fp_regs);
 
 	__save_shadow_kvm_regs(vcpu, prot_ctxt, exit_code);
+
+	hypsec_set_vcpu_state(vmid, vcpu_id, READY);
 
 	return exit_code;
 }

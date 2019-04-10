@@ -27,7 +27,8 @@ enum hypsec_init_state {
 	USED,
 	MAPPED,
 	READY,
-	VERIFIED
+	VERIFIED,
+	ACTIVE
 };
 
 typedef struct ARMInsnFixup {
@@ -74,6 +75,8 @@ extern int el2_set_boot_info(u32 vmid, unsigned long load_addr,
 extern int el2_remap_vm_image(u32 vmid, unsigned long pfn, int id);
 extern int el2_verify_and_load_images(u32 vmid);
 extern int hypsec_get_vm_state(u32 vmid);
+extern void hypsec_set_vcpu_state(u32 vmid, int vcpu_id, int state);
+extern int hypsec_set_vcpu_active(u32 vmid, int vcpu_id);
 
 extern bool is_valid_vm(struct kvm_vcpu *vcpu);
 extern arch_spinlock_t* get_shadow_pt_lock(u32 vmid);
