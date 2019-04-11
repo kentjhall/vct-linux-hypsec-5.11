@@ -523,8 +523,8 @@ void __hyp_text __el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
 	struct s2_page *s2_pages;
 	pgd_t *pgd, *pgdp;
 	pud_t *pud;
-	unsigned long index, s = 0;
-	int vmid;
+	unsigned long s = 0;
+	int vmid, target_vmid;
 
 	if (paddr == 0)
 		goto skip_check;
@@ -539,7 +539,6 @@ void __hyp_text __el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
 	vmid = smmu_cfg->vmid;
 	ttbr = smmu_cfg->hw_ttbr;
 
-	index = get_s2_page_index(el2_data, paddr);
 	s2_pages = el2_data->s2_pages;
 
 	while (s < size) {
@@ -548,10 +547,9 @@ void __hyp_text __el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
 			continue;
 		}
 
-		index = get_s2_page_index(el2_data, paddr + s);
+		target_vmid = get_hpa_owner(paddr + s);
 
-		if (s2_pages[index].vmid != vmid &&
-		    s2_pages[index].vmid != 0) {
+		if (target_vmid && target_vmid != vmid) {
 			/* Inject exception here */
 			print_string("\rsmmu map else\n");
 			printhex_ul(paddr);
