@@ -265,19 +265,16 @@ static int __hyp_text __hypsec_init_vcpu(u32 vmid, int vcpu_id)
 
 	vm_info = vmid_to_vm_info(vmid);
 	stage2_spin_lock(&vm_info->vm_lock);
-	if (vm_info->state != READY) {
-		ret = -EINVAL;
-		goto out;
-	}
 
 	int_vcpu = vcpu_id_to_int_vcpu(vm_info, vcpu_id);
 	if (!int_vcpu || int_vcpu->state != MAPPED)
 		goto out;
 
 	new_ctxt = alloc_shadow_ctxt(el2_data);
-	if (!new_ctxt)
+	if (!new_ctxt) {
+		print_string("\rfailed to allocate shadow ctxt\n");
 		goto out;
-	else {
+	} else {
 		new_ctxt->vmid = vmid;
 		vm_info->shadow_ctxt[vcpu_id] = new_ctxt;
 	}

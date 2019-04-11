@@ -59,7 +59,6 @@ struct el2_vm_info {
 	enum hypsec_init_state state;
 	struct el2_load_info load_info[HYPSEC_MAX_LOAD_IMG];
 	arch_spinlock_t shadow_pt_lock;
-	arch_spinlock_t boot_lock;
 	arch_spinlock_t vm_lock;
 	struct kvm *kvm;
 	struct int_vcpu int_vcpus[HYPSEC_MAX_VCPUS];

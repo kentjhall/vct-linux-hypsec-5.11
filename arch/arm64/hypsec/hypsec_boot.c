@@ -252,9 +252,9 @@ bool __hyp_text __el2_verify_and_load_images(u32 vmid)
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
-	lock = &vm_info->boot_lock;
+	lock = &vm_info->vm_lock;
 	stage2_spin_lock(lock);
-	if (hypsec_get_vm_state(vmid) != READY)
+	if (vm_info->state != READY)
 		goto out;
 
 	/* Traverse through the load info list and check the integrity of images. */
@@ -277,9 +277,8 @@ bool __hyp_text __el2_verify_and_load_images(u32 vmid)
 			load_info.el2_remap_addr, load_info.el2_mapped_pages);
 	}
 
-	stage2_spin_lock(&vm_info->vm_lock);
+	/* We assume the images are always verified for POC now. */
 	vm_info->state = VERIFIED;
-	stage2_spin_unlock(&vm_info->vm_lock);
 
 out:
 	stage2_spin_unlock(lock);
@@ -480,7 +479,6 @@ int __hyp_text __hypsec_init_vm(u32 vmid)
 
 	vm_info->inc_exe = false;
 	vm_info->shadow_pt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	vm_info->boot_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
 	/* Hardcoded VM's keys for now. */
 	el2_memcpy(vm_info->key, key, 16);
