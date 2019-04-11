@@ -122,7 +122,7 @@ phys_addr_t host_alloc_stage2_page(unsigned int num)
 		return 0;
 
 	el2_data = kvm_ksym_ref(el2_data_start);
-	stage2_spin_lock(&el2_data->page_pool_lock);
+	stage2_spin_lock(&el2_data->abs_lock);
 
 	/* Check if we're out of memory in the reserved area */
 	BUG_ON(el2_data->used_pages >= STAGE2_NUM_NORM_PAGES);
@@ -140,7 +140,7 @@ phys_addr_t host_alloc_stage2_page(unsigned int num)
 	}
 	el2_data->used_pages += num;
 
-	stage2_spin_unlock(&el2_data->page_pool_lock);
+	stage2_spin_unlock(&el2_data->abs_lock);
 	return (phys_addr_t)p_addr;
 }
 
@@ -153,7 +153,7 @@ void* __hyp_text alloc_stage2_page(unsigned int num)
 		return NULL;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	stage2_spin_lock(&el2_data->page_pool_lock);
+	stage2_spin_lock(&el2_data->abs_lock);
 
 	/* Check if we're out of memory in the reserved area */
 	if (el2_data->used_pages >= STAGE2_NUM_NORM_PAGES) {
@@ -174,7 +174,7 @@ void* __hyp_text alloc_stage2_page(unsigned int num)
 	}
 	el2_data->used_pages += num;
 
-	stage2_spin_unlock(&el2_data->page_pool_lock);
+	stage2_spin_unlock(&el2_data->abs_lock);
 	return (void *)p_addr;
 }
 
@@ -184,7 +184,7 @@ void * __hyp_text alloc_tmp_page(void)
 	struct el2_data *el2_data;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	stage2_spin_lock(&el2_data->tmp_page_pool_lock);
+	stage2_spin_lock(&el2_data->abs_lock);
 
 	/* Check if we're out of memory in the reserved area */
 	if (el2_data->used_tmp_pages >= STAGE2_NUM_TMP_PAGES) {
@@ -196,7 +196,7 @@ void * __hyp_text alloc_tmp_page(void)
 	p_addr = (u64)start + (PAGE_SIZE * el2_data->used_tmp_pages);
 	el2_data->used_tmp_pages++;
 
-	stage2_spin_unlock(&el2_data->tmp_page_pool_lock);
+	stage2_spin_unlock(&el2_data->abs_lock);
 	return (void *)p_addr;
 }
 

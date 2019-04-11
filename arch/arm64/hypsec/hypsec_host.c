@@ -134,13 +134,8 @@ void init_el2_data_page(void)
 	el2_data->used_tmp_pages = 0;
 	el2_data->page_pool_start = (u64)__pa(stage2_pgs_start);
 
-	el2_data->fault_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	el2_data->s2pages_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->page_pool_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->tmp_page_pool_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->shadow_vcpu_ctxt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->vmid_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->remap_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->abs_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
 	memset(&el2_data->arch, 0, sizeof(struct s2_cpu_arch));
 
@@ -229,7 +224,7 @@ static __hyp_text struct shadow_vcpu_context *alloc_shadow_ctxt(
 {
 	int index;
 	struct shadow_vcpu_context *ctxt = NULL;
-	stage2_spin_lock(&el2_data->shadow_vcpu_ctxt_lock);
+	stage2_spin_lock(&el2_data->abs_lock);
 
 	index = el2_data->used_shadow_vcpu_ctxt++;
 	if (index > NUM_SHADOW_VCPU_CTXT) {
@@ -240,7 +235,7 @@ static __hyp_text struct shadow_vcpu_context *alloc_shadow_ctxt(
 	ctxt = &el2_data->shadow_vcpu_ctxt[index];
 
 err_unlock:
-	stage2_spin_unlock(&el2_data->shadow_vcpu_ctxt_lock);
+	stage2_spin_unlock(&el2_data->abs_lock);
 	return ctxt;
 }
 

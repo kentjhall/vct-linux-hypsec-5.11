@@ -21,9 +21,9 @@
 static u32 __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
 {
 	u32 vmid;
-	stage2_spin_lock(&el2_data->vmid_lock);
+	stage2_spin_lock(&el2_data->abs_lock);
 	vmid = el2_data->next_vmid++;
-	stage2_spin_unlock(&el2_data->vmid_lock);
+	stage2_spin_unlock(&el2_data->abs_lock);
 
 	if (vmid < EL2_MAX_VMID)
 		return vmid;
@@ -37,10 +37,10 @@ static unsigned long __hyp_text alloc_remap_addr(unsigned long page_count)
 	unsigned long ret;
 
 
-	stage2_spin_lock(&el2_data->remap_lock);
+	stage2_spin_lock(&el2_data->abs_lock);
 	ret = EL2_REMAP_START + el2_data->last_remap_ptr;
 	el2_data->last_remap_ptr += (page_count * PAGE_SIZE);
-	stage2_spin_unlock(&el2_data->remap_lock);
+	stage2_spin_unlock(&el2_data->abs_lock);
 
 	return ret;
 }
