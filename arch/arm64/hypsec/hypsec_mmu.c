@@ -376,12 +376,16 @@ void __hyp_text walk_el2_pgd(unsigned long addr, struct s2_trans *result)
 {
 	pgd_t *ttbr_el2 = (pgd_t *)read_sysreg(ttbr0_el2);
 	pgd_t *pgd;
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	ttbr_el2 = __el2_va(ttbr_el2);
 	el2_memset(result, 0, sizeof(struct s2_trans));
+
+	stage2_spin_lock(&el2_data->el2_pt_lock);
 	pgd = ttbr_el2 + pgd_index(addr);
 	if (stage2_pgd_present(*pgd))
 		walk_el2_pud(pgd, addr, result);
+	stage2_spin_unlock(&el2_data->el2_pt_lock);
 
 	return;
 }
@@ -943,6 +947,7 @@ int __hyp_text map_el2_mem(unsigned long start, unsigned long end,
 	pud_t *pud;
 	unsigned long addr, next;
 	int err = 0;
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	pgdp = (pgd_t *)read_sysreg(ttbr0_el2);
 	pgdp =__el2_va(pgdp);
@@ -950,6 +955,7 @@ int __hyp_text map_el2_mem(unsigned long start, unsigned long end,
 	addr = start & PAGE_MASK;
 	end = PAGE_ALIGN(end);
 
+	stage2_spin_lock(&el2_data->el2_pt_lock);
 	do {
 		pgd =  pgdp + pgd_index(addr);
 		if (pgd_none(*pgd)) {
@@ -967,6 +973,7 @@ int __hyp_text map_el2_mem(unsigned long start, unsigned long end,
 	} while (addr = next, addr != end);
 
 out:
+	stage2_spin_unlock(&el2_data->el2_pt_lock);
 	return err;
 }
 
