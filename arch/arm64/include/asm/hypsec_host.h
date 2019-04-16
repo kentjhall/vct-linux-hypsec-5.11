@@ -14,6 +14,11 @@
 #define SHADOW_SYS_REGS_DESC_SIZE	(SHADOW_SYS_REGS_SIZE + SHADOW_32BIT_REGS_SIZE)
 #define NUM_SHADOW_VCPU_CTXT		128
 
+struct shared_data {
+	struct kvm kvm_pool[EL2_MAX_VMID];
+	struct kvm_vcpu vcpu_pool[EL2_MAX_VMID * HYPSEC_MAX_VCPUS];
+};
+
 struct el2_data {
 	struct memblock_region regions[32];
 	struct s2_memblock_info s2_memblock_info[32];

@@ -18,6 +18,15 @@
 #include "ed25519/ed25519.h"
 #include "tiny-AES-c/aes.h"
 
+struct kvm* __hyp_text hypsec_alloc_vm(u32 vmid)
+{
+	struct shared_data *shared_data;
+	shared_data = kvm_ksym_ref(shared_data_start);
+	if (vmid >= EL2_MAX_VMID)
+		BUG();
+	return &shared_data->kvm_pool[vmid];
+}
+
 static u32 __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
 {
 	u32 vmid;
@@ -385,8 +394,8 @@ u32 __hyp_text __hypsec_register_kvm(void)
 
 	el2_data->vm_info[vmid].vm_lock =
 		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->vm_info[vmid].state = USED;
-	addr = (void *)alloc_remap_addr(size_to_page_count(sizeof(struct kvm)));
+	el2_data->vm_info[vmid].state = MAPPED;
+	addr = kern_hyp_va(hypsec_alloc_vm(vmid));
 	el2_data->vm_info[vmid].kvm = addr;
 	el2_data->vm_info[vmid].vmid = vmid;
 	return vmid;

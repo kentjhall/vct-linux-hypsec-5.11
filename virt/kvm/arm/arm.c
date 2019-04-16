@@ -128,6 +128,16 @@ void kvm_arch_check_processor_compat(void *rtn)
 	*(int *)rtn = 0;
 }
 
+extern struct kvm* hypsec_alloc_vm(u32 vmid);
+struct kvm* hypsec_arch_alloc_vm(void)
+{
+	struct kvm *kvm;
+	int vmid = hypsec_register_kvm();
+	BUG_ON(vmid <= 0);
+	kvm = hypsec_alloc_vm(vmid);
+	kvm->arch.vmid = (u32)vmid;
+	return kvm;
+}
 
 /**
  * kvm_arch_init_vm - initializes a VM data structure
@@ -154,16 +164,6 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 #ifndef CONFIG_STAGE2_KERNEL
 	ret = create_hyp_mappings(kvm, kvm + 1, PAGE_HYP);
 	if (ret)
-		goto out_free_stage2_pgd;
-#else
-	ret = hypsec_register_kvm();
-	if (ret <= 0)
-		goto out_free_stage2_pgd;
-	else
-		kvm->arch.vmid = (u32)ret;
-
-	ret = map_kvm_page_to_hyp(kvm->arch.vmid, kvm, kvm + 1);
-	if (ret < 0)
 		goto out_free_stage2_pgd;
 #endif
 
@@ -288,18 +288,24 @@ long kvm_arch_dev_ioctl(struct file *filp,
 
 struct kvm *kvm_arch_alloc_vm(void)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	if (!has_vhe())
 		return kzalloc(sizeof(struct kvm), GFP_KERNEL);
 
 	return vzalloc(sizeof(struct kvm));
+#else
+	return hypsec_arch_alloc_vm();
+#endif
 }
 
 void kvm_arch_free_vm(struct kvm *kvm)
 {
+#ifndef CONFIG_STAGE2_KERNEL
 	if (!has_vhe())
 		kfree(kvm);
 	else
 		vfree(kvm);
+#endif
 }
 
 struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
@@ -1659,6 +1665,14 @@ static int init_hyp_mode(void)
 			PAGE_HYP);
 	if (err) {
 		kvm_err("Cannot map stage 2 data pages\n");
+		goto out_err;
+	}
+
+	err = create_hyp_mappings((void *)kvm_ksym_ref(shared_data_start),
+			(void *)kvm_ksym_ref(shared_data_end),
+			PAGE_HYP);
+	if (err) {
+		kvm_err("Cannot map shared data pages\n");
 		goto out_err;
 	}
 

@@ -106,6 +106,16 @@ static struct s2_sys_reg_desc host_sys_reg_descs[] = {
 	  FPEXC32_EL2, 0x70 }
 };
 
+void el2_shared_data_init(void)
+{
+	struct el2_shared_data *shared_data;
+
+	shared_data = (void *)kvm_ksym_ref(shared_data_start);
+	memset(shared_data, 0, sizeof(struct shared_data));
+	printk("EL2: cleared %lx byte data size %lx\n",
+		sizeof(struct shared_data), PAGE_SIZE * (PAGE_SIZE * 64));
+}
+
 void init_el2_data_page(void)
 {
 	int i = 0, index = 0;
@@ -164,6 +174,9 @@ void init_el2_data_page(void)
 		el2_data->s2_sys_reg_descs[i] = host_sys_reg_descs[i];
 
 	el2_data->next_vmid = 1;
+
+	/* We init intermediate data structure here. */
+	el2_shared_data_init();
 
 	return;
 }
