@@ -52,7 +52,6 @@
 #include <asm/sections.h>
 #ifdef CONFIG_STAGE2_KERNEL
 #include <asm/hypsec_host.h>
-extern int map_kvm_page_to_hyp(u32 vmid, void *from, void *to);
 extern int map_vcpu_page_to_hyp(u32 vmid, int vcpu_id, void *from, void *to);
 #endif
 

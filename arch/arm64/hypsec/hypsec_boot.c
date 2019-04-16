@@ -438,38 +438,6 @@ out:
 	return ret;
 }
 
-int __hyp_text __hypsec_map_one_kvm_page(u32 vmid, unsigned long pfn)
-{
-	struct el2_data *el2_data;
-	struct el2_vm_info *vm_info;
-	unsigned long target;
-	int ret = 1;
-
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	vm_info = vmid_to_vm_info(vmid);
-	stage2_spin_lock(&vm_info->vm_lock);
-
-	/* Return if vm_info has not been allocated OR kvm is remapped */
-	if (vm_info->state != USED) {
-		ret = -EINVAL;
-		goto out;
-	}
-
-	target = (unsigned long)vm_info->kvm + (vm_info->kvm_pg_cnt * PAGE_SIZE);
-	if (get_hpa_owner(pfn << PAGE_SHIFT)) {
-		print_string("\rmap_kvm:  hostvisor tried to map invalid page\n");
-		goto out;
-	}
-	map_el2_mem(target, target + PAGE_SIZE, pfn, PAGE_HYP);
-	vm_info->kvm_pg_cnt++;
-	if (vm_info->kvm_pg_cnt == N_KVM_PAGES)
-		vm_info->state = MAPPED;
-
-out:
-	stage2_spin_unlock(&vm_info->vm_lock);
-	return ret;
-}
-
 int __hyp_text __hypsec_init_vm(u32 vmid)
 {
 	struct el2_data *el2_data;

@@ -386,10 +386,6 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		ret = (int)__hypsec_register_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
 		hr->regs[31] = (u64)ret;
 		break;
-	case HVC_MAP_ONE_KVM_PAGE:
-		ret = (int)__hypsec_map_one_kvm_page((u32)hr->regs[1], (unsigned long)hr->regs[2]);
-		hr->regs[31] = (int)ret;
-		break;
 	case HVC_MAP_ONE_VCPU_PAGE:
 		ret = (int)__hypsec_map_one_vcpu_page((u32)hr->regs[1], (int)hr->regs[2], (unsigned long)hr->regs[3]);
 		hr->regs[31] = (int)ret;
@@ -415,11 +411,6 @@ int hypsec_register_kvm(void)
 int hypsec_register_vcpu(u32 vmid, int vcpu_id)
 {
 	return kvm_call_core((void *)HVC_REGISTER_VCPU, vmid, vcpu_id);
-}
-
-int hypsec_map_one_kvm_page(u32 vmid, unsigned long pfn)
-{
-	return kvm_call_core(HVC_MAP_ONE_KVM_PAGE, vmid, pfn);
 }
 
 int hypsec_map_one_vcpu_page(u32 vmid, int vcpu_id, unsigned long pfn)

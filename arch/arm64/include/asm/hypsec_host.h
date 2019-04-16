@@ -117,7 +117,6 @@ extern void init_hypsec_io(void);
 /* VM Bootstrap */
 extern int hypsec_register_kvm(void);
 extern int hypsec_register_vcpu(u32 vmid, int vcpu_id);
-extern int hypsec_map_one_kvm_page(u32 vmid, unsigned long pfn);
 extern int hypsec_map_one_vcpu_page(u32 vmid, int vcpu_id, unsigned long pfn);
 extern int hypsec_init_vm(u32 vmid);
 extern int hypsec_init_vcpu(u32 vmid, int vcpu_id);
