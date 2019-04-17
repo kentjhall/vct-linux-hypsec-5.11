@@ -263,12 +263,6 @@ static int __hyp_text __hypsec_init_vcpu(u32 vmid, int vcpu_id)
 	struct int_vcpu *int_vcpu;
 
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	/*
-	 * We cannot protect shadow ctxt if vcpu isn't aligned
-	 * to PAGE_SIZE so we just bailed if it's the case.
-	 */
-	if ((u64)vcpu & (PAGE_SIZE -1))
-		return ret;
 
 	vcpu->arch.vmid = vmid;
 
@@ -386,10 +380,6 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		ret = (int)__hypsec_register_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
 		hr->regs[31] = (u64)ret;
 		break;
-	case HVC_MAP_ONE_VCPU_PAGE:
-		ret = (int)__hypsec_map_one_vcpu_page((u32)hr->regs[1], (int)hr->regs[2], (unsigned long)hr->regs[3]);
-		hr->regs[31] = (int)ret;
-		break;
 	case HVC_INIT_VM:
 		ret = (int)__hypsec_init_vm((u32)hr->regs[1]);
 		hr->regs[31] = (int)ret;
@@ -411,11 +401,6 @@ int hypsec_register_kvm(void)
 int hypsec_register_vcpu(u32 vmid, int vcpu_id)
 {
 	return kvm_call_core((void *)HVC_REGISTER_VCPU, vmid, vcpu_id);
-}
-
-int hypsec_map_one_vcpu_page(u32 vmid, int vcpu_id, unsigned long pfn)
-{
-	return kvm_call_core(HVC_MAP_ONE_VCPU_PAGE, vmid, vcpu_id, pfn);
 }
 
 int hypsec_init_vm(u32 vmid)

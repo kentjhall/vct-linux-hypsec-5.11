@@ -127,7 +127,6 @@ void kvm_arch_check_processor_compat(void *rtn)
 	*(int *)rtn = 0;
 }
 
-extern struct kvm* hypsec_alloc_vm(u32 vmid);
 struct kvm* hypsec_arch_alloc_vm(void)
 {
 	struct kvm *kvm;
@@ -322,7 +321,11 @@ struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
 		goto out;
 	}
 
+#ifndef CONFIG_STAGE2_KERNEL
 	vcpu = kmem_cache_zalloc(kvm_vcpu_cache, GFP_KERNEL);
+#else
+	vcpu = hypsec_alloc_vcpu(kvm->arch.vmid, id);
+#endif
 	if (!vcpu) {
 		err = -ENOMEM;
 		goto out;
@@ -341,16 +344,15 @@ struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
 	if (err < 0)
 		goto vcpu_uninit;
 
-	err = map_vcpu_page_to_hyp(kvm->arch.vmid, id, vcpu, vcpu + 1);
-	if (err < 0)
-		goto free_vcpu;
 #endif
 
 	return vcpu;
 vcpu_uninit:
 	kvm_vcpu_uninit(vcpu);
 free_vcpu:
+#ifndef CONFIG_STAGE2_KERNEL
 	kmem_cache_free(kvm_vcpu_cache, vcpu);
+#endif
 out:
 	return ERR_PTR(err);
 }
@@ -368,7 +370,9 @@ void kvm_arch_vcpu_free(struct kvm_vcpu *vcpu)
 	kvm_timer_vcpu_terminate(vcpu);
 	kvm_pmu_vcpu_destroy(vcpu);
 	kvm_vcpu_uninit(vcpu);
+#ifndef CONFIG_STAGE2_KERNEL
 	kmem_cache_free(kvm_vcpu_cache, vcpu);
+#endif
 }
 
 void kvm_arch_vcpu_destroy(struct kvm_vcpu *vcpu)

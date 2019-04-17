@@ -63,7 +63,6 @@
 /* VM INIT */
 #define HVC_REGISTER_KVM 13
 #define HVC_REGISTER_VCPU 14
-#define HVC_MAP_ONE_VCPU_PAGE 16
 #define HVC_INIT_VM 17
 #define HVC_INIT_VCPU 18
 /* VM MGMT */

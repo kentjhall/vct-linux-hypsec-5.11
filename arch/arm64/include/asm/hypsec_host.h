@@ -117,7 +117,6 @@ extern void init_hypsec_io(void);
 /* VM Bootstrap */
 extern int hypsec_register_kvm(void);
 extern int hypsec_register_vcpu(u32 vmid, int vcpu_id);
-extern int hypsec_map_one_vcpu_page(u32 vmid, int vcpu_id, unsigned long pfn);
 extern int hypsec_init_vm(u32 vmid);
 extern int hypsec_init_vcpu(u32 vmid, int vcpu_id);
 
@@ -131,6 +130,9 @@ struct el2_vm_info* vmid_to_vm_info(u32 vmid);
 struct int_vcpu* vcpu_id_to_int_vcpu(struct el2_vm_info *vm_info, int vcpu_id);
 
 extern void map_vgic_cpu_to_shadow_s2pt(u32 vmid, struct el2_data *el2_data);
+
+extern struct kvm* hypsec_alloc_vm(u32 vmid);
+extern struct kvm_vcpu* hypsec_alloc_vcpu(u32 vmid, int vcpu_id);
 
 static inline int is_smmu_range(struct el2_data *el2_data, phys_addr_t addr)
 {

@@ -27,6 +27,28 @@ struct kvm* __hyp_text hypsec_alloc_vm(u32 vmid)
 	return &shared_data->kvm_pool[vmid];
 }
 
+struct kvm_vcpu* __hyp_text hypsec_alloc_vcpu(u32 vmid, int vcpu_id)
+{
+	struct shared_data *shared_data;
+	int index;
+	shared_data = kvm_ksym_ref(shared_data_start);
+	if (vmid >= EL2_MAX_VMID || vcpu_id >= HYPSEC_MAX_VCPUS)
+		BUG();
+	index = (vmid * HYPSEC_MAX_VCPUS) + vcpu_id;
+	return &shared_data->vcpu_pool[index];
+}
+
+struct kvm_vcpu* __hyp_text hypsec_get_vcpu(u32 vmid, int vcpu_id)
+{
+	struct shared_data *shared_data;
+	int index;
+	shared_data = kvm_ksym_ref(shared_data_start);
+	if (vmid >= EL2_MAX_VMID || vcpu_id >= HYPSEC_MAX_VCPUS)
+		BUG();
+	index = (vmid * HYPSEC_MAX_VCPUS) + vcpu_id;
+	return &shared_data->vcpu_pool[index];
+}
+
 static u32 __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
 {
 	u32 vmid;
@@ -365,9 +387,9 @@ int __hyp_text __hypsec_register_vcpu(u32 vmid, int vcpu_id)
 		goto out;
 	}
 
-	addr = (void *)alloc_remap_addr(size_to_page_count(sizeof(struct kvm_vcpu)));
+	addr = kern_hyp_va(hypsec_get_vcpu(vmid, vcpu_id));
 	int_vcpu->vcpu = addr;
-	int_vcpu->state = USED;
+	int_vcpu->state = MAPPED;
 
 out:
 	stage2_spin_unlock(&vm_info->vm_lock);
@@ -399,43 +421,6 @@ u32 __hyp_text __hypsec_register_kvm(void)
 	el2_data->vm_info[vmid].kvm = addr;
 	el2_data->vm_info[vmid].vmid = vmid;
 	return vmid;
-}
-
-int __hyp_text __hypsec_map_one_vcpu_page(u32 vmid, int vcpu_id, unsigned long pfn)
-{
-	struct el2_data *el2_data;
-	struct el2_vm_info *vm_info;
-	struct int_vcpu *int_vcpu;
-	unsigned long target;
-	int ret = 1;
-
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-
-	vm_info = vmid_to_vm_info(vmid);
-	/* Return if vm_info has not been allocated OR kvm is remapped */
-	if (vm_info->state != READY)
-		return -EINVAL;
-
-	stage2_spin_lock(&vm_info->vm_lock);
-	int_vcpu = vcpu_id_to_int_vcpu(vm_info, vcpu_id);
-	if (!int_vcpu || int_vcpu->state != USED) {
-		ret = -EINVAL;
-		goto out;
-	}
-
-	target = (unsigned long)int_vcpu->vcpu + (int_vcpu->vcpu_pg_cnt * PAGE_SIZE);
-	if (get_hpa_owner(pfn << PAGE_SHIFT)) {
-		print_string("\rmap_vcpu: hostvisor tried to map invalid page\n");
-		goto out;
-	}
-	map_el2_mem(target, target + PAGE_SIZE, pfn, PAGE_HYP);
-	int_vcpu->vcpu_pg_cnt++;
-	if (int_vcpu->vcpu_pg_cnt == N_VCPU_PAGES)
-		int_vcpu->state = MAPPED;
-
-out:
-	stage2_spin_unlock(&vm_info->vm_lock);
-	return ret;
 }
 
 int __hyp_text __hypsec_init_vm(u32 vmid)
