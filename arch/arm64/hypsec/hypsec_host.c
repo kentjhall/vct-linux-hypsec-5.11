@@ -322,10 +322,6 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		ret = (int)__hypsec_register_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
 		hr->regs[31] = (u64)ret;
 		break;
-	case HVC_INIT_VM:
-		ret = (int)__hypsec_init_vm((u32)hr->regs[1]);
-		hr->regs[31] = (int)ret;
-		break;
 	default:
 		__hyp_panic();
 	};
@@ -339,9 +335,4 @@ int hypsec_register_kvm(void)
 int hypsec_register_vcpu(u32 vmid, int vcpu_id)
 {
 	return kvm_call_core((void *)HVC_REGISTER_VCPU, vmid, vcpu_id);
-}
-
-int hypsec_init_vm(u32 vmid)
-{
-	return kvm_call_core(HVC_INIT_VM, vmid);
 }

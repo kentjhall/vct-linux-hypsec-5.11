@@ -432,8 +432,13 @@ out:
 u32 __hyp_text __hypsec_register_kvm(void)
 {
 	u32 vmid;
-	struct el2_data *el2_data;
+	u64 vttbr, vmid64;
 	void *addr;
+	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
+	uint8_t iv[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
+	unsigned char *public_key_hex = "25f2d889403a586265eeff77d54687971301c280a02a4b5e7a416449be2ab239";
+	struct el2_vm_info *vm_info;
+	struct el2_data *el2_data;
 
 	if (!system_supports_fpsimd())
 		return 0;
@@ -447,53 +452,33 @@ u32 __hyp_text __hypsec_register_kvm(void)
 	if (vmid < 0)
 		return 0;
 
-	el2_data->vm_info[vmid].vm_lock =
-		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->vm_info[vmid].state = MAPPED;
-	addr = kern_hyp_va(hypsec_alloc_vm(vmid));
-	el2_data->vm_info[vmid].kvm = addr;
-	el2_data->vm_info[vmid].vmid = vmid;
-	return vmid;
-}
-
-int __hyp_text __hypsec_init_vm(u32 vmid)
-{
-	struct el2_data *el2_data;
-	u64 vttbr, vmid64;
-	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
-	uint8_t iv[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
-	unsigned char *public_key_hex = "25f2d889403a586265eeff77d54687971301c280a02a4b5e7a416449be2ab239";
-	struct el2_vm_info *vm_info;
-
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	vm_info = vmid_to_vm_info(vmid);
-
 	stage2_spin_lock(&vm_info->vm_lock);
-	if (vm_info->state != MAPPED)
-		goto out_unlock;
+	//el2_data->vm_info[vmid].vm_lock =
+	//	(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
 	vm_info->inc_exe = false;
 	vm_info->shadow_pt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	vm_info->vmid = vmid;
+
+	addr = kern_hyp_va(hypsec_alloc_vm(vmid));
+	el2_data->vm_info[vmid].kvm = addr;
 
 	/* Hardcoded VM's keys for now. */
 	el2_memcpy(vm_info->key, key, 16);
 	el2_memcpy(vm_info->iv, iv, 16);
 	el2_hex2bin(vm_info->public_key, public_key_hex, 32);
 
-	/* Allocates a 8KB page for stage 2 pgd */
 	vttbr = (u64)alloc_stage2_page(S2_PGD_PAGES_NUM);
-
 	/* Supports 8-bit VMID */
 	vmid64 = ((u64)(vmid) << VTTBR_VMID_SHIFT) & VTTBR_VMID_MASK(8);
 	vm_info->vttbr = vttbr | vmid64;
 
 	map_vgic_cpu_to_shadow_s2pt(vmid, el2_data);
-
 	vm_info->state = READY;
 
-out_unlock:
 	stage2_spin_unlock(&vm_info->vm_lock);
-	return 0;
+	return vmid;
 }
 
 void __hyp_text encrypt_buf(u32 vmid, void *buf, uint32_t len)

@@ -169,11 +169,6 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 
 	/* Mark the initial VMID generation invalid */
 	kvm->arch.vmid_gen = 0;
-#ifdef CONFIG_STAGE2_KERNEL
-	ret = hypsec_init_vm(kvm->arch.vmid);
-	if (ret)
-		goto out_free_stage2_pgd;
-#endif
 
 	/* The maximum number of VCPUs is limited by the host's GIC model */
 	kvm->arch.max_vcpus = vgic_present ?

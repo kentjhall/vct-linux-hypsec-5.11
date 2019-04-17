@@ -63,7 +63,6 @@
 /* VM INIT */
 #define HVC_REGISTER_KVM 13
 #define HVC_REGISTER_VCPU 14
-#define HVC_INIT_VM 17
 /* VM MGMT */
 #define HVC_BOOT_FROM_SAVED_VM 19
 #define HVC_ENCRYPT_BUF 20
