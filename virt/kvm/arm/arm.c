@@ -619,9 +619,6 @@ static int kvm_vcpu_first_run_init(struct kvm_vcpu *vcpu)
 	if (likely(vcpu->arch.has_run_once))
 		return 0;
 #ifdef CONFIG_STAGE2_KERNEL
-	if (!hypsec_init_vcpu(kvm->arch.vmid, vcpu->vcpu_id))
-		return 1;
-
 	spin_lock(&kvm->hypsec_lock);
 	if (!kvm->verified) {
 		ret = el2_verify_and_load_images(kvm->arch.vmid);

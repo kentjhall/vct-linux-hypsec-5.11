@@ -62,6 +62,26 @@ static u32 __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
 		return -1;
 }
 
+static __hyp_text struct shadow_vcpu_context *alloc_shadow_ctxt(
+					struct el2_data *el2_data)
+{
+	int index;
+	struct shadow_vcpu_context *ctxt = NULL;
+	stage2_spin_lock(&el2_data->abs_lock);
+
+	index = el2_data->used_shadow_vcpu_ctxt++;
+	if (index > NUM_SHADOW_VCPU_CTXT) {
+		print_string("\rout of shadow ctxt\n");
+		goto err_unlock;
+	}
+	el2_data->shadow_vcpu_ctxt[index].dirty = -1;
+	ctxt = &el2_data->shadow_vcpu_ctxt[index];
+
+err_unlock:
+	stage2_spin_unlock(&el2_data->abs_lock);
+	return ctxt;
+}
+
 static unsigned long __hyp_text alloc_remap_addr(unsigned long page_count)
 {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -367,6 +387,8 @@ int __hyp_text __hypsec_register_vcpu(u32 vmid, int vcpu_id)
 	struct el2_data *el2_data;
 	struct int_vcpu *int_vcpu;
 	struct el2_vm_info *vm_info;
+	struct shadow_vcpu_context *new_ctxt = NULL;
+	struct kvm_vcpu *vcpu;
 	void *addr;
 	int ret = 1;
 
@@ -389,8 +411,19 @@ int __hyp_text __hypsec_register_vcpu(u32 vmid, int vcpu_id)
 
 	addr = kern_hyp_va(hypsec_get_vcpu(vmid, vcpu_id));
 	int_vcpu->vcpu = addr;
-	int_vcpu->state = MAPPED;
 
+	new_ctxt = alloc_shadow_ctxt(el2_data);
+	if (!new_ctxt) {
+		print_string("\rfailed to allocate shadow ctxt\n");
+		goto out;
+	} else {
+		new_ctxt->vmid = vmid;
+		vm_info->shadow_ctxt[vcpu_id] = new_ctxt;
+	}
+
+	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
+	vcpu->arch.vmid = vmid;
+	int_vcpu->state = READY;
 out:
 	stage2_spin_unlock(&vm_info->vm_lock);
 	return ret;

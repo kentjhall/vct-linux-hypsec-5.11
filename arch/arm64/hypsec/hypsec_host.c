@@ -233,64 +233,6 @@ out:
 	return ret;
 }
 
-static __hyp_text struct shadow_vcpu_context *alloc_shadow_ctxt(
-					struct el2_data *el2_data)
-{
-	int index;
-	struct shadow_vcpu_context *ctxt = NULL;
-	stage2_spin_lock(&el2_data->abs_lock);
-
-	index = el2_data->used_shadow_vcpu_ctxt++;
-	if (index > NUM_SHADOW_VCPU_CTXT) {
-		print_string("\rout of shadow ctxt\n");
-		goto err_unlock;
-	}
-	el2_data->shadow_vcpu_ctxt[index].dirty = -1;
-	ctxt = &el2_data->shadow_vcpu_ctxt[index];
-
-err_unlock:
-	stage2_spin_unlock(&el2_data->abs_lock);
-	return ctxt;
-}
-
-static int __hyp_text __hypsec_init_vcpu(u32 vmid, int vcpu_id)
-{
-	struct el2_data *el2_data;
-	struct shadow_vcpu_context *new_ctxt = NULL;
-	struct el2_vm_info *vm_info;
-	int ret = 0;
-	struct kvm_vcpu *vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
-	struct int_vcpu *int_vcpu;
-
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-
-	vcpu->arch.vmid = vmid;
-
-	vm_info = vmid_to_vm_info(vmid);
-	stage2_spin_lock(&vm_info->vm_lock);
-
-	int_vcpu = vcpu_id_to_int_vcpu(vm_info, vcpu_id);
-	if (!int_vcpu || int_vcpu->state != MAPPED)
-		goto out;
-
-	new_ctxt = alloc_shadow_ctxt(el2_data);
-	if (!new_ctxt) {
-		print_string("\rfailed to allocate shadow ctxt\n");
-		goto out;
-	} else {
-		new_ctxt->vmid = vmid;
-		vm_info->shadow_ctxt[vcpu_id] = new_ctxt;
-	}
-
-	ret = 1;
-
-	int_vcpu->state = READY;
-
-out:
-	stage2_spin_unlock(&vm_info->vm_lock);
-	return ret;
-}
-
 static void __hyp_text hvc_enable_s2_trans(void)
 {
 	struct el2_data *el2_data;
@@ -384,10 +326,6 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		ret = (int)__hypsec_init_vm((u32)hr->regs[1]);
 		hr->regs[31] = (int)ret;
 		break;
-	case HVC_INIT_VCPU:
-		ret = (int)__hypsec_init_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
-		hr->regs[31] = (int)ret;
-		break;
 	default:
 		__hyp_panic();
 	};
@@ -406,9 +344,4 @@ int hypsec_register_vcpu(u32 vmid, int vcpu_id)
 int hypsec_init_vm(u32 vmid)
 {
 	return kvm_call_core(HVC_INIT_VM, vmid);
-}
-
-int hypsec_init_vcpu(u32 vmid, int vcpu_id)
-{
-	return kvm_call_core(HVC_INIT_VCPU, vmid, vcpu_id);
 }
