@@ -38,17 +38,6 @@ struct kvm_vcpu* __hyp_text hypsec_alloc_vcpu(u32 vmid, int vcpu_id)
 	return &shared_data->vcpu_pool[index];
 }
 
-struct kvm_vcpu* __hyp_text hypsec_get_vcpu(u32 vmid, int vcpu_id)
-{
-	struct shared_data *shared_data;
-	int index;
-	shared_data = kvm_ksym_ref(shared_data_start);
-	if (vmid >= EL2_MAX_VMID || vcpu_id >= HYPSEC_MAX_VCPUS)
-		BUG();
-	index = (vmid * HYPSEC_MAX_VCPUS) + vcpu_id;
-	return &shared_data->vcpu_pool[index];
-}
-
 static u32 __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
 {
 	u32 vmid;
@@ -409,7 +398,7 @@ int __hyp_text __hypsec_register_vcpu(u32 vmid, int vcpu_id)
 		goto out;
 	}
 
-	addr = kern_hyp_va(hypsec_get_vcpu(vmid, vcpu_id));
+	addr = kern_hyp_va(hypsec_alloc_vcpu(vmid, vcpu_id));
 	int_vcpu->vcpu = addr;
 
 	new_ctxt = alloc_shadow_ctxt(el2_data);
