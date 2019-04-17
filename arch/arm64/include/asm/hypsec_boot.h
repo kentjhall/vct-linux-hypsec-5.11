@@ -24,7 +24,6 @@ typedef enum {
 
 enum hypsec_init_state {
 	INVALID = 0,
-	USED,
 	MAPPED,
 	READY,
 	VERIFIED,

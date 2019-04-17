@@ -454,8 +454,10 @@ u32 __hyp_text __hypsec_register_kvm(void)
 
 	vm_info = vmid_to_vm_info(vmid);
 	stage2_spin_lock(&vm_info->vm_lock);
-	//el2_data->vm_info[vmid].vm_lock =
-	//	(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	if (vm_info->state != INVALID) {
+		vmid = 0;
+		goto out_unlock;
+	}
 
 	vm_info->inc_exe = false;
 	vm_info->shadow_pt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
@@ -477,6 +479,7 @@ u32 __hyp_text __hypsec_register_kvm(void)
 	map_vgic_cpu_to_shadow_s2pt(vmid, el2_data);
 	vm_info->state = READY;
 
+out_unlock:
 	stage2_spin_unlock(&vm_info->vm_lock);
 	return vmid;
 }

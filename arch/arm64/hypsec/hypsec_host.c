@@ -159,6 +159,7 @@ void init_el2_data_page(void)
 	       sizeof(struct shadow_vcpu_context) * NUM_SHADOW_VCPU_CTXT);
 	el2_data->used_shadow_vcpu_ctxt = 0;
 
+	/* This guarantees all locks are initially zero. */
 	memset(el2_data->vm_info, 0,
 	       sizeof(struct el2_vm_info) * EL2_VM_INFO_SIZE);
 	el2_data->used_vm_info = 0;
