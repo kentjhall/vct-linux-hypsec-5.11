@@ -595,23 +595,26 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 
 	pfn = addr >> PAGE_SHIFT;
 	if (stage2_is_map_memory(addr)) {
-		vmid = get_hpa_owner(addr);
-		if (vmid) {
+		unsigned long index = get_s2_page_index(el2_data, addr & PAGE_MASK);
+		stage2_spin_lock(&el2_data->s2pages_lock);
+		vmid = el2_data->s2_pages[index].vmid;
+		if (vmid)
 			reject_invalid_mem_access(addr, host_lr);
-			goto out;
-		} else if (!vmid)
+		/* vmid = 0, meaning the page is owned by host. */
+		else {
 			new_pte = pfn_pte(pfn, PAGE_S2_KERNEL);
+			mmap_s2pt(addr, el2_data, pte_val(new_pte), 3, 0);
+		}
+		stage2_spin_unlock(&el2_data->s2pages_lock);
 	} else {
 		if (!stage2_emul_mmio(el2_data, addr, host_regs)) {
 			new_pte = pfn_pte(pfn, PAGE_S2_DEVICE);
 			new_pte = kvm_s2pte_mkwrite(new_pte);
+			mmap_s2pt(addr, el2_data, pte_val(new_pte), 3, 0);
 		} else
 			return;
 	}
 
-	mmap_s2pt(addr, el2_data, pte_val(new_pte), 3, 0);
-
-out:
 	return;
 }
 
@@ -654,7 +657,6 @@ static void __hyp_text check_and_assign_pfn(struct s2_trans result,
 	u64 addr = result.output, end = result.output + size;
 	unsigned long index;
 
-	stage2_spin_lock(&el2_data->s2pages_lock);
 	while (addr < end) {
 		/* By the time when we're here, index is always valid. */
 		index = get_s2_page_index(el2_data, addr);
@@ -671,7 +673,6 @@ static void __hyp_text check_and_assign_pfn(struct s2_trans result,
 
 		addr += PAGE_SIZE;
 	}
-	stage2_spin_unlock(&el2_data->s2pages_lock);
 }
 
 static void __hyp_text assign_pfn_to_vm(struct s2_trans result,
@@ -686,8 +687,10 @@ static void __hyp_text assign_pfn_to_vm(struct s2_trans result,
 		size = PAGE_SIZE;
 
 	/* Check if a page is owned by EL2 or already belongs to a VM */
+	stage2_spin_lock(&el2_data->s2pages_lock);
 	check_and_assign_pfn(result, el2_data, size, vmid);
 	__set_pfn_host(result.output, size, 0, PAGE_GUEST);
+	stage2_spin_unlock(&el2_data->s2pages_lock);
 
 }
 
