@@ -580,6 +580,8 @@ static void __hyp_text reject_invalid_mem_access(phys_addr_t addr,
 	stage2_inject_el1_fault(addr);
 }
 
+#define is_valid_host_access(vmid, count) \
+	((!vmid && !count) || (vmid && count > 0)) ? true : false
 void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 					struct s2_host_regs *host_regs)
 {
@@ -598,7 +600,7 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 		unsigned long index = get_s2_page_index(el2_data, addr & PAGE_MASK);
 		stage2_spin_lock(&el2_data->s2pages_lock);
 		vmid = el2_data->s2_pages[index].vmid;
-		if (vmid)
+		if (!is_valid_host_access(vmid, el2_data->s2_pages[index].count))
 			reject_invalid_mem_access(addr, host_lr);
 		/* vmid = 0, meaning the page is owned by host. */
 		else {

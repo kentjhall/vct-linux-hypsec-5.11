@@ -67,11 +67,9 @@ static void __hyp_text __grant_stage2_sg_gpa(struct el2_data *el2_data,
 
 	index = get_s2_page_index(el2_data, pfn << PAGE_SHIFT);
 
+	/* We just increment the count here. */
 	count = s2_pages[index].count++;
 
-	/* We now change the page owner to host. */
-	if (pfn && !count)
-		s2_pages[index].vmid = 0;
 out:
 	stage2_spin_unlock(&el2_data->s2pages_lock);
 
@@ -131,10 +129,8 @@ static void __hyp_text __revoke_stage2_sg_gpa(struct el2_data *el2_data,
 
 	count = --s2_pages[index].count;
 
-	if (pfn && !count) {
-		s2_pages[index].vmid = vmid;
+	if (pfn && !count)
 		__set_pfn_host(pfn << PAGE_SHIFT, PAGE_SIZE, 0, PAGE_GUEST);
-	}
 out:
 	stage2_spin_unlock(&el2_data->s2pages_lock);
 }
