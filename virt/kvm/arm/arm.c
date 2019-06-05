@@ -1843,4 +1843,4 @@ static int arm_init(void)
 	return rc;
 }
 
-module_init(arm_init);
+late_initcall(arm_init);
