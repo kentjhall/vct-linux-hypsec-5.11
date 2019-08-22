@@ -405,8 +405,8 @@ void __hyp_text unmap_image_from_host_s2pt(u32 vmid,
 		walk_el2_pgd(addr, &result);
 		if (!result.level)
 			__hyp_panic();
-		__set_pfn_host(result.output, PAGE_SIZE, 0, PAGE_GUEST);
 		set_pfn_owner(el2_data, result.output, 1, vmid);
+		__set_pfn_host(result.output, PAGE_SIZE, 0, PAGE_GUEST);
 		__kvm_flush_vm_context();
 
 		i++;
