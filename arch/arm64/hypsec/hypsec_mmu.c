@@ -580,12 +580,24 @@ static void __hyp_text reject_invalid_mem_access(phys_addr_t addr,
 	stage2_inject_el1_fault(addr);
 }
 
-#define is_valid_host_access(vmid, count) \
+#define __valid_host_access(vmid, count) \
 	((!vmid && !count) || (vmid && count > 0)) ? true : false
+static inline int __hyp_text is_valid_host_access(struct el2_data *el2_data,
+						  unsigned long index)
+{
+	/*
+	 * We allow the host to access unmapped memblock, but we ensure pages
+	 * in these regions are never mapped to VM's stage 2 page tables.
+	 */
+	if (index == S2_PFN_SIZE)
+		return 1;
+	return __valid_host_access(el2_data->s2_pages[index].vmid,
+				   el2_data->s2_pages[index].count);
+}
+
 void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 					struct s2_host_regs *host_regs)
 {
-	u32 vmid;
 	phys_addr_t addr;
 	kvm_pfn_t pfn;
 	pte_t new_pte;
@@ -599,8 +611,7 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 	if (stage2_is_map_memory(addr)) {
 		unsigned long index = get_s2_page_index(el2_data, addr & PAGE_MASK);
 		stage2_spin_lock(&el2_data->s2pages_lock);
-		vmid = el2_data->s2_pages[index].vmid;
-		if (!is_valid_host_access(vmid, el2_data->s2_pages[index].count))
+		if (!is_valid_host_access(el2_data, index))
 			reject_invalid_mem_access(addr, host_lr);
 		/* vmid = 0, meaning the page is owned by host. */
 		else {
@@ -662,6 +673,9 @@ static void __hyp_text check_and_assign_pfn(struct s2_trans result,
 	while (addr < end) {
 		/* By the time when we're here, index is always valid. */
 		index = get_s2_page_index(el2_data, addr);
+		/* FIXME: If pages are allocated from unused memblock, we panic. */
+		if (index == S2_PFN_SIZE)
+			__hyp_panic();
 		target_vmid = el2_data->s2_pages[index].vmid;
 		if (target_vmid == HYPSEC_VMID ||
 		   (target_vmid && target_vmid != vmid)) {

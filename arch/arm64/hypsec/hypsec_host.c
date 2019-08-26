@@ -216,7 +216,7 @@ unsigned long __hyp_text get_s2_page_index(struct el2_data *el2_data,
                                            phys_addr_t addr)
 {
 	int i;
-	unsigned long ret = 0;
+	unsigned long ret = S2_PFN_SIZE;
 
 	i = stage2_mem_regions_search(addr, el2_data->regions,
 			el2_data->regions_cnt);
@@ -224,8 +224,11 @@ unsigned long __hyp_text get_s2_page_index(struct el2_data *el2_data,
 		goto out;
 
 	/* The requested memblock is unused! */
-	if (el2_data->s2_memblock_info[i].index == S2_PFN_SIZE)
-		print_string("memblock unused\n");
+	if (el2_data->s2_memblock_info[i].index == S2_PFN_SIZE) {
+		printhex_ul(addr);
+		print_string("\rmemblock unused\n");
+		goto out;
+	}
 
 	ret = el2_data->s2_memblock_info[i].index +
 		((addr - el2_data->regions[i].base) >> PAGE_SHIFT);
