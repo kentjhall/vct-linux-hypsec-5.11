@@ -1071,6 +1071,9 @@ void __hyp_text __el2_encrypt_buf(u32 vmid, void *buf, uint32_t len)
 
 void __hyp_text __el2_decrypt_buf(u32 vmid, void *buf, uint32_t len)
 {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+
+	set_pfn_owner(el2_data, (phys_addr_t)buf, 1, vmid);
 	/* Unmap the decrypted page now so the host can not get access to it. */
 	__set_pfn_host((phys_addr_t)buf, PAGE_SIZE, 0, PAGE_NONE);
 	decrypt_buf(vmid, __el2_va(buf), len);
