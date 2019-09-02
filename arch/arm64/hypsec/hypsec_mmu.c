@@ -611,10 +611,19 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 	if (stage2_is_map_memory(addr)) {
 		unsigned long index = get_s2_page_index(el2_data, addr & PAGE_MASK);
 		stage2_spin_lock(&el2_data->s2pages_lock);
-		if (!is_valid_host_access(el2_data, index))
-			reject_invalid_mem_access(addr, host_lr);
+		if (!is_valid_host_access(el2_data, index)) {
+			/* FIXME: Uncomment the following if we'd like to support migration
+			if (el2_data->s2_pages[index].vmid != HYPSEC_VMID) {
+				phys_addr_t pa = (phys_addr_t)alloc_tmp_page();
+				el2_memcpy(__el2_va(pa), __el2_va(addr), PAGE_SIZE);
+				encrypt_buf(el2_data->s2_pages[index].vmid, __el2_va(pa), PAGE_SIZE);
+				new_pte = pfn_pte(pa >> PAGE_SHIFT, PAGE_S2_KERNEL);
+				mmap_s2pt(addr, el2_data, pte_val(new_pte), 3, 0);
+			} else
+			*/
+				reject_invalid_mem_access(addr, host_lr);
 		/* vmid = 0, meaning the page is owned by host. */
-		else {
+		} else {
 			new_pte = pfn_pte(pfn, PAGE_S2_KERNEL);
 			mmap_s2pt(addr, el2_data, pte_val(new_pte), 3, 0);
 		}
