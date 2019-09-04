@@ -75,7 +75,8 @@ void grant_stage2_sg_gpa(struct shadow_vcpu_context *shadow_ctxt);
 void revoke_stage2_sg_gpa(struct shadow_vcpu_context *shadow_ctxt);
 void set_balloon_pfn(struct shadow_vcpu_context *shadow_ctxt);
 
-void* alloc_stage2_page(unsigned int order);
+void* alloc_stage2_page_split(u32 vmid, unsigned int num);
+void* alloc_stage2_page(unsigned int num);
 
 struct s2_trans walk_stage2_pgd(u32 vmid, phys_addr_t addr);
 

@@ -421,7 +421,7 @@ out:
 u32 __hyp_text __hypsec_register_kvm(void)
 {
 	u32 vmid;
-	u64 vttbr, vmid64;
+	u64 vttbr, vmid64, pool_start;
 	void *addr;
 	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
 	uint8_t iv[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
@@ -460,7 +460,11 @@ u32 __hyp_text __hypsec_register_kvm(void)
 	el2_memcpy(vm_info->iv, iv, 16);
 	el2_hex2bin(vm_info->public_key, public_key_hex, 32);
 
-	vttbr = (u64)alloc_stage2_page(S2_PGD_PAGES_NUM);
+	pool_start = el2_data->page_pool_start + STAGE2_NUM_CORE_PAGES;
+	pool_start += (STAGE2_VM_POOL_SIZE * vmid);
+	vm_info->page_pool_start = pool_start;
+
+	vttbr = (u64)alloc_stage2_page_split(vmid, S2_PGD_PAGES_NUM);
 	/* Supports 8-bit VMID */
 	vmid64 = ((u64)(vmid) << VTTBR_VMID_SHIFT) & VTTBR_VMID_MASK(8);
 	vm_info->vttbr = vttbr | vmid64;

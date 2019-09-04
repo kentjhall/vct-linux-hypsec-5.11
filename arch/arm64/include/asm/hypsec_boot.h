@@ -66,6 +66,9 @@ struct el2_vm_info {
 	uint8_t iv[16];
 	unsigned char public_key[32];
 	bool powered_on;
+	/* For VM private pool */
+	u64 page_pool_start;
+	unsigned long used_pages;
 };
 
 extern int el2_set_boot_info(u32 vmid, unsigned long load_addr,

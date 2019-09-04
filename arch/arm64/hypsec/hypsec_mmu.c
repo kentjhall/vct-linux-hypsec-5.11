@@ -125,7 +125,7 @@ phys_addr_t host_alloc_stage2_page(unsigned int num)
 	stage2_spin_lock(&el2_data->abs_lock);
 
 	/* Check if we're out of memory in the reserved area */
-	BUG_ON(el2_data->used_pages >= STAGE2_NUM_NORM_PAGES);
+	BUG_ON(el2_data->used_pages >= STAGE2_NUM_CORE_PAGES);
 
 	/* Start allocating memory from the normal page pool */
 	start = el2_data->page_pool_start;
@@ -144,6 +144,37 @@ phys_addr_t host_alloc_stage2_page(unsigned int num)
 	return (phys_addr_t)p_addr;
 }
 
+void* __hyp_text alloc_stage2_page_split(u32 vmid, unsigned int num)
+{
+	u64 p_addr, start, unaligned, append;
+	struct el2_vm_info *vm_info;
+
+	if (!num)
+		return NULL;
+	vm_info = vmid_to_vm_info(vmid);
+
+	/* Check if we're out of memory in the reserved area */
+	if (vm_info->used_pages >= STAGE2_VM_POOL_SIZE) {
+		print_string("stage2: out of vm pages\r\n");
+		__hyp_panic();
+	}
+
+	/* Start allocating memory from the normal page pool */
+	start = vm_info->page_pool_start;
+	p_addr = (u64)start + (PAGE_SIZE * vm_info->used_pages);
+
+	unaligned = p_addr % (PAGE_SIZE * num);
+	/* Append to make p_addr aligned with (PAGE_SIZE * num) */
+	if (unaligned) {
+		append = num - (unaligned >> PAGE_SHIFT);
+		p_addr += append * PAGE_SIZE;
+		num += append;
+	}
+	vm_info->used_pages += num;
+
+	return (void *)p_addr;
+}
+
 void* __hyp_text alloc_stage2_page(unsigned int num)
 {
 	u64 p_addr, start, unaligned, append;
@@ -156,8 +187,8 @@ void* __hyp_text alloc_stage2_page(unsigned int num)
 	stage2_spin_lock(&el2_data->abs_lock);
 
 	/* Check if we're out of memory in the reserved area */
-	if (el2_data->used_pages >= STAGE2_NUM_NORM_PAGES) {
-		print_string("stage2: out of pages\r\n");
+	if (el2_data->used_pages >= STAGE2_NUM_CORE_PAGES) {
+		print_string("stage2: out of core pages\r\n");
 		__hyp_panic();
 	}
 
