@@ -140,7 +140,7 @@ void init_el2_data_page(void)
 	}
 	el2_data->regions_cnt = i;
 
-	el2_data->used_pages = 2;
+	el2_data->used_pages = 0;
 	el2_data->used_tmp_pages = 0;
 	el2_data->page_pool_start = (u64)__pa(stage2_pgs_start);
 
@@ -153,8 +153,6 @@ void init_el2_data_page(void)
 	memset(el2_data->s2_pages, 0, sizeof(struct s2_page) * S2_PFN_SIZE);
 	el2_data->ram_start_pfn = el2_data->regions[0].base >> PAGE_SHIFT;
 
-	el2_data->host_vttbr = __pa(stage2_pgs_start);
-
 	memset(el2_data->shadow_vcpu_ctxt, 0,
 	       sizeof(struct shadow_vcpu_context) * NUM_SHADOW_VCPU_CTXT);
 	el2_data->used_shadow_vcpu_ctxt = 0;
@@ -164,11 +162,16 @@ void init_el2_data_page(void)
 	       sizeof(struct el2_vm_info) * EL2_VM_INFO_SIZE);
 	el2_data->used_vm_info = 0;
 	el2_data->last_remap_ptr = 0;
-	el2_data->vm_info[0].vttbr = el2_data->host_vttbr;
+
 	el2_data->vm_info[0].shadow_pt_lock =
 		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	el2_data->vm_info[0].page_pool_start =
 		el2_data->page_pool_start + STAGE2_NUM_CORE_PAGES;
+
+	el2_data->host_vttbr = el2_data->vm_info[0].page_pool_start;
+	el2_data->vm_info[0].used_pages = 2;
+	el2_data->vm_info[0].vttbr = el2_data->host_vttbr;
+	printk("%s %llx\n", __func__, el2_data->host_vttbr);
 
 	memset(el2_data->smmu_cfg, 0,
 		sizeof(struct el2_smmu_cfg) * EL2_SMMU_CFG_SIZE);
