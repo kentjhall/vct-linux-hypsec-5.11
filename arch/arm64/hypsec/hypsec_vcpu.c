@@ -288,6 +288,7 @@ void __hyp_text __save_shadow_kvm_regs(struct kvm_vcpu *vcpu,
 {
 	shadow_ctxt->ec = ec;
 
+	//printhex_ul(*shadow_vcpu_pc(shadow_ctxt));
 	switch (ec) {
 		case ARM_EXCEPTION_TRAP:
 			el2_prepare_exit_ctxt(vcpu, shadow_ctxt, shadow_ctxt->esr);

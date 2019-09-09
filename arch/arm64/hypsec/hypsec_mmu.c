@@ -154,7 +154,7 @@ void* __hyp_text alloc_stage2_page_split(u32 vmid, unsigned int num)
 	vm_info = vmid_to_vm_info(vmid);
 
 	/* Check if we're out of memory in the reserved area */
-	if (vm_info->used_pages >= STAGE2_VM_POOL_SIZE) {
+	if (vm_info->used_pages >= (STAGE2_VM_POOL_SIZE / PAGE_SIZE)) {
 		print_string("stage2: out of vm pages\r\n");
 		__hyp_panic();
 	}

@@ -460,10 +460,6 @@ u32 __hyp_text __hypsec_register_kvm(void)
 	el2_memcpy(vm_info->iv, iv, 16);
 	el2_hex2bin(vm_info->public_key, public_key_hex, 32);
 
-	pool_start = el2_data->page_pool_start + STAGE2_NUM_CORE_PAGES;
-	pool_start += (STAGE2_VM_POOL_SIZE * vmid);
-	vm_info->page_pool_start = pool_start;
-
 	vttbr = (u64)alloc_stage2_page_split(vmid, S2_PGD_PAGES_NUM);
 	/* Supports 8-bit VMID */
 	vmid64 = ((u64)(vmid) << VTTBR_VMID_SHIFT) & VTTBR_VMID_MASK(8);
