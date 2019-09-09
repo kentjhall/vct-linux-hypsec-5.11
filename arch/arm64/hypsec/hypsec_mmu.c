@@ -554,13 +554,13 @@ static void __hyp_text mmap_s2pt(phys_addr_t addr,
 	vttbr = __el2_va(vttbr);
 	pgd = vttbr + stage2_pgd_index(addr);
 	if (stage2_pgd_none(*pgd)) {
-		pud = alloc_stage2_page(1);
+		pud = alloc_stage2_page_split(vmid, 1);
 		__pgd_populate(pgd, (phys_addr_t)pud, PUD_TYPE_TABLE);
 	}
 
 	pud = stage2_pud_offset(pgd, addr);
 	if (stage2_pud_none(*pud)) {
-		pmd = alloc_stage2_page(1);
+		pmd = alloc_stage2_page_split(vmid, 1);
 		__pud_populate(pud, (phys_addr_t)pmd, PMD_TYPE_TABLE);
 	}
 
@@ -571,7 +571,7 @@ static void __hyp_text mmap_s2pt(phys_addr_t addr,
 	}
 
 	if (pmd_none(*pmd)) {
-		pte = alloc_stage2_page(1);
+		pte = alloc_stage2_page_split(vmid, 1);
 		__pmd_populate(pmd, (phys_addr_t)pte, PMD_TYPE_TABLE);
 	}
 	

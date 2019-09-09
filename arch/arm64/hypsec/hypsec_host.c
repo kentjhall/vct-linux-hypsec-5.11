@@ -166,7 +166,7 @@ void init_el2_data_page(void)
 	el2_data->vm_info[0].shadow_pt_lock =
 		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	el2_data->vm_info[0].page_pool_start =
-		el2_data->page_pool_start + STAGE2_NUM_CORE_PAGES;
+		el2_data->page_pool_start + STAGE2_CORE_PAGES_SIZE;
 
 	el2_data->host_vttbr = el2_data->vm_info[0].page_pool_start;
 	el2_data->vm_info[0].used_pages = 2;
