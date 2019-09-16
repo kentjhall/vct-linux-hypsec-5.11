@@ -1,0 +1,16 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+D:/Workspace/hypsec_proved/library.c
+library.h
+D:/Workspace/hypsec_proved/library.h
+stdio.h
+-
+
+D:/Workspace/hypsec_proved/library.h
+
