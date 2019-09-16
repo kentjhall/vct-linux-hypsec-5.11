@@ -1,4 +1,0 @@
-"C:\Program Files\JetBrains\CLion 2019.2.2\bin\cmake\win\bin\cmake.exe" -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - MinGW Makefiles" D:\Workspace\hypsec_proved
--- Configuring done
--- Generating done
--- Build files have been written to: D:/Workspace/hypsec_proved/cmake-build-debug
