@@ -11,6 +11,7 @@ typedef u64 phys_addr_t;
  * Data Structures
  */
 
+/*
 struct el2_data {
     struct memblock_region regions[32];
     struct s2_memblock_info s2_memblock_info[32];
@@ -49,13 +50,13 @@ struct el2_data {
     phys_addr_t vgic_cpu_base;
     bool installed;
 };
-
+*/
 
 /*
  * AbstractMachine
  */
 
-void    panic(void);
+void    _panic(void);
 void    clear_phys_mem(u64 pfn);
 u64     get_shared_kvm(u32 vmid);
 u64     get_shared_vcpu(u32 vmid, u32 vcpuid);
@@ -149,8 +150,8 @@ u64 alloc_s2pt_page(u32 vmid);
 u64 walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc);
 u64 walk_pmd(u32 vmid, u64 pgd, u64 addr, u32 alloc);
 u64 walk_pte(u32 vmid, u64 pmd, u64 addr);
-void set_pmd(u32 vmid, u64 pgd, u64 addr, u64 pmd);
-void set_pte(u32 vmid, u64 pmd, u64 addr, u64 pte);
+//void set_pmd(u32 vmid, u64 pgd, u64 addr, u64 pmd);
+//void set_pte(u32 vmid, u64 pmd, u64 addr, u64 pte);
 
 /*
  * NPTWalk
@@ -182,14 +183,14 @@ u32 mem_region_search(u64 addr);
  * PageIndex
  */
 
-u64 get_s2_page_index(u64 addr);
+//u64 get_s2_page_index(u64 addr);
 
 /*
  * PageManager
  */
 
 u32 get_pfn_owner(u64 pfn);
-void set_pfn_owner(u64 pfn, u64 num, u32 vmid);
+//void set_pfn_owner(u64 pfn, u64 num, u32 vmid);
 u32 get_pfn_count(u64 pfn);
 void set_pfn_count(u64 pfn, u32 count);
 
@@ -217,8 +218,8 @@ void revoke_vm_page(u32 vmid, u64 pfn);
 
 void clear_vm_stage2_range(u32 vmid, u64 start, u64 size);
 void prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 level, u32 iabt);
-void grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
-void revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
+//void grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
+//void revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
 
 /*
  * BootCore
@@ -232,8 +233,8 @@ u64 alloc_remap_addr(u64 pgnum);
  * BootAux
  */
 
-void unmap_image_from_host_s2pt(u32 vmid, u64 remap_addr, u64 num);
-void load_image_to_shadow_s2pt(u32 vmid, u64 target_addr, u64 remap_addr, u64 num);
+//void unmap_image_from_host_s2pt(u32 vmid, u64 remap_addr, u64 num);
+//void load_image_to_shadow_s2pt(u32 vmid, u64 target_addr, u64 remap_addr, u64 num);
 
 /*
  * BootOps
@@ -243,7 +244,7 @@ u32 vm_is_inc_exe(u32 vmid);
 void boot_from_inc_exe(u32 vmid);
 u32 set_vcpu_active(u32 vmid, u32 vcpuid);
 u32 set_vcpu_inactive(u32 vmid, u32 vcpuid);
-u64 search_load_info(u32 vmid, u64 addr);
+//u64 search_load_info(u32 vmid, u64 addr);
 u32 register_vcpu(u32 vmid, u32 vcpuid);
 u32 register_kvm(void);
 void set_boot_info(u32 vmid, u64 load_addr, u64 size);
@@ -262,17 +263,17 @@ void sync_dirty_to_shadow(u32 ctxtid);
 void prep_wfx(u32 ctxtid);
 void prep_hvc(u32 ctxtid);
 void prep_abort(u32 ctxtid);
-void hypsec_inject_undef(u32 ctxtid);
-void update_exception_gp_regs(u32 ctxtid);
-void post_handle_shadow_s2pt_fault(u32 ctxtid);
+//void hypsec_inject_undef(u32 ctxtid);
+//void update_exception_gp_regs(u32 ctxtid);
+//void post_handle_shadow_s2pt_fault(u32 ctxtid);
 
 /*
  * VCPUOps
  */
 
 void save_shadow_kvm_regs(u32 ctxtid, u64 ec);
-void restore_shadow_kvm_regs(u32 ctxtid);
-void save_encrypted_vcpu(u32 ctxtid);
+void restore_shadow_kvm_regs(u32 ctxtid) {};
+//void save_encrypted_vcpu(u32 ctxtid);
 
 #endif //HYPSEC_HYPSEC_H
 

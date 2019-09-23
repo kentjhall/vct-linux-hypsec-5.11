@@ -51,7 +51,7 @@
 
 #define HVC_GET_VECTORS	5
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 #define HVC_ENABLE_S2_TRANS 6
 #define HVC_TIMER_SET_CNTVOFF 7
 #define HVC_VCPU_RUN 8
@@ -102,7 +102,7 @@ extern u32 __boot_cpu_mode[2];
 void __hyp_set_vectors(phys_addr_t phys_vector_base);
 void __hyp_reset_vectors(void);
 phys_addr_t __hyp_get_vectors(void);
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 void enable_stage2_translation(phys_addr_t vttbr_base);
 #endif
 

@@ -15,6 +15,7 @@ int __hyp_text handle_pvops(struct shadow_vcpu_context *shadow_ctxt)
 {
 	unsigned long call_num = shadow_vcpu_get_reg(shadow_ctxt, 0);
 
+#if 0
 	switch (call_num) {
 		case KVM_SET_DESC_PFN:
 			grant_stage2_sg_gpa(shadow_ctxt);
@@ -28,5 +29,6 @@ int __hyp_text handle_pvops(struct shadow_vcpu_context *shadow_ctxt)
 		default:
 			return -EINVAL;
 	}
+#endif
 	return 1;
 }

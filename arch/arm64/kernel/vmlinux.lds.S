@@ -215,7 +215,7 @@ SECTIONS
 
 	BSS_SECTION(0, 0, 0)
 
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	. = ALIGN(PAGE_SIZE);
 #else
 	. = ALIGN(SEGMENT_ALIGN);
@@ -236,7 +236,7 @@ SECTIONS
 	swapper_pg_dir = .;
 	. += SWAPPER_DIR_SIZE;
 	swapper_pg_end = .;
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	. = ALIGN(SEGMENT_ALIGN);
 	stage2_pgs_start = .;
 	. += STAGE2_PAGES_SIZE;

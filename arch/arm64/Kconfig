@@ -590,13 +590,12 @@ config QCOM_FALKOR_ERRATUM_E1041
 
 endmenu
 
-config STAGE2_KERNEL
-	bool "Build kernel that uses stage 2 address translation"
+config VERIFIED_KVM
+	bool "Build verified KVM"
 	select ARM64_4K_PAGES
 	select VIRTUALIZATION
 	help
-	  Boot the kernel with stage 2 translation enabled. This may reduce
-	  performance of regular userspace applications.
+	  Build verified KVM.
 
 choice
 	prompt "Page size"

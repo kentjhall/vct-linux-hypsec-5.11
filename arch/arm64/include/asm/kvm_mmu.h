@@ -152,7 +152,7 @@ int create_hyp_io_mappings(phys_addr_t phys_addr, size_t size,
 			   void __iomem **haddr);
 int create_hyp_exec_mappings(phys_addr_t phys_addr, size_t size,
 			     void **haddr);
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 int create_hypsec_io_mappings(phys_addr_t phys_addr, size_t size,
 			      unsigned long *haddr);
 int el2_create_hyp_mappings(void *from, void *to, pgprot_t prot);
@@ -270,7 +270,7 @@ static inline bool vcpu_has_cache_enabled(struct kvm_vcpu *vcpu)
 
 static inline void __clean_dcache_guest_page(kvm_pfn_t pfn, unsigned long size)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	void *va = page_address(pfn_to_page(pfn));
 	kvm_flush_dcache_to_poc(va, size);
 #endif
@@ -292,7 +292,7 @@ static inline void __invalidate_icache_guest_page(kvm_pfn_t pfn,
 
 static inline void __kvm_flush_dcache_pte(pte_t pte)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	struct page *page = pte_page(pte);
 	kvm_flush_dcache_to_poc(page_address(page), PAGE_SIZE);
 #endif
@@ -300,7 +300,7 @@ static inline void __kvm_flush_dcache_pte(pte_t pte)
 
 static inline void __kvm_flush_dcache_pmd(pmd_t pmd)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	struct page *page = pmd_page(pmd);
 	kvm_flush_dcache_to_poc(page_address(page), PMD_SIZE);
 #endif
@@ -308,7 +308,7 @@ static inline void __kvm_flush_dcache_pmd(pmd_t pmd)
 
 static inline void __kvm_flush_dcache_pud(pud_t pud)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	struct page *page = pud_page(pud);
 	kvm_flush_dcache_to_poc(page_address(page), PUD_SIZE);
 #endif

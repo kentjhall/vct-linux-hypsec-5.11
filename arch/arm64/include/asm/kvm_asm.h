@@ -63,7 +63,7 @@ extern void __kvm_timer_set_cntvoff(u32 cntvoff_low, u32 cntvoff_high);
 
 extern int kvm_vcpu_run_vhe(struct kvm_vcpu *vcpu);
 
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 extern int __kvm_vcpu_run_nvhe(struct kvm_vcpu *vcpu);
 #else
 struct shadow_vcpu_context;
@@ -113,7 +113,7 @@ extern u32 __init_stage2_translation(void);
 .macro get_vcpu_ptr vcpu, ctxt
 	get_host_ctxt \ctxt, \vcpu
 	ldr	\vcpu, [\ctxt, #HOST_CONTEXT_VCPU]
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	kern_hyp_va	\vcpu
 #endif
 .endm

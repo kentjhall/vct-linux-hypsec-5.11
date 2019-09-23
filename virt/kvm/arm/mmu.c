@@ -1756,7 +1756,7 @@ int kvm_handle_guest_abort(struct kvm_vcpu *vcpu, struct kvm_run *run)
 	is_iabt = kvm_vcpu_trap_is_iabt(vcpu);
 
 	/* Synchronous External Abort? */
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	if (kvm_vcpu_dabt_isextabt(vcpu, 0)) {
 #else
 	if (kvm_vcpu_dabt_isextabt(vcpu)) {

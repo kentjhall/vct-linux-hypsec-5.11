@@ -1,9 +1,30 @@
 #include "hypsec.h"
+#include <linux/types.h>
+#include <asm/kvm_asm.h>
+#include <asm/kvm_hyp.h>
+#include <linux/mman.h>
+#include <linux/kvm_host.h>
+#include <linux/io.h>
+#include <trace/events/kvm.h>
+#include <asm/pgalloc.h>
+#include <asm/cacheflush.h>
+#include <asm/kvm_arm.h>
+#include <asm/kvm_mmu.h>
+#include <asm/kvm_mmio.h>
+#include <asm/kvm_emulate.h>
+#include <asm/virt.h>
+#include <asm/kernel-pgtable.h>
+#include <asm/hypsec_host.h>
+#include <asm/spinlock_types.h>
+#include <linux/serial_reg.h>
 
-void    panic(void) {
+#include "hypsec.h"
+
+void _panic(void) {
     __hyp_panic();
 }
 
+#if 0
 void    clear_phys_mem(u64 pfn) {
     memset(kern_hyp_va(pfn), 0, PAGE_SIZE);
 }
@@ -13,7 +34,7 @@ u64     get_shared_kvm(u32 vmid) {
 }
 
 u64     get_shared_vcpu(u32 vmid, u32 vcpuid) {
-    return SHARED_VCPU_START + (vmid * VCPU_PER_VM + vcpuid) * sizeof(struct kvcpu);
+    return SHARED_VCPU_START + (vmid * VCPU_PER_VM + vcpuid) * sizeof(struct kvm_vcpu);
 }
 
 u32     verify_image(u32 vmid, u64 addr) {
@@ -26,8 +47,9 @@ u64     get_sys_reg_desc_val(u32 index) {
     return host_sys_reg_descs[index];
 }
 
-u64     get_exception_vector(u64 pstate) {
+u64	get_exception_vector(u64 pstate) {
     // TODO
+	return 0;
 }
 
 // TODO: PT structure
@@ -271,3 +293,4 @@ u32     get_shadow_dirty_bit(u32 ctxtid, u32 index);
 void    set_shadow_dirty_bit(u32 ctxtid, u32 index, u32 value);
 u64     get_int_new_pte(u32 ctxtid);
 u32     get_int_new_level(u32 ctxtid);
+#endif

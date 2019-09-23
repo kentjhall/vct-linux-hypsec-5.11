@@ -107,6 +107,7 @@ core-$(CONFIG_KVM) += arch/arm64/kvm/
 core-$(CONFIG_XEN) += arch/arm64/xen/
 core-$(CONFIG_CRYPTO) += arch/arm64/crypto/
 core-$(CONFIG_STAGE2_KERNEL) += arch/arm64/hypsec/
+core-$(CONFIG_VERIFIED_KVM) += arch/arm64/hypsec_proved/
 libs-y		:= arch/arm64/lib/ $(libs-y)
 core-$(CONFIG_EFI_STUB) += $(objtree)/drivers/firmware/efi/libstub/lib.a
 

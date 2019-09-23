@@ -40,7 +40,7 @@
 #include <kvm/arm_vgic.h>
 #include <kvm/arm_arch_timer.h>
 #include <kvm/arm_pmu.h>
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 #include <asm/hypsec_mmu.h>
 #endif
 
@@ -210,7 +210,7 @@ struct kvm_cpu_context {
 
 typedef struct kvm_cpu_context kvm_cpu_context_t;
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 #define	DIRTY_PC_FLAG			1UL << 32
 #define	PENDING_DABT_INJECT		1UL << 33
 #define	PENDING_IABT_INJECT		1UL << 34
@@ -239,7 +239,7 @@ struct shadow_vcpu_context {
 #endif
 
 struct kvm_vcpu_arch {
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	u32 vmid;
 	bool was_preempted;
 	struct s2_trans walk_result;
@@ -354,7 +354,7 @@ struct kvm_vcpu_arch {
  */
 #define __vcpu_sys_reg(v,r)	((v)->arch.ctxt.sys_regs[(r)])
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 #define vcpu_shadow_gp_regs(v)	(&(v)->gp_regs)
 #endif
 
@@ -406,7 +406,7 @@ void kvm_arm_resume_guest(struct kvm *kvm);
 
 u64 __kvm_call_hyp(void *hypfn, ...);
 #define kvm_call_hyp(f, ...) __kvm_call_hyp(kvm_ksym_ref(f), ##__VA_ARGS__)
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 #define kvm_call_core(n, ...) __kvm_call_hyp((void *)n, ##__VA_ARGS__)
 #endif
 
@@ -430,7 +430,7 @@ static inline void __cpu_init_hyp_mode(phys_addr_t pgd_ptr,
 				       unsigned long hyp_stack_ptr,
 				       unsigned long vector_ptr)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	u64 tpidr_el2;
 #endif
 
@@ -443,7 +443,7 @@ static inline void __cpu_init_hyp_mode(phys_addr_t pgd_ptr,
 	BUG_ON(!static_branch_likely(&arm64_const_caps_ready));
 	__kvm_call_hyp((void *)pgd_ptr, hyp_stack_ptr, vector_ptr);
 
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	/*
 	 * Calculate the raw per-cpu offset without a translation from the
 	 * kernel's mapping to the linear mapping, and store it in tpidr_el2
@@ -456,7 +456,7 @@ static inline void __cpu_init_hyp_mode(phys_addr_t pgd_ptr,
 #endif
 }
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 static inline u64 get_host_tpidr_el2(void)
 {
 	return (u64)this_cpu_ptr(&kvm_host_cpu_state)
@@ -497,7 +497,7 @@ int kvm_arm_vcpu_arch_has_attr(struct kvm_vcpu *vcpu,
 
 static inline void __cpu_init_stage2(void)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	u32 parange = kvm_call_hyp(__init_stage2_translation);
 
 	WARN_ONCE(parange < 40,

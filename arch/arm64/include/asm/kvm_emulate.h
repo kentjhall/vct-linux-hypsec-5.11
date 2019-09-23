@@ -86,7 +86,7 @@ static inline void vcpu_set_vsesr(struct kvm_vcpu *vcpu, u64 vsesr)
 	vcpu->arch.vsesr_el2 = vsesr;
 }
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 static inline unsigned long *shadow_vcpu_pc(struct shadow_vcpu_context *shadow_ctxt)
 {
 	return (unsigned long *)&vcpu_shadow_gp_regs(shadow_ctxt)->regs.pc;
@@ -178,7 +178,7 @@ static inline void vcpu_set_reg(struct kvm_vcpu *vcpu, u8 reg_num,
 		vcpu_gp_regs(vcpu)->regs.regs[reg_num] = val;
 }
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 static inline unsigned long shadow_vcpu_get_reg(struct shadow_vcpu_context *shadow_ctxt,
                                                 u8 reg_num)
 {
@@ -333,7 +333,7 @@ static inline u8 kvm_vcpu_trap_get_fault_type(const struct kvm_vcpu *vcpu)
 {
 	return kvm_vcpu_get_hsr(vcpu) & ESR_ELx_FSC_TYPE;
 }
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 static inline u8 hypsec_vcpu_trap_get_class(struct shadow_vcpu_context *shadow_ctxt)
 {
 	return ESR_ELx_EC(shadow_ctxt->esr);
@@ -478,7 +478,7 @@ static inline unsigned long vcpu_data_host_to_guest(struct kvm_vcpu *vcpu,
 	return data;		/* Leave LE untouched */
 }
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 #if 0
 static inline bool hypsec_is_vgic_v2_cpuif_trap(struct kvm_vcpu *vcpu, u32 esr)
 {

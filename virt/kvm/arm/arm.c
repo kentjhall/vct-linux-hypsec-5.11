@@ -53,6 +53,9 @@
 #ifdef CONFIG_STAGE2_KERNEL
 #include <asm/hypsec_host.h>
 extern int map_vcpu_page_to_hyp(u32 vmid, int vcpu_id, void *from, void *to);
+#elif CONFIG_VERIFIED_KVM
+extern int map_vcpu_page_to_hyp(u32 vmid, int vcpu_id, void *from, void *to);
+#include <asm/hypsec_missing.h>
 #endif
 
 #ifdef REQUIRES_VIRT

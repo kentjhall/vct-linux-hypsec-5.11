@@ -18,7 +18,7 @@
 #include <asm/kvm_hyp.h>
 #include <asm/kvm_mmu.h>
 #include <asm/tlbflush.h>
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 #include <asm/hypsec_host.h>
 #endif
 
@@ -63,7 +63,7 @@ static void __hyp_text __tlb_switch_to_host_vhe(struct kvm *kvm)
 
 static void __hyp_text __tlb_switch_to_host_nvhe(struct kvm *kvm)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	write_sysreg(0, vttbr_el2);
 #else
 	struct el2_data *el2_data;
@@ -82,7 +82,7 @@ void __hyp_text __kvm_tlb_flush_vmid_ipa(struct kvm *kvm, phys_addr_t ipa)
 	dsb(ishst);
 
 	/* Switch to requested VMID */
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	kvm = kern_hyp_va(kvm);
 #endif
 	__tlb_switch_to_guest()(kvm);
@@ -136,7 +136,7 @@ void __hyp_text __kvm_tlb_flush_vmid(struct kvm *kvm)
 	dsb(ishst);
 
 	/* Switch to requested VMID */
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	kvm = kern_hyp_va(kvm);
 #endif
 	__tlb_switch_to_guest()(kvm);
@@ -150,7 +150,7 @@ void __hyp_text __kvm_tlb_flush_vmid(struct kvm *kvm)
 
 void __hyp_text __kvm_tlb_flush_local_vmid(struct kvm_vcpu *vcpu)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	struct kvm *kvm = kern_hyp_va(kern_hyp_va(vcpu)->kvm);
 #else
 	struct kvm *kvm = hypsec_vmid_to_kvm(vcpu->arch.vmid);
@@ -166,7 +166,7 @@ void __hyp_text __kvm_tlb_flush_local_vmid(struct kvm_vcpu *vcpu)
 	__tlb_switch_to_host()(kvm);
 }
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 void __hyp_text hypsec_tlb_flush_local_vmid(void)
 {
 	__tlbi(vmalle1);
@@ -184,7 +184,7 @@ void __hyp_text __kvm_flush_vm_context(void)
 }
 
 /* Call here with shadow vttbr loaded */
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 void __hyp_text __kvm_tlb_flush_vmid_ipa_shadow(phys_addr_t ipa)
 {
 	dsb(ishst);
