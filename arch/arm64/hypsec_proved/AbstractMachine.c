@@ -31,18 +31,27 @@ u64	get_exception_vector(u64 pstate) {
     // TODO
 	return 0;
 }
+#endif
 
 // TODO: PT structure
-void    acquire_lock_pt(u32 vmid);
-void    release_lock_pt(u32 vmid);
-u64     get_pt_next(u32 vmid);
-void    set_pt_next(u32 vmid, u64 next);
-u64     pt_load(u32 vmid, u64 addr);
-void    pt_store(u32 vmid, u64 addr, u64 value);
-u64     get_pt_vttbr(u32 vmid);
-void    set_pt_vttbr(u32 vmid, u64 vttbr);
+void acquire_lock_pt(u32 vmid);
+void release_lock_pt(u32 vmid);
 
-#endif
+//TODO: Fix the following functions
+u64 get_pt_next(u32 vmid) {
+	BUG();
+	return 0;
+};
+
+void set_pt_next(u32 vmid, u64 next) {
+	BUG();
+};
+
+u64 pt_load(u32 vmid, u64 addr);
+void pt_store(u32 vmid, u64 addr, u64 value);
+u64 get_pt_vttbr(u32 vmid);
+void set_pt_vttbr(u32 vmid, u64 vttbr);
+
 
 u32 get_mem_region_cnt(void) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
