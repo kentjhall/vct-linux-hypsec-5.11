@@ -1,4 +1,5 @@
 #include "hypsec.h"
+#include <uapi/linux/psci.h>
 
 /*
  * VCPUOpsAux
@@ -6,19 +7,19 @@
 
 void reset_gp_regs(u32 ctxtid)
 {
-    u64 pc = get_int_ctxt(ctxtid, PC);
+    u64 pc = get_int_ctxt(ctxtid, V_PC), pstate;
     u32 vmid = get_ctxt_vmid(ctxtid);
 
-    if (search_load_info(vmid, pc))
+    if (v_search_load_info(vmid, pc))
     {
         clear_shadow_gp_regs(ctxtid);
-        u64 pstate = get_int_ctxt(ctxtid, PSTATE);
-        set_shadow_ctxt(ctxtid, PSTATE, pstate);
-        set_shadow_ctxt(ctxtid, PC, pc);
+        pstate = get_int_ctxt(ctxtid, V_PSTATE);
+        set_shadow_ctxt(ctxtid, V_PSTATE, pstate);
+        set_shadow_ctxt(ctxtid, V_PC, pc);
         int_to_shadow_fp_regs(ctxtid);
     }
     else {
-        panic();
+        v_panic();
     }
 }
 
@@ -37,7 +38,7 @@ void reset_sys_regs(u32 ctxtid)
         }
         else
         {
-            val = get_sys_reg_desc_val(i);
+            val = get_sys_reg_desc_val(ctxtid, i);
         }
         set_shadow_ctxt(ctxtid, i, val);
         i += 1U;
@@ -106,9 +107,9 @@ void prep_hvc(u32 ctxtid)
 
 void prep_abort(u32 ctxtid)
 {
-    u64 esr = get_int_ctxt(ctxtid, ESR_EL2);
+    u64 esr = get_int_ctxt(ctxtid, V_ESR_EL2);
     u32 Rd = (u32)((esr / 65536UL) % 32UL);
-    u64 fault_ipa = (get_shadow_ctxt(ctxtid, HPFAR_EL2) / 16UL) * 4096UL;
+    u64 fault_ipa = (get_shadow_ctxt(ctxtid, V_HPFAR_EL2) / 16UL) * 4096UL;
 
     if (fault_ipa < MAX_MMIO_ADDR)
     {
@@ -124,32 +125,32 @@ void prep_abort(u32 ctxtid)
     }
 }
 
-void hypsec_inject_undef(u32 ctxtid)
+void v_hypsec_inject_undef(u32 ctxtid)
 {
     set_shadow_dirty_bit(ctxtid, PENDING_UNDEF_INJECT, 1U);
 }
 
-void update_exception_gp_regs(u32 ctxtid)
+void v_update_exception_gp_regs(u32 ctxtid)
 {
     u64 esr = ESR_ELx_EC_UNKNOWN;
-    u64 pstate = get_shadow_ctxt(ctxtid, PSTATE);
-    u64 pc = get_shadow_ctxt(ctxtid, PC);
-    set_shadow_ctxt(ctxtid, ELR_EL1, pc);
+    u64 pstate = get_shadow_ctxt(ctxtid, V_PSTATE);
+    u64 pc = get_shadow_ctxt(ctxtid, V_PC);
     u64 new_pc = get_exception_vector(pstate);
-    set_shadow_ctxt(ctxtid, PC, new_pc);
-    set_shadow_ctxt(ctxtid, PSTATE, PSTATE_FAULT_BITS_64);
-    set_shadow_ctxt(ctxtid, SPSR_0, pstate);
-    set_shadow_ctxt(ctxtid, ESR_EL1, esr);
+    set_shadow_ctxt(ctxtid, V_ELR_EL1, pc);
+    set_shadow_ctxt(ctxtid, V_PC, new_pc);
+    set_shadow_ctxt(ctxtid, V_PSTATE, PSTATE_FAULT_BITS_64);
+    set_shadow_ctxt(ctxtid, V_SPSR_0, pstate);
+    set_shadow_ctxt(ctxtid, V_ESR_EL1, esr);
 }
 
-void post_handle_shadow_s2pt_fault(u32 ctxtid)
+void v_post_handle_shadow_s2pt_fault(u32 ctxtid)
 {
     u32 vmid = get_ctxt_vmid(ctxtid);
-    u64 hpfar = get_shadow_ctxt(ctxtid, HPFAR_EL2);
-    u64 addr = (hpfar & HPFAR_MASK) * 256UL;
+    u64 hpfar = get_shadow_ctxt(ctxtid, V_HPFAR_EL2);
+    u64 addr = (hpfar & V_HPFAR_MASK) * 256UL;
     u64 pte = get_int_new_pte(ctxtid);
     u32 level = get_int_new_level(ctxtid);
-    u64 esr = get_shadow_ctxt(ctxtid, ESR_EL2);
+    u64 esr = get_shadow_ctxt(ctxtid, V_ESR_EL2);
     u64 esr_ec = (esr / ESR_ELx_EC_SHIFT) % ESR_ELx_EC_MASK;
     u32 is_iabt = 0U;
     if (esr_ec == ESR_ELx_EC_IABT_LOW) is_iabt = 1U;

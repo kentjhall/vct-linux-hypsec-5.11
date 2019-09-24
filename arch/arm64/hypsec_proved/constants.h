@@ -35,8 +35,8 @@
 #define VTTBR_VMID_SHIFT 1UL
 #define S2_PGD_PAGES_NUM 1UL
 #define MEMBLOCK_NOMAP 1UL
-#define MAX_MMIO_ADDR 100000UL
 */
+#define MAX_MMIO_ADDR 0x40000000
 #define S2_RDWR PTE_S2_RDWR 
 #define PMD_PAGE_MASK PMD_MASK 
 
@@ -57,24 +57,24 @@
 #define VCPU_PER_VM	8
 
 #define DIRTY 1
-/*
-#define SHADOW_SYS_REGS_SIZE 1
-#define PC 2
-#define PSTATE 3
-#define FAR_EL2 0
-#define ESR_EL2 1
-#define MPIDR_EL1 2
-#define DACR32_EL2 3
-#define IFSR32_EL2 4
-#define FPEXC32_EL2 5
-#define HPFAR_EL2 6
-#define ELR_EL1 7
-#define SPSR_0 8
-#define ESR_EL1 9
-#define EC 100
-#define FLAGS 102
-#define HPFAR_MASK 65535UL
+//#define SHADOW_SYS_REGS_SIZE 1
+#define V_PC 2
+#define V_PSTATE 3
+#define V_FAR_EL2 0
+#define V_ESR_EL2 1
+#define V_MPIDR_EL1 2
+#define V_DACR32_EL2 3
+#define V_IFSR32_EL2 4
+#define V_FPEXC32_EL2 5
+#define V_HPFAR_EL2 6
+#define V_ELR_EL1 7
+#define V_SPSR_0 8
+#define V_ESR_EL1 9
+#define V_EC 100
+#define V_FLAGS 102
+#define V_HPFAR_MASK 65535UL
 
+/*
 #define PENDING_FSC_FAULT 1UL //????????????
 #define ARM_EXCEPTION_TRAP 0UL
 #define PENDING_EXCEPT_INJECT_FLAG 2UL //????????
@@ -90,10 +90,8 @@
 #define ESR_ELx_EC_HVC64 10UL
 #define ESR_ELx_EC_IABT_LOW 11UL
 #define ESR_ELx_EC_DABT_LOW 12UL
-#define PENDING_UNDEF_INJECT 13UL
-#define ESR_ELx_EC_UNKNOWN 67108864UL
-#define PSTATE_FAULT_BITS_64 11UL
 */
+#define PSTATE_FAULT_BITS_64 11UL
 
 // Micros
 

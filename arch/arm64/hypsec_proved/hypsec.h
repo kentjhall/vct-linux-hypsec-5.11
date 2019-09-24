@@ -80,7 +80,7 @@ void    clear_phys_mem(u64 pfn);
 u64     get_shared_kvm(u32 vmid);
 u64     get_shared_vcpu(u32 vmid, u32 vcpuid);
 u32     verify_image(u32 vmid, u64 addr);
-u64     get_sys_reg_desc_val(u32 index);
+u64     get_sys_reg_desc_val(u32 ctxtid, u32 index);
 u64     get_exception_vector(u64 pstate);
 
 void    acquire_lock_pt(u32 vmid);
@@ -151,8 +151,8 @@ void    clear_shadow_gp_regs(u32 ctxtid);
 void    int_to_shadow_fp_regs(u32 ctxtid);
 void    int_to_shadow_decrypt(u32 ctxtid);
 void    shadow_to_int_encrypt(u32 ctxtid);
-u32     get_shadow_dirty_bit(u32 ctxtid, u32 index);
-void    set_shadow_dirty_bit(u32 ctxtid, u32 index, u32 value);
+u32     get_shadow_dirty_bit(u32 ctxtid, u64 index);
+void    set_shadow_dirty_bit(u32 ctxtid, u64 index, u32 value);
 u64     get_int_new_pte(u32 ctxtid);
 u32     get_int_new_level(u32 ctxtid);
 
@@ -282,9 +282,9 @@ void sync_dirty_to_shadow(u32 ctxtid);
 void prep_wfx(u32 ctxtid);
 void prep_hvc(u32 ctxtid);
 void prep_abort(u32 ctxtid);
-//void hypsec_inject_undef(u32 ctxtid);
-//void update_exception_gp_regs(u32 ctxtid);
-//void post_handle_shadow_s2pt_fault(u32 ctxtid);
+void v_hypsec_inject_undef(u32 ctxtid);
+void v_update_exception_gp_regs(u32 ctxtid);
+void v_post_handle_shadow_s2pt_fault(u32 ctxtid);
 
 /*
  * VCPUOps

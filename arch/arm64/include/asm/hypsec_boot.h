@@ -47,6 +47,7 @@ struct int_vcpu {
 	struct kvm_vcpu *vcpu;
 	int vcpu_pg_cnt;
 	enum hypsec_init_state state;
+	u32 ctxtid;
 };
 
 struct el2_vm_info {

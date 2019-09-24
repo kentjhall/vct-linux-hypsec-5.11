@@ -22,17 +22,17 @@ u32 verify_image(u32 vmid, u64 addr) {
     return 0;
 }
 
-#if 0
-u64     get_sys_reg_desc_val(u32 index) {
-    // TODO
-    return host_sys_reg_descs[index];
+u64 get_sys_reg_desc_val(u32 ctxtid, u32 index) {
+    // TODO: make the following work
+    int vcpuid = 0, vmid = 0;
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    return el2_data->vm_info[vmid].shadow_ctxt[vcpuid]->sys_regs[index];
 }
 
-u64	get_exception_vector(u64 pstate) {
+u64 get_exception_vector(u64 pstate) {
     // TODO
 	return 0;
 }
-#endif
 
 // TODO: PT structure
 void acquire_lock_pt(u32 vmid) {
@@ -135,18 +135,25 @@ void    release_lock_vm(u32 vmid) {
     stage2_spin_unlock(&el2_data->vm_info[vmid].vm_lock);
 }
 
-#if 0
+
 u32     get_vcpu_ctxtid(u32 vmid, u32 vcpuid, u32 ctxtid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].int_vcpus[vcpuid].ctxtid;
 }
-#endif
 
 // TODO: CTXT Info
-u32     get_ctxt_vmid(u32 ctxtid);
-u32     get_ctxt_vcpuid(u32 ctxtid);
-void    set_vcpu_ctxtid(u32 vmid, u32 vcpuid, u32 ctxtid) {
-    BUG();
+u32 get_ctxt_vmid(u32 ctxtid) {
+	//struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return 0;
+};
+
+u32 get_ctxt_vcpuid(u32 ctxtid) {
+	//struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return 0;
+};
+
+void set_vcpu_ctxtid(u32 vmid, u32 vcpuid, u32 ctxtid) {
+    	BUG();
 };
 
 u32     get_vm_state(u32 vmid) {
@@ -307,15 +314,16 @@ u64     get_shadow_ctxt(u32 ctxtid, u32 index) {
 void    set_shadow_ctxt(u32 ctxtid, u32 index, u64 value) {
 	BUG();
 };
+
+u64     get_int_ctxt(u32 ctxtid, u32 index) {return 0;};
+void    set_int_ctxt(u32 ctxtid, u32 index, u64 value) {};
+void    clear_shadow_gp_regs(u32 ctxtid) {};
+void    int_to_shadow_fp_regs(u32 ctxtid) {};
 #if 0
-u64     get_int_ctxt(u32 ctxtid, u32 index);
-void    set_int_ctxt(u32 ctxtid, u32 index, u64 value);
-void    clear_shadow_gp_regs(u32 ctxtid);
-void    int_to_shadow_fp_regs(u32 ctxtid);
 void    int_to_shadow_decrypt(u32 ctxtid);
 void    shadow_to_int_encrypt(u32 ctxtid);
-u32     get_shadow_dirty_bit(u32 ctxtid, u32 index);
-void    set_shadow_dirty_bit(u32 ctxtid, u32 index, u32 value);
-u64     get_int_new_pte(u32 ctxtid);
-u32     get_int_new_level(u32 ctxtid);
 #endif
+u32     get_shadow_dirty_bit(u32 ctxtid, u64 index) {return 0;};
+void    set_shadow_dirty_bit(u32 ctxtid, u64 index, u32 value) {};
+u64     get_int_new_pte(u32 ctxtid) {return 0;};
+u32     get_int_new_level(u32 ctxtid) {return 0;};
