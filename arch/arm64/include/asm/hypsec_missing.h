@@ -2,9 +2,6 @@ static int hypsec_register_kvm(void) {return 0;};
 static int hypsec_register_vcpu(u32 vmid, int vcpu_id) {return 0;};
 static struct kvm* __hyp_text hypsec_alloc_vm(u32 vmid) {return NULL;};
 
-void v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size) {};
-void v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size) {};
-
 int __hyp_text hypsec_set_vcpu_active(u32 vmid, int vcpu_id) {return 0;}
 struct kvm* __hyp_text hypsec_vmid_to_kvm(u32 vmid) {return NULL;};
 struct kvm_vcpu* __hyp_text hypsec_vcpu_id_to_vcpu(u32 vmid, int vcpu_id) {return NULL;};

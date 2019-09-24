@@ -124,7 +124,6 @@ void    set_s2_page_count(u64 index, u32 count) {
     el2_data->s2_pages[index].count = count;
 }
 
-#if 0
 void    acquire_lock_vm(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     stage2_spin_lock(&el2_data->vm_info[vmid].vm_lock);
@@ -135,10 +134,12 @@ void    release_lock_vm(u32 vmid) {
     stage2_spin_unlock(&el2_data->vm_info[vmid].vm_lock);
 }
 
+#if 0
 u32     get_vcpu_ctxtid(u32 vmid, u32 vcpuid, u32 ctxtid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].int_vcpus[vcpuid].ctxtid;
 }
+#endif
 
 // TODO: CTXT Info
 u32     get_ctxt_vmid(u32 ctxtid);
@@ -165,6 +166,11 @@ void    set_vcpu_state(u32 vmid, u32 vcpuid, u32 state) {
     el2_data->vm_info[vmid].int_vcpus[vcpuid].state = state;
 }
 
+void     set_vm_power(u32 vmid, u32 power) {
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    el2_data->vm_info[vmid].powered_on = power;
+}
+
 u32     get_vm_power(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].powered_on;
@@ -180,24 +186,24 @@ void    set_vm_inc_exe(u32 vmid, u32 inc_exe) {
     el2_data->vm_info[vmid].inc_exe = inc_exe;
 }
 
-u64     get_vm_kvm(u32 vmid) {
+u64 	get_vm_kvm(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    return el2_data->vm_info[vmid].kvm;
+    return (u64)el2_data->vm_info[vmid].kvm;
 }
 
 void    set_vm_kvm(u32 vmid, u64 kvm) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-   el2_data->vm_info[vmid].kvm = kvm;
+    el2_data->vm_info[vmid].kvm = (struct kvm*)kvm;
 }
 
 u64     get_vm_vcpu(u32 vmid, u32 vcpuid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    return el2_data->vm_info[vmid].int_vcpus[vcpuid].vcpu;
+    return (u64)el2_data->vm_info[vmid].int_vcpus[vcpuid].vcpu;
 }
 
 void    set_vm_vcpu(u32 vmid, u32 vcpuid, u64 vcpu) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    el2_data->vm_info[vmid].int_vcpus[vcpuid].vcpu = vcpu;
+    el2_data->vm_info[vmid].int_vcpus[vcpuid].vcpu = (struct kvm_vcpu*)vcpu;
 }
 
 u32     get_vm_next_load_idx(u32 vmid) {
@@ -290,6 +296,7 @@ void    set_next_remap_ptr(u64 remap) {
     el2_data->last_remap_ptr = remap;
 }
 
+#if 0
 u64     get_shadow_ctxt(u32 ctxtid, u32 index);
 void    set_shadow_ctxt(u32 ctxtid, u32 index, u64 value);
 u64     get_int_ctxt(u32 ctxtid, u32 index);
