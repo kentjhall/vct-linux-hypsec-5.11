@@ -24,7 +24,6 @@
 #define PMD_S2_RDWR 0UL
 #define PTE_S2_XN 0UL
 #define PMD_S2_XN 0UL
-#define PMD_TABLE_SHIFT 1UL
 
 #define PHYS_MASK 1UL
 #define PAGE_MASK 1UL
@@ -41,6 +40,7 @@
 #define MAX_MMIO_ADDR 100000UL
 */
 #define S2_PTE_SHIFT PAGE_SHIFT
+#define PMD_TABLE_SHIFT PMD_SHIFT 
 
 #define COREVISOR 257
 #define HOSTVISOR 0
@@ -98,7 +98,7 @@
 #define pgd_idx(addr) (((addr) >> S2_PGDIR_SHIFT) & PTRS_PER_PGD)
 #define pmd_idx(addr) (((addr) >> S2_PMD_SHIFT) & PTRS_PER_PMD)
 #define pte_idx(addr) (((addr) >> S2_PTE_SHIFT) & PTRS_PER_PTE)
-//#define pmd_table(pmd) (((pmd) >> PMD_TABLE_SHIFT) & 1UL)
+#define v_pmd_table(pmd) (((pmd) >> PMD_TABLE_SHIFT) & 1UL)
 #define writable(pte) (((pte) >> 2UL) & 1UL)
 
 #endif //HYPSEC_CONSTANTS_H

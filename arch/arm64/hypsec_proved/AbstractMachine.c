@@ -1,6 +1,6 @@
 #include "hypsec.h"
 
-void _panic(void) {
+void v_panic(void) {
     __hyp_panic();
 }
 
@@ -56,9 +56,14 @@ void pt_store(u32 vmid, u64 addr, u64 value) {
 	BUG();
 };
 
-u64 get_pt_vttbr(u32 vmid);
-void set_pt_vttbr(u32 vmid, u64 vttbr);
+u64 get_pt_vttbr(u32 vmid) {
+	BUG();
+	return 0;
+};
 
+void set_pt_vttbr(u32 vmid, u64 vttbr) {
+	BUG();
+};
 
 u32 get_mem_region_cnt(void) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));

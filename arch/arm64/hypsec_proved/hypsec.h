@@ -75,7 +75,7 @@ struct el2_data {
  * AbstractMachine
  */
 
-void    _panic(void);
+void    v_panic(void);
 void    clear_phys_mem(u64 pfn);
 u64     get_shared_kvm(u32 vmid);
 u64     get_shared_vcpu(u32 vmid, u32 vcpuid);
