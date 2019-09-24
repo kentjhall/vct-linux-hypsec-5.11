@@ -17,3 +17,4 @@ obj-y += BootOps.o
 obj-y += BootAux.o
 obj-y += Helper.o
 obj-y += VCPUOpsAux.o
+obj-y += VCPUOps.o
