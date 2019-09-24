@@ -4,21 +4,19 @@ void v_panic(void) {
     __hyp_panic();
 }
 
-#if 0
-void    clear_phys_mem(u64 pfn) {
-    memset(kern_hyp_va(pfn), 0, PAGE_SIZE);
+void clear_phys_mem(u64 pfn) {
+    el2_memset((void *)kern_hyp_va(pfn << PAGE_SHIFT), 0, PAGE_SIZE);
 }
-#endif
 
-u64     get_shared_kvm(u32 vmid) {
+u64 get_shared_kvm(u32 vmid) {
     return SHARED_KVM_START + vmid * sizeof(struct kvm);
 }
 
-u64     get_shared_vcpu(u32 vmid, u32 vcpuid) {
+u64 get_shared_vcpu(u32 vmid, u32 vcpuid) {
     return SHARED_VCPU_START + (vmid * VCPU_PER_VM + vcpuid) * sizeof(struct kvm_vcpu);
 }
 
-u32     verify_image(u32 vmid, u64 addr) {
+u32 verify_image(u32 vmid, u64 addr) {
     // TODO:
     //return ed25519_verify(load_info.signature, kern_img, load_info.size, vm_info->public_key);
     return 0;

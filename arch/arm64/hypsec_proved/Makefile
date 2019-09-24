@@ -15,3 +15,4 @@ obj-y += VMPower.o
 obj-y += BootCore.o
 obj-y += BootOps.o
 obj-y += BootAux.o
+obj-y += Helper.o

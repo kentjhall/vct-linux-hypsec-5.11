@@ -25,19 +25,5 @@ void __save_shadow_kvm_regs(struct kvm_vcpu *vcpu,
 
 void __hyp_text hypsec_set_vcpu_state(u32 vmid, int vcpu_id, int state) {};
 
-void __hyp_text el2_memset(void *b, int c, int len)
-{
-	char *s = b;
-
-        while(len--)
-            *s++ = c;
-}
-
-void __hyp_text el2_memcpy(void *dest, void *src, size_t len)
-{
-	char *cdest = dest;
-	char *csrc = src;
-
-        while(len--)
-            *cdest++ = *csrc++;
-}
+void el2_memset(void *b, int c, int len);
+void el2_memcpy(void *dest, void *src, size_t len);

@@ -13,7 +13,7 @@ void clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
         while (i < cnt)
         {
             u64 flag = get_mem_region_flag(i);
-            if (flag & MEMBLOCK_NOMAP == 0UL)
+            if ((flag & MEMBLOCK_NOMAP) == 0UL)
             {
                 u64 b = get_mem_region_base(i);
                 u64 s = get_mem_region_size(i);
