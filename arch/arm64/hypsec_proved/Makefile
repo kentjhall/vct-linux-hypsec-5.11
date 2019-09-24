@@ -12,3 +12,6 @@ obj-y += NPTOps.o
 obj-y += MemManager.o
 obj-y += MemoryOps.o
 obj-y += VMPower.o
+obj-y += BootCore.o
+obj-y += BootOps.o
+obj-y += BootAux.o

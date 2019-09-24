@@ -46,14 +46,19 @@
 #define COREVISOR 257
 #define HOSTVISOR 0
 #define MAX_SHARE_COUNT 100
-//#define UNUSED 0
+#define UNUSED 0
 //#define READY 1
 //#define VERIFIED 2
 //#define ACTIVE 3
 
+//Boot
+#define SHARED_KVM_START 1
+#define SHARED_VCPU_START 1
+#define VCPU_PER_VM	8
+
+#define DIRTY 1
 /*
 #define SHADOW_SYS_REGS_SIZE 1
-#define DIRTY 1
 #define PC 2
 #define PSTATE 3
 #define FAR_EL2 0

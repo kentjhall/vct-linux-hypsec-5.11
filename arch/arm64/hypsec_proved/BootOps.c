@@ -6,8 +6,9 @@
 
 u32 vm_is_inc_exe(u32 vmid)
 {
+    u32 inc_exe;
     acquire_lock_vm(vmid);
-    u32 inc_exe = get_vm_inc_exe(vmid);
+    inc_exe = get_vm_inc_exe(vmid);
     release_lock_vm(vmid);
     return inc_exe;
 }
@@ -21,10 +22,10 @@ void boot_from_inc_exe(u32 vmid)
 
 u32 set_vcpu_active(u32 vmid, u32 vcpuid)
 {
-    u32 ret = 0U;
+    u32 ret = 0U, vm_state, vcpu_state;
     acquire_lock_vm(vmid);
-    u32 vm_state = get_vm_state(vmid);
-    u32 vcpu_state = get_vcpu_state(vmid, vcpuid);
+    vm_state = get_vm_state(vmid);
+    vcpu_state = get_vcpu_state(vmid, vcpuid);
     if (vm_state == VERIFIED && vcpu_state == READY) {
         set_vcpu_state(vmid, vcpuid, ACTIVE);
         ret = 1U;
@@ -35,9 +36,9 @@ u32 set_vcpu_active(u32 vmid, u32 vcpuid)
 
 u32 set_vcpu_inactive(u32 vmid, u32 vcpuid)
 {
-    u32 ret = 0U;
+    u32 ret = 0U, vcpu_state;
     acquire_lock_vm(vmid);
-    u32 vcpu_state = get_vcpu_state(vmid, vcpuid);
+    vcpu_state = get_vcpu_state(vmid, vcpuid);
     if (vcpu_state == ACTIVE) {
         set_vcpu_state(vmid, vcpuid, READY);
         ret = 0U;
@@ -46,12 +47,14 @@ u32 set_vcpu_inactive(u32 vmid, u32 vcpuid)
     return ret;
 }
 
-u64 search_load_info(u32 vmid, u64 addr)
+u64 v_search_load_info(u32 vmid, u64 addr)
 {
+    u32 load_info_cnt, load_idx;
+    u64 ret; 
     acquire_lock_vm(vmid);
-    u32 load_info_cnt = get_vm_next_load_idx(vmid);
-    u32 load_idx = 0U;
-    u64 ret = 0UL;
+    load_info_cnt = get_vm_next_load_idx(vmid);
+    load_idx = 0U;
+    ret = 0UL;
     while (load_idx < load_info_cnt)
     {
         u64 base = get_vm_load_addr(vmid, load_idx);
@@ -69,17 +72,18 @@ u64 search_load_info(u32 vmid, u64 addr)
 
 u32 register_vcpu(u32 vmid, u32 vcpuid)
 {
-    u32 ret = 0U;
+    u32 ret = 0U, vm_state, vcpu_state, ctxtid;
+    u64 vcpu;
     acquire_lock_vm(vmid);
-    u32 vm_state = get_vm_state(vmid);
-    u32 vcpu_state = get_vcpu_state(vmid, vcpuid);
+    vm_state = get_vm_state(vmid);
+    vcpu_state = get_vcpu_state(vmid, vcpuid);
     if (vm_state != READY || vcpu_state != UNUSED) {
         ret = INVALID;
     }
     else {
-        u64 vcpu = get_shared_vcpu(vmid, vcpuid);
+        vcpu = get_shared_vcpu(vmid, vcpuid);
         set_vm_vcpu(vmid, vcpuid, vcpu);
-        u32 ctxtid = alloc_shadow_ctxt();
+        ctxtid = alloc_shadow_ctxt();
         if (ctxtid == INVALID) {
             ret = INVALID;
         }
@@ -95,19 +99,20 @@ u32 register_vcpu(u32 vmid, u32 vcpuid)
 u32 register_kvm()
 {
     u32 vmid = gen_vmid();
-    u32 ret = vmid;
+    u32 ret = vmid, state;
+    u64 kvm;
     if (vmid == INVALID) {
         ret = 0U;
     }
     else {
         acquire_lock_vm(vmid);
-        u32 state = get_vm_state(vmid);
+        state = get_vm_state(vmid);
         if (state != UNUSED) {
             ret = 0U;
         }
         else {
             set_vm_inc_exe(vmid, 0U);
-            u64 kvm = get_shared_kvm(vmid);
+            kvm = get_shared_kvm(vmid);
             set_vm_kvm(vmid, kvm);
             init_s2pt(vmid);
             set_vm_state(vmid, READY);
@@ -119,16 +124,18 @@ u32 register_kvm()
 
 void set_boot_info(u32 vmid, u64 load_addr, u64 size)
 {
+    u32 state, load_idx;
+    u64 page_count, remap_addr;
     acquire_lock_vm(vmid);
-    u32 state = get_vm_state(vmid);
+    state = get_vm_state(vmid);
     if (state == READY)
     {
-        u32 load_idx = get_vm_next_load_idx(vmid);
+        load_idx = get_vm_next_load_idx(vmid);
         if (load_idx < MAX_LOAD_INFO_NUM)
         {
             set_vm_next_load_idx(vmid, load_idx + 1U);
-            u64 page_count = (size + PAGE_SIZE - 1UL) / PAGE_SIZE;
-            u64 remap_addr = alloc_remap_addr(page_count);
+            page_count = (size + PAGE_SIZE - 1UL) / PAGE_SIZE;
+            remap_addr = alloc_remap_addr(page_count);
             set_vm_load_addr(vmid, load_idx, load_addr);
             set_vm_load_size(vmid, load_idx, size);
             set_vm_remap_addr(vmid, load_idx, remap_addr);
@@ -140,21 +147,23 @@ void set_boot_info(u32 vmid, u64 load_addr, u64 size)
 
 void remap_vm_image(u32 vmid, u32 load_idx, u64 pfn)
 {
+    u32 state, load_info_cnt;
+    u64 size, page_count, mapped, remap_addr, target;
     acquire_lock_vm(vmid);
-    u32 state = get_vm_state(vmid);
+    state = get_vm_state(vmid);
     if (state == READY)
     {
-        u32 load_info_cnt = get_vm_next_load_idx(vmid);
+        load_info_cnt = get_vm_next_load_idx(vmid);
         if (load_idx < load_info_cnt)
         {
-            u64 size = get_vm_load_size(vmid, load_idx);
-            u64 page_count = (size + PAGE_SIZE - 1UL) / PAGE_SIZE;
-            u64 mapped = get_vm_mapped_pages(vmid, load_idx);
-            u64 remap_addr = get_vm_remap_addr(vmid, load_idx);
-            u64 target = remap_addr + mapped * PAGE_SIZE;
+            size = get_vm_load_size(vmid, load_idx);
+            page_count = (size + PAGE_SIZE - 1UL) / PAGE_SIZE;
+            mapped = get_vm_mapped_pages(vmid, load_idx);
+            remap_addr = get_vm_remap_addr(vmid, load_idx);
+            target = remap_addr + mapped * PAGE_SIZE;
             if (mapped < page_count)
             {
-                mmap_s2pt(COREVISOR, target, 3U, pfn * PAGE_SIZE + PAGE_HYP);
+                mmap_s2pt(COREVISOR, target, 3U, pfn * PAGE_SIZE + pgprot_val(PAGE_HYP));
                 set_vm_mapped_pages(vmid, load_idx, mapped + 1UL);
             }
         }
@@ -164,21 +173,23 @@ void remap_vm_image(u32 vmid, u32 load_idx, u64 pfn)
 
 void verify_and_load_images(u32 vmid)
 {
+    u32 state, load_info_cnt, load_idx, valid;
+    u64 load_addr, remap_addr, mapped;
     acquire_lock_vm(vmid);
-    u32 state = get_vm_state(vmid);
+    state = get_vm_state(vmid);
     if (state == READY)
     {
-        u32 load_info_cnt = get_vm_next_load_idx(vmid);
-        u32 load_idx = 0U;
+        load_info_cnt = get_vm_next_load_idx(vmid);
+        load_idx = 0U;
         while (load_idx < load_info_cnt)
         {
-            u64 load_addr = get_vm_load_addr(vmid, load_idx);
-            u64 remap_addr = get_vm_remap_addr(vmid, load_idx);
-            u64 mapped = get_vm_mapped_pages(vmid, load_idx);
-            unmap_image_from_host_s2pt(vmid, remap_addr, mapped);
-            u32 valid = verify_image(vmid, remap_addr);
+            load_addr = get_vm_load_addr(vmid, load_idx);
+            remap_addr = get_vm_remap_addr(vmid, load_idx);
+            mapped = get_vm_mapped_pages(vmid, load_idx);
+            v_unmap_image_from_host_s2pt(vmid, remap_addr, mapped);
+            valid = verify_image(vmid, remap_addr);
             if (valid == 1U) {
-                load_image_to_shadow_s2pt(vmid, load_addr, remap_addr, mapped);
+                v_load_image_to_shadow_s2pt(vmid, load_addr, remap_addr, mapped);
             }
             load_idx += 1U;
         }

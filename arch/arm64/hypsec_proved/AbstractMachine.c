@@ -8,6 +8,7 @@ void v_panic(void) {
 void    clear_phys_mem(u64 pfn) {
     memset(kern_hyp_va(pfn), 0, PAGE_SIZE);
 }
+#endif
 
 u64     get_shared_kvm(u32 vmid) {
     return SHARED_KVM_START + vmid * sizeof(struct kvm);
@@ -19,9 +20,11 @@ u64     get_shared_vcpu(u32 vmid, u32 vcpuid) {
 
 u32     verify_image(u32 vmid, u64 addr) {
     // TODO:
-    return ed25519_verify(load_info.signature, kern_img, load_info.size, vm_info->public_key);
+    //return ed25519_verify(load_info.signature, kern_img, load_info.size, vm_info->public_key);
+    return 0;
 }
 
+#if 0
 u64     get_sys_reg_desc_val(u32 index) {
     // TODO
     return host_sys_reg_descs[index];
@@ -144,7 +147,9 @@ u32     get_vcpu_ctxtid(u32 vmid, u32 vcpuid, u32 ctxtid) {
 // TODO: CTXT Info
 u32     get_ctxt_vmid(u32 ctxtid);
 u32     get_ctxt_vcpuid(u32 ctxtid);
-void    set_vcpu_ctxtid(u32 vmid, u32 vcpuid, u32 ctxtid);
+void    set_vcpu_ctxtid(u32 vmid, u32 vcpuid, u32 ctxtid) {
+    BUG();
+};
 
 u32     get_vm_state(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -296,9 +301,15 @@ void    set_next_remap_ptr(u64 remap) {
     el2_data->last_remap_ptr = remap;
 }
 
+//TODO: Define the following
+u64     get_shadow_ctxt(u32 ctxtid, u32 index) {
+	BUG();
+	return 0;
+};
+void    set_shadow_ctxt(u32 ctxtid, u32 index, u64 value) {
+	BUG();
+};
 #if 0
-u64     get_shadow_ctxt(u32 ctxtid, u32 index);
-void    set_shadow_ctxt(u32 ctxtid, u32 index, u64 value);
 u64     get_int_ctxt(u32 ctxtid, u32 index);
 void    set_int_ctxt(u32 ctxtid, u32 index, u64 value);
 void    clear_shadow_gp_regs(u32 ctxtid);
