@@ -6,3 +6,4 @@ obj-y += MemRegion.o
 obj-y += PageIndex.o
 obj-y += PageManager.o
 obj-y += PTAlloc.o
+obj-y += PTWalk.o

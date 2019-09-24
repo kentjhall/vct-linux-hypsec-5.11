@@ -47,8 +47,15 @@ void set_pt_next(u32 vmid, u64 next) {
 	BUG();
 };
 
-u64 pt_load(u32 vmid, u64 addr);
-void pt_store(u32 vmid, u64 addr, u64 value);
+u64 pt_load(u32 vmid, u64 addr) {
+	BUG();
+	return 0;
+};
+
+void pt_store(u32 vmid, u64 addr, u64 value) {
+	BUG();
+};
+
 u64 get_pt_vttbr(u32 vmid);
 void set_pt_vttbr(u32 vmid, u64 vttbr);
 
