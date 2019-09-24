@@ -8,3 +8,4 @@ obj-y += PageManager.o
 obj-y += PTAlloc.o
 obj-y += PTWalk.o
 obj-y += NPTWalk.o
+obj-y += NPTOps.o

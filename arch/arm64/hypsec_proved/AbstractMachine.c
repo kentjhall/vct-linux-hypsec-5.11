@@ -34,8 +34,13 @@ u64	get_exception_vector(u64 pstate) {
 #endif
 
 // TODO: PT structure
-void acquire_lock_pt(u32 vmid);
-void release_lock_pt(u32 vmid);
+void acquire_lock_pt(u32 vmid) {
+	BUG();
+};
+
+void release_lock_pt(u32 vmid) {
+	BUG();
+};
 
 //TODO: Fix the following functions
 u64 get_pt_next(u32 vmid) {
