@@ -83,8 +83,6 @@ struct s2_trans walk_stage2_pgd(u32 vmid, phys_addr_t addr);
 int stage2_mem_regions_search(phys_addr_t addr, struct memblock_region *regions,
 	unsigned long cnt);
 
-unsigned long get_s2_page_index(struct el2_data *el2_data, phys_addr_t addr);
-int pre_handle_shadow_s2pt_fault(struct shadow_vcpu_context *shadow_ctxt);
 void post_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu,
 				   struct shadow_vcpu_context *shadow_ctxt);
 

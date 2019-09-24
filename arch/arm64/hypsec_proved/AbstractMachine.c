@@ -68,7 +68,6 @@ u64 get_mem_region_flag(u32 index) {
 	return el2_data->regions[index].flags;
 }
 
-#if 0
 void    acquire_lock_s2page(void) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     stage2_spin_lock(&el2_data->s2pages_lock);
@@ -99,6 +98,7 @@ void    set_s2_page_count(u64 index, u32 count) {
     el2_data->s2_pages[index].count = count;
 }
 
+#if 0
 void    acquire_lock_vm(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     stage2_spin_lock(&el2_data->vm_info[vmid].vm_lock);

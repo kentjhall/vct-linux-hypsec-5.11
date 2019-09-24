@@ -3,3 +3,5 @@
 #
 obj-y += AbstractMachine.o
 obj-y += MemRegion.o
+obj-y += PageIndex.o
+obj-y += PageManager.o

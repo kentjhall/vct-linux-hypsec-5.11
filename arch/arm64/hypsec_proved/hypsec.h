@@ -202,14 +202,14 @@ u32 mem_region_search(u64 addr);
  * PageIndex
  */
 
-//u64 get_s2_page_index(u64 addr);
+u64 get_s2_page_index(u64 addr);
 
 /*
  * PageManager
  */
 
 u32 get_pfn_owner(u64 pfn);
-//void set_pfn_owner(u64 pfn, u64 num, u32 vmid);
+void set_pfn_owner(u64 pfn, u64 num, u32 vmid);
 u32 get_pfn_count(u64 pfn);
 void set_pfn_count(u64 pfn, u32 count);
 
