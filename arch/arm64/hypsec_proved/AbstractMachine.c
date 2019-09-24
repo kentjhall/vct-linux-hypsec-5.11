@@ -1,24 +1,4 @@
 #include "hypsec.h"
-#include <linux/types.h>
-#include <asm/kvm_asm.h>
-#include <asm/kvm_hyp.h>
-#include <linux/mman.h>
-#include <linux/kvm_host.h>
-#include <linux/io.h>
-#include <trace/events/kvm.h>
-#include <asm/pgalloc.h>
-#include <asm/cacheflush.h>
-#include <asm/kvm_arm.h>
-#include <asm/kvm_mmu.h>
-#include <asm/kvm_mmio.h>
-#include <asm/kvm_emulate.h>
-#include <asm/virt.h>
-#include <asm/kernel-pgtable.h>
-#include <asm/hypsec_host.h>
-#include <asm/spinlock_types.h>
-#include <linux/serial_reg.h>
-
-#include "hypsec.h"
 
 void _panic(void) {
     __hyp_panic();
@@ -62,30 +42,33 @@ void    pt_store(u32 vmid, u64 addr, u64 value);
 u64     get_pt_vttbr(u32 vmid);
 void    set_pt_vttbr(u32 vmid, u64 vttbr);
 
-u32     get_mem_region_cnt(void) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    return el2_data->regions_cnt;
+#endif
+
+u32 get_mem_region_cnt(void) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->regions_cnt;
 }
 
-u64     get_mem_region_base(u32 index) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    return el2_data->regions[index].base;
+u64 get_mem_region_base(u32 index) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->regions[index].base;
 }
-u64     get_mem_region_size(u32 index) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    return el2_data->regions[index].size;
-}
-
-u64     get_mem_region_index(u32 index) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    return el2_data->regions[index].index;
+u64 get_mem_region_size(u32 index) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->regions[index].size;
 }
 
-u64     get_mem_region_flag(u32 index) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    return el2_data->regions[index].flag;
+u64 get_mem_region_index(u32 index) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->s2_memblock_info[index].index;
 }
 
+u64 get_mem_region_flag(u32 index) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->regions[index].flags;
+}
+
+#if 0
 void    acquire_lock_s2page(void) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     stage2_spin_lock(&el2_data->s2pages_lock);

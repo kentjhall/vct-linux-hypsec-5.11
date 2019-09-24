@@ -1,6 +1,25 @@
 #ifndef HYPSEC_HYPSEC_H
 #define HYPSEC_HYPSEC_H
 
+#include <linux/types.h>
+#include <asm/kvm_asm.h>
+#include <asm/kvm_hyp.h>
+#include <linux/mman.h>
+#include <linux/kvm_host.h>
+#include <linux/io.h>
+#include <trace/events/kvm.h>
+#include <asm/pgalloc.h>
+#include <asm/cacheflush.h>
+#include <asm/kvm_arm.h>
+#include <asm/kvm_mmu.h>
+#include <asm/kvm_mmio.h>
+#include <asm/kvm_emulate.h>
+#include <asm/virt.h>
+#include <asm/kernel-pgtable.h>
+#include <asm/hypsec_host.h>
+#include <asm/spinlock_types.h>
+#include <linux/serial_reg.h>
+
 #include "constants.h"
 
 typedef unsigned long long u64;
@@ -272,7 +291,7 @@ void prep_abort(u32 ctxtid);
  */
 
 void save_shadow_kvm_regs(u32 ctxtid, u64 ec);
-void restore_shadow_kvm_regs(u32 ctxtid) {};
+void restore_shadow_kvm_regs(u32 ctxtid);
 //void save_encrypted_vcpu(u32 ctxtid);
 
 #endif //HYPSEC_HYPSEC_H

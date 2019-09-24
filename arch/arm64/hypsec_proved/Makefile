@@ -2,4 +2,4 @@
 # Makefile for host Kernel running with stage 2 translation
 #
 obj-y += AbstractMachine.o
-
+obj-y += MemRegion.o
