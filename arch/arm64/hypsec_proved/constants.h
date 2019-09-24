@@ -18,7 +18,6 @@
 #define PAGE_S2_KERNEL 0UL
 #define PAGE_S2_DEVICE 0UL
 #define PAGE_HYP 0UL
-#define S2_RDWR 0UL
 #define PAGE_S2 0UL
 #define PTE_S2_RDWR 0UL
 #define PMD_S2_RDWR 0UL
@@ -39,6 +38,8 @@
 #define MEMBLOCK_NOMAP 1UL
 #define MAX_MMIO_ADDR 100000UL
 */
+#define S2_RDWR PTE_S2_RDWR 
+
 #define S2_PTE_SHIFT PAGE_SHIFT
 #define PMD_TABLE_SHIFT PMD_SHIFT 
 
