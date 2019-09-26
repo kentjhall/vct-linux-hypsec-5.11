@@ -22,7 +22,7 @@ u32 verify_image(u32 vmid, u64 addr) {
     return 0;
 }
 
-u64 get_sys_reg_desc_val(u32 ctxtid, u32 index) {
+u64 get_sys_reg_desc_val(u32 index) {
     // TODO: make the following work
     int vcpuid = 0, vmid = 0;
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -34,41 +34,46 @@ u64 get_exception_vector(u64 pstate) {
 	return 0;
 }
 
-// TODO: PT structure
 void acquire_lock_pt(u32 vmid) {
-	BUG();
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    stage2_spin_lock(&el2_data->vm_info[vmid].shadow_pt_lock);
 };
 
 void release_lock_pt(u32 vmid) {
-	BUG();
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    stage2_spin_unlock(&el2_data->vm_info[vmid].shadow_pt_lock);
 };
 
-//TODO: Fix the following functions
 u64 get_pt_next(u32 vmid) {
-	BUG();
-	return 0;
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    return el2_data->vm_info[vmid].used_pages;
 };
 
 void set_pt_next(u32 vmid, u64 next) {
-	BUG();
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    el2_data->vm_info[vmid].used_pages = next;
 };
 
+// TODO: make the following work
 u64 pt_load(u32 vmid, u64 addr) {
 	BUG();
 	return 0;
 };
 
+// TODO: make the following work
 void pt_store(u32 vmid, u64 addr, u64 value) {
 	BUG();
 };
 
 u64 get_pt_vttbr(u32 vmid) {
-	BUG();
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    return el2_data->vm_info[vmid].vttbr;
 	return 0;
 };
 
 void set_pt_vttbr(u32 vmid, u64 vttbr) {
-	BUG();
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    el2_data->vm_info[vmid].vttbr = vttbr;
 };
 
 u32 get_mem_region_cnt(void) {
@@ -136,24 +141,14 @@ void    release_lock_vm(u32 vmid) {
 }
 
 
-u32     get_vcpu_ctxtid(u32 vmid, u32 vcpuid, u32 ctxtid) {
+u32     get_vcpu_ctxtid(u32 vmid, u32 vcpuid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].int_vcpus[vcpuid].ctxtid;
 }
 
-// TODO: CTXT Info
-u32 get_ctxt_vmid(u32 ctxtid) {
-	//struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	return 0;
-};
-
-u32 get_ctxt_vcpuid(u32 ctxtid) {
-	//struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	return 0;
-};
-
-void set_vcpu_ctxtid(u32 vmid, u32 vcpuid, u32 ctxtid) {
-    	BUG();
+// TODO: make the following work
+void 	set_vcpu_ctxtid(u32 vmid, u32 vcpuid, u32 ctxtid) {
+	BUG();
 };
 
 u32     get_vm_state(u32 vmid) {
@@ -307,6 +302,10 @@ void    set_next_remap_ptr(u64 remap) {
 }
 
 //TODO: Define the following
+u32     get_cur_vmid(void) { return 0; }
+u32     get_cur_vcpuid(void) { return 0; }
+u32     get_cur_ctxtid(void) { return 0; }
+
 u64     get_shadow_ctxt(u32 ctxtid, u32 index) {
 	BUG();
 	return 0;
@@ -323,7 +322,7 @@ void    int_to_shadow_fp_regs(u32 ctxtid) {};
 void    int_to_shadow_decrypt(u32 ctxtid);
 void    shadow_to_int_encrypt(u32 ctxtid);
 #endif
-u32     get_shadow_dirty_bit(u32 ctxtid, u64 index) {return 0;};
-void    set_shadow_dirty_bit(u32 ctxtid, u64 index, u32 value) {};
+u32     get_shadow_dirty_bit(u32 ctxtid, u32 index) {return 0;};
+void    set_shadow_dirty_bit(u32 ctxtid, u32 index, u32 value) {};
 u64     get_int_new_pte(u32 ctxtid) {return 0;};
 u32     get_int_new_level(u32 ctxtid) {return 0;};

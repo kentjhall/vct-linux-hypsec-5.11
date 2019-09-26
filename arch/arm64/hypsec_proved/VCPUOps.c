@@ -4,9 +4,12 @@
  * VCPUOps
  */
 
-void save_shadow_kvm_regs(u32 ctxtid, u64 ec)
+void save_shadow_kvm_regs()
 {
-    set_shadow_ctxt(ctxtid, V_EC, ec);
+    u32 vmid = get_cur_vmid();
+    u32 vcpuid = get_cur_vcpuid();
+    u32 ctxtid = get_cur_ctxtid();
+    u64 ec = get_shadow_ctxt(ctxtid, V_EC);
     if (ec == ARM_EXCEPTION_TRAP)
     {
         u64 hsr = get_shadow_ctxt(ctxtid, V_ESR_EL2);
@@ -14,22 +17,23 @@ void save_shadow_kvm_regs(u32 ctxtid, u64 ec)
         if (hsr_ec == ESR_ELx_EC_WFx)
             prep_wfx(ctxtid);
         else if (hsr_ec == ESR_ELx_EC_HVC32)
-            prep_hvc(ctxtid);
+            prep_hvc(vmid, vcpuid, ctxtid);
         else if (hsr_ec == ESR_ELx_EC_HVC64)
-            prep_hvc(ctxtid);
+            prep_hvc(vmid, vcpuid, ctxtid);
         else if (hsr_ec == ESR_ELx_EC_IABT_LOW)
             prep_abort(ctxtid);
         else if (hsr_ec == ESR_ELx_EC_DABT_LOW)
             prep_abort(ctxtid);
         else
-            v_panic();
-            //hypsec_inject_undef(ctxtid);
+			v_panic();
     }
 }
 
-void restore_shadow_kvm_regs(u32 ctxtid)
+void restore_shadow_kvm_regs()
 {
-    u32 vmid = get_ctxt_vmid(ctxtid);
+    u32 vmid = get_cur_vmid();
+    u32 vcpuid = get_cur_vcpuid();
+    u32 ctxtid = get_cur_ctxtid();
     u64 dirty = get_shadow_ctxt(ctxtid, DIRTY);
 
     if (dirty == INVALID64)
@@ -40,8 +44,8 @@ void restore_shadow_kvm_regs(u32 ctxtid)
         }
         else*/
         {
-            reset_gp_regs(ctxtid);
-            reset_sys_regs(ctxtid);
+            reset_gp_regs(vmid, vcpuid, ctxtid);
+            reset_sys_regs(vmid, vcpuid, ctxtid);
         }
         save_sys_regs(ctxtid);
         set_shadow_ctxt(ctxtid, DIRTY, 0UL);
@@ -51,8 +55,8 @@ void restore_shadow_kvm_regs(u32 ctxtid)
         u64 ec = get_shadow_ctxt(ctxtid, V_EC);
         if (ec == ARM_EXCEPTION_TRAP)
             sync_dirty_to_shadow(ctxtid);
-        //if (dirty & PENDING_EXCEPT_INJECT_FLAG)
-            //update_exception_gp_regs(ctxtid);
+        if (dirty & PENDING_EXCEPT_INJECT_FLAG)
+            v_update_exception_gp_regs(ctxtid);
         if (dirty & DIRTY_PC_FLAG) {
             u64 pc = get_shadow_ctxt(ctxtid, V_PC);
             set_shadow_ctxt(ctxtid, V_PC, pc + 4UL);
@@ -62,7 +66,7 @@ void restore_shadow_kvm_regs(u32 ctxtid)
 
         if (get_shadow_ctxt(ctxtid, V_FLAGS) & PENDING_FSC_FAULT)
         {
-            //post_handle_shadow_s2pt_fault(ctxtid);
+            v_post_handle_shadow_s2pt_fault(vmid, vcpuid, ctxtid);
         }
 
         set_shadow_ctxt(ctxtid, V_FLAGS, 0UL);
@@ -70,10 +74,11 @@ void restore_shadow_kvm_regs(u32 ctxtid)
 }
 
 /*
-void save_encrypted_vcpu(u32 ctxtid)
+void save_encrypted_vcpu(u32 vmid, u32 vcpuid)
 {
+    u32 ctxtid = get_ctxtid(vmid, vcpuid);
     shadow_to_int_encrypt(ctxtid);
-    u64 pstate = get_shadow_ctxt(ctxtid, PSTATE);
-    set_int_ctxt(ctxtid, PSTATE, pstate);
+    u64 pstate = get_shadow_ctxt(ctxtid, V_PSTATE);
+    set_int_ctxt(ctxtid, V_PSTATE, pstate);
 }
 */

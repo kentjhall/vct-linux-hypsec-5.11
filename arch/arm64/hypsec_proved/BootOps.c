@@ -20,31 +20,42 @@ void boot_from_inc_exe(u32 vmid)
     release_lock_vm(vmid);
 }
 
-u32 set_vcpu_active(u32 vmid, u32 vcpuid)
+u32 get_ctxtid(u32 vmid, u32 vcpuid)
 {
-    u32 ret = 0U, vm_state, vcpu_state;
+    u32 ctxtid;
+    acquire_lock_vm(vmid);
+    ctxtid = get_vcpu_ctxtid(vmid, vcpuid);
+    release_lock_vm(vmid);
+    return ctxtid;
+}
+
+void set_vcpu_active(u32 vmid, u32 vcpuid)
+{
+    u32 vm_state, vcpu_state;
     acquire_lock_vm(vmid);
     vm_state = get_vm_state(vmid);
     vcpu_state = get_vcpu_state(vmid, vcpuid);
     if (vm_state == VERIFIED && vcpu_state == READY) {
         set_vcpu_state(vmid, vcpuid, ACTIVE);
-        ret = 1U;
     }
+	else {
+		v_panic();
+	}
     release_lock_vm(vmid);
-    return ret;
 }
 
-u32 set_vcpu_inactive(u32 vmid, u32 vcpuid)
+void set_vcpu_inactive(u32 vmid, u32 vcpuid)
 {
-    u32 ret = 0U, vcpu_state;
+    u32 vcpu_state;
     acquire_lock_vm(vmid);
     vcpu_state = get_vcpu_state(vmid, vcpuid);
     if (vcpu_state == ACTIVE) {
         set_vcpu_state(vmid, vcpuid, READY);
-        ret = 0U;
     }
+	else {
+		v_panic();
+	}
     release_lock_vm(vmid);
-    return ret;
 }
 
 u64 v_search_load_info(u32 vmid, u64 addr)
@@ -72,20 +83,20 @@ u64 v_search_load_info(u32 vmid, u64 addr)
 
 u32 register_vcpu(u32 vmid, u32 vcpuid)
 {
-    u32 ret = 0U, vm_state, vcpu_state, ctxtid;
+    u32 vm_state, vcpu_state, ctxtid;
     u64 vcpu;
     acquire_lock_vm(vmid);
     vm_state = get_vm_state(vmid);
     vcpu_state = get_vcpu_state(vmid, vcpuid);
     if (vm_state != READY || vcpu_state != UNUSED) {
-        ret = INVALID;
+		v_panic();
     }
     else {
         vcpu = get_shared_vcpu(vmid, vcpuid);
         set_vm_vcpu(vmid, vcpuid, vcpu);
         ctxtid = alloc_shadow_ctxt();
         if (ctxtid == INVALID) {
-            ret = INVALID;
+			v_panic();
         }
         else {
             set_vcpu_ctxtid(vmid, vcpuid, ctxtid);
@@ -93,22 +104,22 @@ u32 register_vcpu(u32 vmid, u32 vcpuid)
         }
     }
     release_lock_vm(vmid);
-    return ret;
+    return 0U;
 }
 
 u32 register_kvm()
 {
     u32 vmid = gen_vmid();
-    u32 ret = vmid, state;
+    u32 state;
     u64 kvm;
     if (vmid == INVALID) {
-        ret = 0U;
+		v_panic();
     }
     else {
         acquire_lock_vm(vmid);
         state = get_vm_state(vmid);
         if (state != UNUSED) {
-            ret = 0U;
+			v_panic();
         }
         else {
             set_vm_inc_exe(vmid, 0U);
@@ -119,7 +130,7 @@ u32 register_kvm()
         }
         release_lock_vm(vmid);
     }
-    return ret;
+    return vmid;
 }
 
 void set_boot_info(u32 vmid, u64 load_addr, u64 size)

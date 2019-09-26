@@ -27,51 +27,6 @@ typedef unsigned u32;
 typedef u64 phys_addr_t;
 
 /*
- * Data Structures
- */
-
-/*
-struct el2_data {
-    struct memblock_region regions[32];
-    struct s2_memblock_info s2_memblock_info[32];
-    struct s2_cpu_arch arch;
-
-    int regions_cnt;
-    u64 page_pool_start;
-    phys_addr_t host_vttbr;
-
-    unsigned long used_pages;
-    unsigned long used_tmp_pages;
-    unsigned long pl011_base;
-
-    arch_spinlock_t s2pages_lock;
-    arch_spinlock_t abs_lock;
-    arch_spinlock_t el2_pt_lock;
-
-    kvm_pfn_t ram_start_pfn;
-    struct s2_page s2_pages[S2_PFN_SIZE];
-
-    struct shadow_vcpu_context shadow_vcpu_ctxt[NUM_SHADOW_VCPU_CTXT];
-    int used_shadow_vcpu_ctxt;
-
-    struct s2_sys_reg_desc s2_sys_reg_descs[SHADOW_SYS_REGS_DESC_SIZE];
-
-    struct el2_vm_info vm_info[EL2_VM_INFO_SIZE];
-    int used_vm_info;
-    unsigned long last_remap_ptr;
-
-    struct el2_smmu_cfg smmu_cfg[EL2_SMMU_CFG_SIZE];
-    struct el2_arm_smmu_device smmu;
-    struct el2_arm_smmu_device smmus[SMMU_NUM];
-    int el2_smmu_num;
-
-    u32 next_vmid;
-    phys_addr_t vgic_cpu_base;
-    bool installed;
-};
-*/
-
-/*
  * AbstractMachine
  */
 
@@ -80,7 +35,7 @@ void    clear_phys_mem(u64 pfn);
 u64     get_shared_kvm(u32 vmid);
 u64     get_shared_vcpu(u32 vmid, u32 vcpuid);
 u32     verify_image(u32 vmid, u64 addr);
-u64     get_sys_reg_desc_val(u32 ctxtid, u32 index);
+u64     get_sys_reg_desc_val(u32 index);
 u64     get_exception_vector(u64 pstate);
 
 void    acquire_lock_pt(u32 vmid);
@@ -107,9 +62,7 @@ void    set_s2_page_count(u64 index, u32 count);
 
 void    acquire_lock_vm(u32 vmid);
 void    release_lock_vm(u32 vmid);
-u32     get_vcpu_ctxtid(u32 vmid, u32 vcpuid, u32 ctxtid);
-u32     get_ctxt_vmid(u32 ctxtid);
-u32     get_ctxt_vcpuid(u32 ctxtid);
+u32     get_vcpu_ctxtid(u32 vmid, u32 vcpuid);
 void    set_vcpu_ctxtid(u32 vmid, u32 vcpuid, u32 ctxtid);
 u32     get_vm_state(u32 vmid);
 void    set_vm_state(u32 vmid, u32 state);
@@ -143,6 +96,9 @@ void    set_next_ctxt(u32 ctxtid);
 u64     get_next_remap_ptr(void);
 void    set_next_remap_ptr(u64 remap);
 
+u32     get_cur_vmid(void);
+u32     get_cur_vcpuid(void);
+u32     get_cur_ctxtid(void);
 u64     get_shadow_ctxt(u32 ctxtid, u32 index);
 void    set_shadow_ctxt(u32 ctxtid, u32 index, u64 value);
 u64     get_int_ctxt(u32 ctxtid, u32 index);
@@ -151,10 +107,11 @@ void    clear_shadow_gp_regs(u32 ctxtid);
 void    int_to_shadow_fp_regs(u32 ctxtid);
 void    int_to_shadow_decrypt(u32 ctxtid);
 void    shadow_to_int_encrypt(u32 ctxtid);
-u32     get_shadow_dirty_bit(u32 ctxtid, u64 index);
-void    set_shadow_dirty_bit(u32 ctxtid, u64 index, u32 value);
+u32     get_shadow_dirty_bit(u32 ctxtid, u32 index);
+void    set_shadow_dirty_bit(u32 ctxtid, u32 index, u32 value);
 u64     get_int_new_pte(u32 ctxtid);
 u32     get_int_new_level(u32 ctxtid);
+
 
 /*
  * PTAlloc
@@ -261,9 +218,10 @@ void v_load_image_to_shadow_s2pt(u32 vmid, u64 target_addr, u64 remap_addr, u64 
 
 u32 vm_is_inc_exe(u32 vmid);
 void boot_from_inc_exe(u32 vmid);
-u32 set_vcpu_active(u32 vmid, u32 vcpuid);
-u32 set_vcpu_inactive(u32 vmid, u32 vcpuid);
+u32 get_ctxtid(u32 vmid, u32 vcpuid);
 u64 v_search_load_info(u32 vmid, u64 addr);
+void set_vcpu_active(u32 vmid, u32 vcpuid);
+void set_vcpu_inactive(u32 vmid, u32 vcpuid);
 u32 register_vcpu(u32 vmid, u32 vcpuid);
 u32 register_kvm(void);
 void set_boot_info(u32 vmid, u64 load_addr, u64 size);
@@ -274,24 +232,25 @@ void verify_and_load_images(u32 vmid);
  * VCPUOpsAux
  */
 
-void reset_gp_regs(u32 ctxtid);
-void reset_sys_regs(u32 ctxtid);
+void reset_gp_regs(u32 vmid, u32 vcpuid, u32 ctxtid);
+void reset_sys_regs(u32 vmid, u32 vcpuid, u32 ctxtid);
 void save_sys_regs(u32 ctxtid);
 void restore_sys_regs(u32 ctxtid);
 void sync_dirty_to_shadow(u32 ctxtid);
 void prep_wfx(u32 ctxtid);
-void prep_hvc(u32 ctxtid);
+void prep_hvc(u32 vmid, u32 vcpuid, u32 ctxtid);
 void prep_abort(u32 ctxtid);
 void v_hypsec_inject_undef(u32 ctxtid);
 void v_update_exception_gp_regs(u32 ctxtid);
-void v_post_handle_shadow_s2pt_fault(u32 ctxtid);
+void v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid, u32 ctxtid);
+
 
 /*
  * VCPUOps
  */
 
-void save_shadow_kvm_regs(u32 ctxtid, u64 ec);
-void restore_shadow_kvm_regs(u32 ctxtid);
+void save_shadow_kvm_regs(void);
+void restore_shadow_kvm_regs(void);
 //void save_encrypted_vcpu(u32 ctxtid);
 
 #endif //HYPSEC_HYPSEC_H

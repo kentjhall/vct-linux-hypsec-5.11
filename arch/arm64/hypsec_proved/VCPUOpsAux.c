@@ -1,19 +1,18 @@
 #include "hypsec.h"
 #include <uapi/linux/psci.h>
 
+
 /*
  * VCPUOpsAux
  */
 
-void reset_gp_regs(u32 ctxtid)
+void reset_gp_regs(u32 vmid, u32 vcpuid, u32 ctxtid)
 {
-    u64 pc = get_int_ctxt(ctxtid, V_PC), pstate;
-    u32 vmid = get_ctxt_vmid(ctxtid);
-
+    u64 pc = get_int_ctxt(ctxtid, V_PC);
     if (v_search_load_info(vmid, pc))
     {
         clear_shadow_gp_regs(ctxtid);
-        pstate = get_int_ctxt(ctxtid, V_PSTATE);
+        u64 pstate = get_int_ctxt(ctxtid, V_PSTATE);
         set_shadow_ctxt(ctxtid, V_PSTATE, pstate);
         set_shadow_ctxt(ctxtid, V_PC, pc);
         int_to_shadow_fp_regs(ctxtid);
@@ -23,22 +22,21 @@ void reset_gp_regs(u32 ctxtid)
     }
 }
 
-void reset_sys_regs(u32 ctxtid)
+void reset_sys_regs(u32 vmid, u32 vcpuid, u32 ctxtid)
 {
     u64 val;
     u32 i = 1U;
-    u32 vcpu_id = get_ctxt_vcpuid(ctxtid);
     while (i <= SHADOW_SYS_REGS_SIZE)
     {
-        if (i == MPIDR_EL1)
+        if (i == V_MPIDR_EL1)
         {
-            u64 mpidr = (vcpu_id % 16U) + ((vcpu_id / 16U) % 256U) * 256U +
-                                  ((vcpu_id / 4096U) % 256U) * 65536U;
+            u64 mpidr = (vcpuid % 16U) + ((vcpuid / 16U) % 256U) * 256U +
+                                  ((vcpuid / 4096U) % 256U) * 65536U;
             val = mpidr + 2147483648UL;
         }
         else
         {
-            val = get_sys_reg_desc_val(ctxtid, i);
+            val = get_sys_reg_desc_val(i);
         }
         set_shadow_ctxt(ctxtid, i, val);
         i += 1U;
@@ -47,20 +45,20 @@ void reset_sys_regs(u32 ctxtid)
 
 void save_sys_regs(u32 ctxtid)
 {
-    set_shadow_ctxt(ctxtid, DACR32_EL2, get_int_ctxt(ctxtid, DACR32_EL2));
-    set_shadow_ctxt(ctxtid, IFSR32_EL2, get_int_ctxt(ctxtid, IFSR32_EL2));
-    set_shadow_ctxt(ctxtid, FPEXC32_EL2, get_int_ctxt(ctxtid, FPEXC32_EL2));
+    set_shadow_ctxt(ctxtid, V_DACR32_EL2, get_int_ctxt(ctxtid, V_DACR32_EL2));
+    set_shadow_ctxt(ctxtid, V_IFSR32_EL2, get_int_ctxt(ctxtid, V_IFSR32_EL2));
+    set_shadow_ctxt(ctxtid, V_FPEXC32_EL2, get_int_ctxt(ctxtid, V_FPEXC32_EL2));
 
-    set_int_ctxt(ctxtid, DACR32_EL2, 0UL);
-    set_int_ctxt(ctxtid, IFSR32_EL2, 0UL);
-    set_int_ctxt(ctxtid, FPEXC32_EL2, 0UL);
+    set_int_ctxt(ctxtid, V_DACR32_EL2, 0UL);
+    set_int_ctxt(ctxtid, V_IFSR32_EL2, 0UL);
+    set_int_ctxt(ctxtid, V_FPEXC32_EL2, 0UL);
 }
 
 void restore_sys_regs(u32 ctxtid)
 {
-    set_int_ctxt(ctxtid, DACR32_EL2, get_shadow_ctxt(ctxtid, DACR32_EL2));
-    set_int_ctxt(ctxtid, IFSR32_EL2, get_shadow_ctxt(ctxtid, IFSR32_EL2));
-    set_int_ctxt(ctxtid, FPEXC32_EL2, get_shadow_ctxt(ctxtid, FPEXC32_EL2));
+    set_int_ctxt(ctxtid, V_DACR32_EL2, get_shadow_ctxt(ctxtid, V_DACR32_EL2));
+    set_int_ctxt(ctxtid, V_IFSR32_EL2, get_shadow_ctxt(ctxtid, V_IFSR32_EL2));
+    set_int_ctxt(ctxtid, V_FPEXC32_EL2, get_shadow_ctxt(ctxtid, V_FPEXC32_EL2));
 }
 
 void sync_dirty_to_shadow(u32 ctxtid)
@@ -81,9 +79,8 @@ void prep_wfx(u32 ctxtid)
     set_shadow_dirty_bit(ctxtid, DIRTY_PC_FLAG, 1U);
 }
 
-void prep_hvc(u32 ctxtid)
+void prep_hvc(u32 vmid, u32 vcpuid, u32 ctxtid)
 {
-    u32 vmid = get_ctxt_vmid(ctxtid);
     u64 psci_fn = get_shadow_ctxt(ctxtid, 0UL);
     set_shadow_dirty_bit(ctxtid, 0U, 1U);
     set_int_ctxt(ctxtid, 0U, psci_fn);
@@ -135,17 +132,16 @@ void v_update_exception_gp_regs(u32 ctxtid)
     u64 esr = ESR_ELx_EC_UNKNOWN;
     u64 pstate = get_shadow_ctxt(ctxtid, V_PSTATE);
     u64 pc = get_shadow_ctxt(ctxtid, V_PC);
-    u64 new_pc = get_exception_vector(pstate);
     set_shadow_ctxt(ctxtid, V_ELR_EL1, pc);
+    u64 new_pc = get_exception_vector(pstate);
     set_shadow_ctxt(ctxtid, V_PC, new_pc);
     set_shadow_ctxt(ctxtid, V_PSTATE, PSTATE_FAULT_BITS_64);
     set_shadow_ctxt(ctxtid, V_SPSR_0, pstate);
     set_shadow_ctxt(ctxtid, V_ESR_EL1, esr);
 }
 
-void v_post_handle_shadow_s2pt_fault(u32 ctxtid)
+void v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid, u32 ctxtid)
 {
-    u32 vmid = get_ctxt_vmid(ctxtid);
     u64 hpfar = get_shadow_ctxt(ctxtid, V_HPFAR_EL2);
     u64 addr = (hpfar & V_HPFAR_MASK) * 256UL;
     u64 pte = get_int_new_pte(ctxtid);
