@@ -51,14 +51,15 @@ static u32 __hyp_text hypsec_gen_vmid(struct el2_data *el2_data)
 		return -1;
 }
 
-static __hyp_text struct shadow_vcpu_context *alloc_shadow_ctxt(
-					struct el2_data *el2_data)
+static __hyp_text struct shadow_vcpu_context *alloc_shadow_ctxt(u32 vmid, int vcpu_id)
 {
 	int index;
 	struct shadow_vcpu_context *ctxt = NULL;
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+
 	stage2_spin_lock(&el2_data->abs_lock);
 
-	index = el2_data->used_shadow_vcpu_ctxt++;
+	index = (vmid * HYPSEC_MAX_VCPUS) + vcpu_id;
 	if (index > NUM_SHADOW_VCPU_CTXT) {
 		print_string("\rout of shadow ctxt\n");
 		goto err_unlock;
@@ -401,7 +402,7 @@ int __hyp_text __hypsec_register_vcpu(u32 vmid, int vcpu_id)
 	addr = kern_hyp_va(hypsec_alloc_vcpu(vmid, vcpu_id));
 	int_vcpu->vcpu = addr;
 
-	new_ctxt = alloc_shadow_ctxt(el2_data);
+	new_ctxt = alloc_shadow_ctxt(vmid, vcpu_id);
 	if (!new_ctxt) {
 		print_string("\rfailed to allocate shadow ctxt\n");
 		goto out;
