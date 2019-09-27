@@ -140,17 +140,6 @@ void    release_lock_vm(u32 vmid) {
     stage2_spin_unlock(&el2_data->vm_info[vmid].vm_lock);
 }
 
-
-u32     get_vcpu_ctxtid(u32 vmid, u32 vcpuid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    return el2_data->vm_info[vmid].int_vcpus[vcpuid].ctxtid;
-}
-
-// TODO: make the following work
-void 	set_vcpu_ctxtid(u32 vmid, u32 vcpuid, u32 ctxtid) {
-	BUG();
-};
-
 u32     get_vm_state(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].state;
@@ -281,16 +270,6 @@ void    set_next_vmid(u32 vmid) {
     el2_data->next_vmid = vmid;
 }
 
-u32     get_next_ctxt(void) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    return el2_data->used_shadow_vcpu_ctxt;
-}
-
-void    set_next_ctxt(u32 ctxtid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    el2_data->used_shadow_vcpu_ctxt = ctxtid;
-}
-
 u64     get_next_remap_ptr(void) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->last_remap_ptr;
@@ -304,25 +283,50 @@ void    set_next_remap_ptr(u64 remap) {
 //TODO: Define the following
 u32     get_cur_vmid(void) { return 0; }
 u32     get_cur_vcpuid(void) { return 0; }
-u32     get_cur_ctxtid(void) { return 0; }
 
-u64     get_shadow_ctxt(u32 ctxtid, u32 index) {
+u64     get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index) {
 	BUG();
 	return 0;
-};
-void    set_shadow_ctxt(u32 ctxtid, u32 index, u64 value) {
-	BUG();
-};
+}
 
-u64     get_int_ctxt(u32 ctxtid, u32 index) {return 0;};
-void    set_int_ctxt(u32 ctxtid, u32 index, u64 value) {};
-void    clear_shadow_gp_regs(u32 ctxtid) {};
-void    int_to_shadow_fp_regs(u32 ctxtid) {};
+void    set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
+	BUG();
+}
+
+u64     get_int_ctxt(u32 vmid, u32 vcpuid, u32 index) {
+	BUG();
+	return 0;
+}
+
+void    set_int_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
+
+}
+
+void    clear_shadow_gp_regs(u32 vmid, u32 vcpuid) {
+
+}
+
+void    int_to_shadow_fp_regs(u32 vmid, u32 vcpuid) {
+
+}
+
+u32     get_shadow_dirty_bit(u32 vmid, u32 vcpuid, u32 index) {
+	return 0;
+}
+
+void    set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u32 index, u32 value) {
+
+}
+
+u64     get_int_new_pte(u32 vmid, u32 vcpuid) {
+	return 0;
+}
+
+u32     get_int_new_level(u32 vmid, u32 vcpuid) {
+	return 0;
+}
+
 #if 0
-void    int_to_shadow_decrypt(u32 ctxtid);
-void    shadow_to_int_encrypt(u32 ctxtid);
+void    int_to_shadow_decrypt(u32 vmid, u32 vcpuid);
+void    shadow_to_int_encrypt(u32 vmid, u32 vcpuid);
 #endif
-u32     get_shadow_dirty_bit(u32 ctxtid, u32 index) {return 0;};
-void    set_shadow_dirty_bit(u32 ctxtid, u32 index, u32 value) {};
-u64     get_int_new_pte(u32 ctxtid) {return 0;};
-u32     get_int_new_level(u32 ctxtid) {return 0;};

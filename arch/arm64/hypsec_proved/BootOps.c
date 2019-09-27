@@ -20,15 +20,6 @@ void boot_from_inc_exe(u32 vmid)
     release_lock_vm(vmid);
 }
 
-u32 get_ctxtid(u32 vmid, u32 vcpuid)
-{
-    u32 ctxtid;
-    acquire_lock_vm(vmid);
-    ctxtid = get_vcpu_ctxtid(vmid, vcpuid);
-    release_lock_vm(vmid);
-    return ctxtid;
-}
-
 void set_vcpu_active(u32 vmid, u32 vcpuid)
 {
     u32 vm_state, vcpu_state;
@@ -83,7 +74,7 @@ u64 v_search_load_info(u32 vmid, u64 addr)
 
 u32 register_vcpu(u32 vmid, u32 vcpuid)
 {
-    u32 vm_state, vcpu_state, ctxtid;
+    u32 vm_state, vcpu_state;
     u64 vcpu;
     acquire_lock_vm(vmid);
     vm_state = get_vm_state(vmid);
@@ -94,14 +85,7 @@ u32 register_vcpu(u32 vmid, u32 vcpuid)
     else {
         vcpu = get_shared_vcpu(vmid, vcpuid);
         set_vm_vcpu(vmid, vcpuid, vcpu);
-        ctxtid = alloc_shadow_ctxt();
-        if (ctxtid == INVALID) {
-			v_panic();
-        }
-        else {
-            set_vcpu_ctxtid(vmid, vcpuid, ctxtid);
-            set_vcpu_state(vmid, vcpuid, READY);
-        }
+		set_vcpu_state(vmid, vcpuid, READY);
     }
     release_lock_vm(vmid);
     return 0U;

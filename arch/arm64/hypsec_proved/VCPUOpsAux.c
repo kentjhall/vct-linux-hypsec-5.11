@@ -6,23 +6,23 @@
  * VCPUOpsAux
  */
 
-void reset_gp_regs(u32 vmid, u32 vcpuid, u32 ctxtid)
+void reset_gp_regs(u32 vmid, u32 vcpuid)
 {
-    u64 pc = get_int_ctxt(ctxtid, V_PC);
+    u64 pc = get_int_ctxt(vmid, vcpuid, V_PC);
     if (v_search_load_info(vmid, pc))
     {
-        clear_shadow_gp_regs(ctxtid);
-        u64 pstate = get_int_ctxt(ctxtid, V_PSTATE);
-        set_shadow_ctxt(ctxtid, V_PSTATE, pstate);
-        set_shadow_ctxt(ctxtid, V_PC, pc);
-        int_to_shadow_fp_regs(ctxtid);
+        clear_shadow_gp_regs(vmid, vcpuid);
+        u64 pstate = get_int_ctxt(vmid, vcpuid, V_PSTATE);
+        set_shadow_ctxt(vmid, vcpuid, V_PSTATE, pstate);
+        set_shadow_ctxt(vmid, vcpuid, V_PC, pc);
+        int_to_shadow_fp_regs(vmid, vcpuid);
     }
     else {
         v_panic();
     }
 }
 
-void reset_sys_regs(u32 vmid, u32 vcpuid, u32 ctxtid)
+void reset_sys_regs(u32 vmid, u32 vcpuid)
 {
     u64 val;
     u32 i = 1U;
@@ -38,63 +38,63 @@ void reset_sys_regs(u32 vmid, u32 vcpuid, u32 ctxtid)
         {
             val = get_sys_reg_desc_val(i);
         }
-        set_shadow_ctxt(ctxtid, i, val);
+        set_shadow_ctxt(vmid, vcpuid, i, val);
         i += 1U;
     }
 }
 
-void save_sys_regs(u32 ctxtid)
+void save_sys_regs(u32 vmid, u32 vcpuid)
 {
-    set_shadow_ctxt(ctxtid, V_DACR32_EL2, get_int_ctxt(ctxtid, V_DACR32_EL2));
-    set_shadow_ctxt(ctxtid, V_IFSR32_EL2, get_int_ctxt(ctxtid, V_IFSR32_EL2));
-    set_shadow_ctxt(ctxtid, V_FPEXC32_EL2, get_int_ctxt(ctxtid, V_FPEXC32_EL2));
+    set_shadow_ctxt(vmid, vcpuid, V_DACR32_EL2, get_int_ctxt(vmid, vcpuid, V_DACR32_EL2));
+    set_shadow_ctxt(vmid, vcpuid, V_IFSR32_EL2, get_int_ctxt(vmid, vcpuid, V_IFSR32_EL2));
+    set_shadow_ctxt(vmid, vcpuid, V_FPEXC32_EL2, get_int_ctxt(vmid, vcpuid, V_FPEXC32_EL2));
 
-    set_int_ctxt(ctxtid, V_DACR32_EL2, 0UL);
-    set_int_ctxt(ctxtid, V_IFSR32_EL2, 0UL);
-    set_int_ctxt(ctxtid, V_FPEXC32_EL2, 0UL);
+    set_int_ctxt(vmid, vcpuid, V_DACR32_EL2, 0UL);
+    set_int_ctxt(vmid, vcpuid, V_IFSR32_EL2, 0UL);
+    set_int_ctxt(vmid, vcpuid, V_FPEXC32_EL2, 0UL);
 }
 
-void restore_sys_regs(u32 ctxtid)
+void restore_sys_regs(u32 vmid, u32 vcpuid)
 {
-    set_int_ctxt(ctxtid, V_DACR32_EL2, get_shadow_ctxt(ctxtid, V_DACR32_EL2));
-    set_int_ctxt(ctxtid, V_IFSR32_EL2, get_shadow_ctxt(ctxtid, V_IFSR32_EL2));
-    set_int_ctxt(ctxtid, V_FPEXC32_EL2, get_shadow_ctxt(ctxtid, V_FPEXC32_EL2));
+    set_int_ctxt(vmid, vcpuid, V_DACR32_EL2, get_shadow_ctxt(vmid, vcpuid, V_DACR32_EL2));
+    set_int_ctxt(vmid, vcpuid, V_IFSR32_EL2, get_shadow_ctxt(vmid, vcpuid, V_IFSR32_EL2));
+    set_int_ctxt(vmid, vcpuid, V_FPEXC32_EL2, get_shadow_ctxt(vmid, vcpuid, V_FPEXC32_EL2));
 }
 
-void sync_dirty_to_shadow(u32 ctxtid)
+void sync_dirty_to_shadow(u32 vmid, u32 vcpuid)
 {
     u32 i = 0U;
     while (i < 31U)
     {
-        if (get_shadow_dirty_bit(ctxtid, i) == 1U) {
-            u64 reg = get_int_ctxt(ctxtid, i);
-            set_shadow_ctxt(ctxtid, i, reg);
+        if (get_shadow_dirty_bit(vmid, vcpuid, i) == 1U) {
+            u64 reg = get_int_ctxt(vmid, vcpuid, i);
+            set_shadow_ctxt(vmid, vcpuid, i, reg);
         }
         i += 1U;
     }
 }
 
-void prep_wfx(u32 ctxtid)
+void prep_wfx(u32 vmid, u32 vcpuid)
 {
-    set_shadow_dirty_bit(ctxtid, DIRTY_PC_FLAG, 1U);
+    set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG, 1U);
 }
 
-void prep_hvc(u32 vmid, u32 vcpuid, u32 ctxtid)
+void prep_hvc(u32 vmid, u32 vcpuid)
 {
-    u64 psci_fn = get_shadow_ctxt(ctxtid, 0UL);
-    set_shadow_dirty_bit(ctxtid, 0U, 1U);
-    set_int_ctxt(ctxtid, 0U, psci_fn);
+    u64 psci_fn = get_shadow_ctxt(vmid, vcpuid, 0UL);
+    set_shadow_dirty_bit(vmid, vcpuid, 0U, 1U);
+    set_int_ctxt(vmid, vcpuid, 0U, psci_fn);
     if (psci_fn == PSCI_0_2_FN64_CPU_ON)
     {
-        set_int_ctxt(ctxtid, 1U, get_shadow_ctxt(ctxtid, 1U));
-        set_int_ctxt(ctxtid, 2U, get_shadow_ctxt(ctxtid, 2U));
-        set_int_ctxt(ctxtid, 3U, get_shadow_ctxt(ctxtid, 3U));
+        set_int_ctxt(vmid, vcpuid, 1U, get_shadow_ctxt(vmid, vcpuid, 1U));
+        set_int_ctxt(vmid, vcpuid, 2U, get_shadow_ctxt(vmid, vcpuid, 2U));
+        set_int_ctxt(vmid, vcpuid, 3U, get_shadow_ctxt(vmid, vcpuid, 3U));
     }
     else if (psci_fn == PSCI_0_2_FN_AFFINITY_INFO ||
              psci_fn == PSCI_0_2_FN64_AFFINITY_INFO)
     {
-        set_int_ctxt(ctxtid, 1U, get_shadow_ctxt(ctxtid, 1U));
-        set_int_ctxt(ctxtid, 2U, get_shadow_ctxt(ctxtid, 2U));
+        set_int_ctxt(vmid, vcpuid, 1U, get_shadow_ctxt(vmid, vcpuid, 1U));
+        set_int_ctxt(vmid, vcpuid, 2U, get_shadow_ctxt(vmid, vcpuid, 2U));
 
     }
     else if (psci_fn == PSCI_0_2_FN_SYSTEM_OFF) {
@@ -102,51 +102,51 @@ void prep_hvc(u32 vmid, u32 vcpuid, u32 ctxtid)
     }
 }
 
-void prep_abort(u32 ctxtid)
+void prep_abort(u32 vmid, u32 vcpuid)
 {
-    u64 esr = get_int_ctxt(ctxtid, V_ESR_EL2);
+    u64 esr = get_int_ctxt(vmid, vcpuid, V_ESR_EL2);
     u32 Rd = (u32)((esr / 65536UL) % 32UL);
-    u64 fault_ipa = (get_shadow_ctxt(ctxtid, V_HPFAR_EL2) / 16UL) * 4096UL;
+    u64 fault_ipa = (get_shadow_ctxt(vmid, vcpuid, V_HPFAR_EL2) / 16UL) * 4096UL;
 
     if (fault_ipa < MAX_MMIO_ADDR)
     {
-        set_shadow_dirty_bit(ctxtid, DIRTY_PC_FLAG, 1UL);
+        set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG, 1UL);
 
         if ((esr / 64UL) % 4UL == 0UL) {
-            set_shadow_dirty_bit(ctxtid, Rd, 1U);
+            set_shadow_dirty_bit(vmid, vcpuid, Rd, 1U);
         }
         else {
-            u64 reg = get_shadow_ctxt(ctxtid, Rd);
-            set_int_ctxt(ctxtid, Rd, reg);
+            u64 reg = get_shadow_ctxt(vmid, vcpuid, Rd);
+            set_int_ctxt(vmid, vcpuid, Rd, reg);
         }
     }
 }
 
-void v_hypsec_inject_undef(u32 ctxtid)
+void v_hypsec_inject_undef(u32 vmid, u32 vcpuid)
 {
-    set_shadow_dirty_bit(ctxtid, PENDING_UNDEF_INJECT, 1U);
+    set_shadow_dirty_bit(vmid, vcpuid, PENDING_UNDEF_INJECT, 1U);
 }
 
-void v_update_exception_gp_regs(u32 ctxtid)
+void v_update_exception_gp_regs(u32 vmid, u32 vcpuid)
 {
     u64 esr = ESR_ELx_EC_UNKNOWN;
-    u64 pstate = get_shadow_ctxt(ctxtid, V_PSTATE);
-    u64 pc = get_shadow_ctxt(ctxtid, V_PC);
-    set_shadow_ctxt(ctxtid, V_ELR_EL1, pc);
+    u64 pstate = get_shadow_ctxt(vmid, vcpuid, V_PSTATE);
+    u64 pc = get_shadow_ctxt(vmid, vcpuid, V_PC);
+    set_shadow_ctxt(vmid, vcpuid, V_ELR_EL1, pc);
     u64 new_pc = get_exception_vector(pstate);
-    set_shadow_ctxt(ctxtid, V_PC, new_pc);
-    set_shadow_ctxt(ctxtid, V_PSTATE, PSTATE_FAULT_BITS_64);
-    set_shadow_ctxt(ctxtid, V_SPSR_0, pstate);
-    set_shadow_ctxt(ctxtid, V_ESR_EL1, esr);
+    set_shadow_ctxt(vmid, vcpuid, V_PC, new_pc);
+    set_shadow_ctxt(vmid, vcpuid, V_PSTATE, PSTATE_FAULT_BITS_64);
+    set_shadow_ctxt(vmid, vcpuid, V_SPSR_0, pstate);
+    set_shadow_ctxt(vmid, vcpuid, V_ESR_EL1, esr);
 }
 
-void v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid, u32 ctxtid)
+void v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid)
 {
-    u64 hpfar = get_shadow_ctxt(ctxtid, V_HPFAR_EL2);
+    u64 hpfar = get_shadow_ctxt(vmid, vcpuid, V_HPFAR_EL2);
     u64 addr = (hpfar & V_HPFAR_MASK) * 256UL;
-    u64 pte = get_int_new_pte(ctxtid);
-    u32 level = get_int_new_level(ctxtid);
-    u64 esr = get_shadow_ctxt(ctxtid, V_ESR_EL2);
+    u64 pte = get_int_new_pte(vmid, vcpuid);
+    u32 level = get_int_new_level(vmid, vcpuid);
+    u64 esr = get_shadow_ctxt(vmid, vcpuid, V_ESR_EL2);
     u64 esr_ec = (esr / ESR_ELx_EC_SHIFT) % ESR_ELx_EC_MASK;
     u32 is_iabt = 0U;
     if (esr_ec == ESR_ELx_EC_IABT_LOW) is_iabt = 1U;
