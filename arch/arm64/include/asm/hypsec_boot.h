@@ -7,7 +7,8 @@
 #define EL2_MAX_VMID		16
 #define EL2_VM_INFO_SIZE	EL2_MAX_VMID
 
-#define HYPSEC_MAX_VCPUS	32
+#define HYPSEC_MAX_VCPUS	16	
+#define HYPSEC_MAX_CPUS		32
 #define HYPSEC_MAX_LOAD_IMG	5
 /* Below is copied from QEMU  */
 typedef enum {

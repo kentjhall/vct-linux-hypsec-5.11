@@ -19,6 +19,11 @@ struct shared_data {
 	struct kvm_vcpu vcpu_pool[EL2_MAX_VMID * HYPSEC_MAX_VCPUS];
 };
 
+struct el2_per_cpu_data {
+	int vmid;
+	int vcpu_id;
+};
+
 struct el2_data {
 	struct memblock_region regions[32];
 	struct s2_memblock_info s2_memblock_info[32];
@@ -56,6 +61,8 @@ struct el2_data {
 	u32 next_vmid;
 	phys_addr_t vgic_cpu_base;
 	bool installed;
+
+	struct el2_per_cpu_data per_cpu_data[HYPSEC_MAX_CPUS];
 };
 
 void init_el2_data_page(void);

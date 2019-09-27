@@ -190,6 +190,12 @@ void init_el2_data_page(void)
 	/* We init intermediate data structure here. */
 	el2_shared_data_init();
 
+	BUG_ON(num_online_cpus() > HYPSEC_MAX_CPUS);
+	for (i = 0; i < num_online_cpus(); i++) {
+		el2_data->per_cpu_data[i].vmid = 0;
+		el2_data->per_cpu_data[i].vcpu_id = i;
+	}
+
 	return;
 }
 

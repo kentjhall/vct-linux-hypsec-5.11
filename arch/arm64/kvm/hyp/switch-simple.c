@@ -98,6 +98,28 @@ void deactivate_traps_vhe_put(void)
 {
 }
 
+static inline void __hyp_text set_per_cpu(int vmid, int vcpu_id)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
+	el2_data->per_cpu_data[pcpuid].vmid = vmid;
+	el2_data->per_cpu_data[pcpuid].vcpu_id = vcpu_id;
+}
+
+static inline int __hyp_text get_cur_vmid(void)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
+	return el2_data->per_cpu_data[pcpuid].vmid;
+}
+
+static inline int __hyp_text get_cur_vcpu_id(void)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
+	return el2_data->per_cpu_data[pcpuid].vcpu_id;
+}
+
 static void __hyp_text __activate_vm(u64 vmid)
 {
 	u64 shadow_vttbr = get_shadow_vttbr((u32)vmid);
@@ -273,6 +295,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 	/* check if vm is verified and vcpu is already active. */
 	if (!hypsec_set_vcpu_active(vmid, vcpu_id))
 		return 0;
+	set_per_cpu(vmid, vcpu_id);
 
 	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
 	prot_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
@@ -331,6 +354,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 
 	__save_shadow_kvm_regs(vcpu, prot_ctxt, exit_code);
 
+	set_per_cpu(0, read_cpuid_mpidr() & MPIDR_HWID_BITMASK);
 	hypsec_set_vcpu_state(vmid, vcpu_id, READY);
 
 	return exit_code;
