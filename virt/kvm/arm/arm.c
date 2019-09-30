@@ -50,12 +50,10 @@
 #include <asm/kvm_emulate.h>
 #include <asm/kvm_coproc.h>
 #include <asm/sections.h>
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_missing.h>
 #include <asm/hypsec_host.h>
 extern int map_vcpu_page_to_hyp(u32 vmid, int vcpu_id, void *from, void *to);
-#elif CONFIG_VERIFIED_KVM
-extern int map_vcpu_page_to_hyp(u32 vmid, int vcpu_id, void *from, void *to);
-#include <asm/hypsec_missing.h>
 #endif
 
 #ifdef REQUIRES_VIRT
@@ -109,7 +107,7 @@ int kvm_arch_vcpu_should_kick(struct kvm_vcpu *vcpu)
 	return kvm_vcpu_exiting_guest_mode(vcpu) == IN_GUEST_MODE;
 }
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 static void install_el2_runtime(void *discard)
 {
 	kvm_call_core(HVC_ENABLE_S2_TRANS);
@@ -118,7 +116,7 @@ static void install_el2_runtime(void *discard)
 
 int kvm_arch_hardware_setup(void)
 {
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	on_each_cpu(install_el2_runtime, NULL, 1);
 	printk("HypSec EL2 runtime is installed\n");
 #endif
@@ -162,7 +160,7 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 	if (ret)
 		goto out_fail_alloc;
 
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	ret = create_hyp_mappings(kvm, kvm + 1, PAGE_HYP);
 	if (ret)
 		goto out_free_stage2_pgd;
@@ -178,8 +176,11 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 				kvm_vgic_get_max_vcpus() : KVM_MAX_VCPUS;
 
 	return ret;
+
+#ifndef CONFIG_VERIFIED_KVM
 out_free_stage2_pgd:
 	kvm_free_stage2_pgd(kvm);
+#endif
 out_fail_alloc:
 	free_percpu(kvm->arch.last_vcpu_ran);
 	kvm->arch.last_vcpu_ran = NULL;
@@ -284,7 +285,7 @@ long kvm_arch_dev_ioctl(struct file *filp,
 
 struct kvm *kvm_arch_alloc_vm(void)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	if (!has_vhe())
 		return kzalloc(sizeof(struct kvm), GFP_KERNEL);
 
@@ -296,7 +297,7 @@ struct kvm *kvm_arch_alloc_vm(void)
 
 void kvm_arch_free_vm(struct kvm *kvm)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	if (!has_vhe())
 		kfree(kvm);
 	else
@@ -319,7 +320,7 @@ struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
 		goto out;
 	}
 
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	vcpu = kmem_cache_zalloc(kvm_vcpu_cache, GFP_KERNEL);
 #else
 	vcpu = hypsec_alloc_vcpu(kvm->arch.vmid, id);
@@ -333,7 +334,7 @@ struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
 	if (err)
 		goto free_vcpu;
 
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	err = create_hyp_mappings(vcpu, vcpu + 1, PAGE_HYP);
 	if (err)
 		goto vcpu_uninit;
@@ -348,7 +349,7 @@ struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
 vcpu_uninit:
 	kvm_vcpu_uninit(vcpu);
 free_vcpu:
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	kmem_cache_free(kvm_vcpu_cache, vcpu);
 #endif
 out:
@@ -368,7 +369,7 @@ void kvm_arch_vcpu_free(struct kvm_vcpu *vcpu)
 	kvm_timer_vcpu_terminate(vcpu);
 	kvm_pmu_vcpu_destroy(vcpu);
 	kvm_vcpu_uninit(vcpu);
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	kmem_cache_free(kvm_vcpu_cache, vcpu);
 #endif
 }
@@ -420,7 +421,7 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 	 * over-invalidation doesn't affect correctness.
 	 */
 	if (*last_ran != vcpu->vcpu_id) {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 		kvm_call_hyp(__kvm_tlb_flush_local_vmid, vcpu);
 #else
 		vcpu->arch.was_preempted = true;
@@ -434,7 +435,7 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 	kvm_arm_set_running_vcpu(vcpu);
 	kvm_vgic_load(vcpu);
 	kvm_timer_vcpu_load(vcpu);
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	kvm_vcpu_load_sysregs(vcpu);
 	kvm_arch_vcpu_load_fp(vcpu);
 #endif
@@ -442,7 +443,7 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 
 void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	kvm_arch_vcpu_put_fp(vcpu);
 	kvm_vcpu_put_sysregs(vcpu);
 #endif
@@ -588,13 +589,13 @@ static void update_vttbr(struct kvm *kvm)
 		 * shareable domain to make sure all data structures are
 		 * clean.
 		 */
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 		kvm_call_hyp(__kvm_flush_vm_context);
 #endif
 	}
 
 	kvm->arch.vmid_gen = atomic64_read(&kvm_vmid_gen);
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	kvm->arch.vmid = kvm_next_vmid;
 	kvm_next_vmid++;
 	kvm_next_vmid &= (1 << kvm_vmid_bits) - 1;
@@ -616,7 +617,7 @@ static int kvm_vcpu_first_run_init(struct kvm_vcpu *vcpu)
 
 	if (likely(vcpu->arch.has_run_once))
 		return 0;
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	spin_lock(&kvm->hypsec_lock);
 	if (!kvm->verified) {
 		ret = el2_verify_and_load_images(kvm->arch.vmid);
@@ -738,7 +739,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *run)
 		ret = kvm_handle_mmio_return(vcpu, vcpu->run);
 		if (ret)
 			return ret;
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 		if (kvm_arm_handle_step_debug(vcpu, vcpu->run))
 			return 0;
 #endif
@@ -821,7 +822,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *run)
 			continue;
 		}
 
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM_
 		kvm_arm_setup_debug(vcpu);
 #endif
 
@@ -836,7 +837,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *run)
 			ret = kvm_vcpu_run_vhe(vcpu);
 			kvm_arm_vhe_guest_exit();
 		} else {
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 			ret = kvm_call_core(HVC_VCPU_RUN,
 					vcpu->arch.vmid, vcpu->vcpu_id);
 #else
@@ -850,7 +851,7 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu, struct kvm_run *run)
 		 * Back from guest
 		 *************************************************************/
 
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 		kvm_arm_clear_debug(vcpu);
 #endif
 
@@ -1207,7 +1208,7 @@ long kvm_arch_vcpu_ioctl(struct file *filp,
 		r = kvm_arm_vcpu_has_attr(vcpu, &attr);
 		break;
 	}
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	case KVM_ARM_PRE_VCPU: {
 		save_encrypted_vcpu(vcpu);
 		r = 0;
@@ -1312,7 +1313,7 @@ long kvm_arch_vm_ioctl(struct file *filp,
 
 		return 0;
 	}
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	case KVM_ARM_SET_BOOT_INFO: {
 		struct kvm_boot_info info;
 		struct page *page[1];
@@ -1398,7 +1399,7 @@ static void cpu_init_hyp_mode(void *dummy)
 
 static void cpu_hyp_reset(void)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	if (!is_kernel_in_hyp_mode())
 		__hyp_reset_vectors();
 #endif
@@ -1557,7 +1558,7 @@ static int init_subsystems(void)
 	kvm_coproc_table_init();
 
 out:
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	on_each_cpu(_kvm_arch_hardware_disable, NULL, 1);
 #endif
 
@@ -1582,7 +1583,7 @@ static int init_hyp_mode(void)
 	int cpu;
 	int err = 0;
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	init_el2_data_page();
 #endif
 	/*
@@ -1600,7 +1601,7 @@ static int init_hyp_mode(void)
 	for_each_possible_cpu(cpu) {
 		unsigned long stack_page;
 
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 		stack_page = __get_free_page(GFP_KERNEL);
 #else
 		stack_page = (unsigned long)phys_to_virt(host_alloc_stage2_page(1));
@@ -1613,7 +1614,7 @@ static int init_hyp_mode(void)
 		per_cpu(kvm_arm_hyp_stack_page, cpu) = stack_page;
 	}
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	init_hypsec_io();
 	/* Map the entire memblocks to EL2's address space */
 	map_mem_el2();
@@ -1649,7 +1650,7 @@ static int init_hyp_mode(void)
 		goto out_err;
 	}
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	err = create_hyp_mappings((void *)kvm_ksym_ref(stage2_pgs_start),
 			(void *)kvm_ksym_ref(stage2_pgs_end),
 			PAGE_HYP);

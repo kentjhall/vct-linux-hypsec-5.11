@@ -187,7 +187,7 @@ void revoke_vm_page(u32 vmid, u64 pfn);
  * MemoryOps
  */
 
-void clear_vm_stage2_range(u32 vmid, u64 start, u64 size);
+void __clear_vm_stage2_range(u32 vmid, u64 start, u64 size);
 void prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 level, u32 iabt);
 //void grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
 //void revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);

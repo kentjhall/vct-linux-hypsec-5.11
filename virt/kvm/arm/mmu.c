@@ -31,7 +31,7 @@
 #include <asm/kvm_emulate.h>
 #include <asm/virt.h>
 #include <asm/system_misc.h>
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 #include <asm/hypsec_host.h>
 #endif
 
@@ -67,14 +67,14 @@ static bool memslot_is_logging(struct kvm_memory_slot *memslot)
  */
 void kvm_flush_remote_tlbs(struct kvm *kvm)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	kvm_call_hyp(__kvm_tlb_flush_vmid, kvm);
 #endif
 }
 
 static void kvm_tlb_flush_vmid_ipa(struct kvm *kvm, phys_addr_t ipa)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	kvm_call_hyp(__kvm_tlb_flush_vmid_ipa, kvm, ipa);
 #endif
 }
@@ -326,7 +326,7 @@ static void unmap_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size)
 			cond_resched_lock(&kvm->mmu_lock);
 	} while (pgd++, addr = next, addr != end);
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	clear_vm_stage2_range(kvm->arch.vmid, start, size);
 #endif
 }
@@ -575,7 +575,7 @@ void free_hyp_pgds(void)
 	mutex_unlock(&kvm_hyp_pgd_mutex);
 }
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 /* Map physical memory to EL2's address space */
 void map_mem_el2(void)
 {
@@ -639,7 +639,7 @@ static int create_hyp_pmd_mappings(pud_t *pud, unsigned long start,
 		BUG_ON(pmd_sect(*pmd));
 
 		if (pmd_none(*pmd)) {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 			pte = pte_alloc_one_kernel(NULL, addr);
 #else
 			pte = phys_to_virt(host_alloc_stage2_page(1));
@@ -676,7 +676,7 @@ static int create_hyp_pud_mappings(pgd_t *pgd, unsigned long start,
 		pud = pud_offset(pgd, addr);
 
 		if (pud_none_or_clear_bad(pud)) {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 			pmd = pmd_alloc_one(NULL, addr);
 #else
 			pmd = phys_to_virt(host_alloc_stage2_page(1));
@@ -716,7 +716,7 @@ static int __create_hyp_mappings(pgd_t *pgdp, unsigned long ptrs_per_pgd,
 		pgd = pgdp + kvm_pgd_index(addr, ptrs_per_pgd);
 
 		if (pgd_none(*pgd)) {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 			pud = pud_alloc_one(NULL, addr);
 #else
 			pud = phys_to_virt(host_alloc_stage2_page(1));
@@ -744,7 +744,7 @@ out:
 
 static phys_addr_t kvm_kaddr_to_phys(void *kaddr)
 {
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	if ((u64)kaddr < PAGE_OFFSET)
 		kaddr = __va(kaddr);
 #endif
@@ -772,7 +772,7 @@ int create_hyp_mappings(void *from, void *to, pgprot_t prot)
 	int err;
 	phys_addr_t phys_addr;
 	unsigned long virt_addr;
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	unsigned long start = kern_hyp_va((unsigned long)from);
 	unsigned long end = kern_hyp_va((unsigned long)to);
 #else
@@ -915,7 +915,7 @@ int create_hyp_exec_mappings(phys_addr_t phys_addr, size_t size,
 	return 0;
 }
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM 
 int create_hypsec_io_mappings(phys_addr_t phys_addr, size_t size,
 			      unsigned long *haddr)
 {
@@ -1094,6 +1094,7 @@ static pmd_t *stage2_get_pmd(struct kvm *kvm, struct kvm_mmu_memory_cache *cache
 	return stage2_pmd_offset(pud, addr);
 }
 
+#if 0
 static int stage2_set_pmd_huge(struct kvm *kvm, struct kvm_mmu_memory_cache
 			       *cache, phys_addr_t addr, const pmd_t *new_pmd)
 {
@@ -1143,6 +1144,7 @@ static bool stage2_is_exec(struct kvm *kvm, phys_addr_t addr)
 
 	return kvm_s2pte_exec(ptep);
 }
+#endif
 
 static int stage2_set_pte(struct kvm *kvm, struct kvm_mmu_memory_cache *cache,
 			  phys_addr_t addr, const pte_t *new_pte,
@@ -1436,7 +1438,7 @@ void kvm_mmu_wp_memory_region(struct kvm *kvm, int slot)
 	spin_lock(&kvm->mmu_lock);
 	stage2_wp_range(kvm, start, end);
 	spin_unlock(&kvm->mmu_lock);
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	kvm_flush_remote_tlbs(kvm);
 #endif
 }
@@ -1477,6 +1479,7 @@ void kvm_arch_mmu_enable_log_dirty_pt_masked(struct kvm *kvm,
 	kvm_mmu_write_protect_pt_masked(kvm, slot, gfn_offset, mask);
 }
 
+#if 0
 static void clean_dcache_guest_page(kvm_pfn_t pfn, unsigned long size)
 {
 	__clean_dcache_guest_page(pfn, size);
@@ -1486,6 +1489,7 @@ static void invalidate_icache_guest_page(kvm_pfn_t pfn, unsigned long size)
 {
 	__invalidate_icache_guest_page(pfn, size);
 }
+#endif
 
 static void kvm_send_hwpoison_signal(unsigned long address,
 				     struct vm_area_struct *vma)
@@ -1506,7 +1510,7 @@ static void kvm_send_hwpoison_signal(unsigned long address,
 	send_sig_info(SIGBUS, &info, current);
 }
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 static void set_s2_trans_result(struct kvm_vcpu *vcpu, kvm_pfn_t pfn,
 				phys_addr_t output, bool writable, int level)
 {
@@ -1627,7 +1631,7 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 		hugetlb = transparent_hugepage_adjust(&pfn, &fault_ipa);
 
 	if (hugetlb) {
-#if 0
+#ifndef CONFIG_VERIFIED_KVM
 		pmd_t new_pmd = pfn_pmd(pfn, mem_type);
 		new_pmd = pmd_mkhuge(new_pmd);
 		if (writable) {
@@ -1647,12 +1651,11 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 				new_pmd = kvm_s2pmd_mkexec(new_pmd);
 		}
 		ret = stage2_set_pmd_huge(kvm, memcache, fault_ipa, &new_pmd);
-#endif
-#ifdef CONFIG_STAGE2_KERNEL
+#else
 		set_s2_trans_result(vcpu, pfn, pfn << PAGE_SHIFT, writable, 2);
 #endif
 	} else {
-#if 0
+#ifndef CONFIG_VERIFIED_KVM
 		pte_t new_pte = pfn_pte(pfn, mem_type);
 
 		if (writable) {
@@ -1673,8 +1676,7 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 				new_pte = kvm_s2pte_mkexec(new_pte);
 		}
 		ret = stage2_set_pte(kvm, memcache, fault_ipa, &new_pte, flags);
-#endif
-#ifdef CONFIG_STAGE2_KERNEL
+#else
 		set_s2_trans_result(vcpu, pfn, pfn << PAGE_SHIFT, writable, 3);
 #endif
 	}
@@ -1795,7 +1797,7 @@ int kvm_handle_guest_abort(struct kvm_vcpu *vcpu, struct kvm_run *run)
 	write_fault = kvm_is_write_fault(vcpu);
 	if (kvm_is_error_hva(hva) || (write_fault && !writable)) {
 		if (is_iabt) {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 			/* Prefetch Abort on I/O address, can this happen? */
 			kvm_inject_pabt(vcpu, kvm_vcpu_get_hfar(vcpu));
 			ret = 1;
@@ -2033,7 +2035,7 @@ static int kvm_map_idmap_text(pgd_t *pgd)
 int kvm_mmu_init(void)
 {
 	int err;
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	unsigned long pgnum;
 #endif
 
@@ -2066,7 +2068,7 @@ int kvm_mmu_init(void)
 		goto out;
 	}
 
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	hyp_pgd = (pgd_t *)__get_free_pages(GFP_KERNEL | __GFP_ZERO, hyp_pgd_order);
 #else
 	pgnum = (PTRS_PER_PGD * sizeof(pgd_t)) / PAGE_SIZE;

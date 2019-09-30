@@ -4,7 +4,7 @@
  * MemoryOps
  */
 
-void clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
+void __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 {
     u32 poweron = get_vm_poweron(vmid);
     if (size == KVM_PHYS_SIZE && poweron == 0U) {

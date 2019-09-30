@@ -18,3 +18,4 @@ obj-y += BootAux.o
 obj-y += Helper.o
 obj-y += VCPUOpsAux.o
 obj-y += VCPUOps.o
+obj-y += el1.o

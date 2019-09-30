@@ -1374,7 +1374,7 @@ struct kvm_s390_ucas_mapping {
 #define KVM_S390_GET_IRQ_STATE	  _IOW(KVMIO, 0xb6, struct kvm_s390_irq_state)
 /* Available with KVM_CAP_X86_SMM */
 #define KVM_SMI                   _IO(KVMIO,   0xb7)
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 #define KVM_ARM_SET_BOOT_INFO	  _IOR(KVMIO,  0xb8, struct kvm_boot_info)
 #define KVM_ARM_RESUME_INC_EXE    _IO(KVMIO,  0xb9)
 #define KVM_ARM_ENCRYPT_BUF       _IOW(KVMIO,  0xba, unsigned long)

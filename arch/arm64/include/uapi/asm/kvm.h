@@ -154,7 +154,7 @@ struct kvm_sync_regs {
 struct kvm_arch_memory_slot {
 };
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 struct kvm_boot_info {
 	__u32 datasize;
 	__u8 *data;
