@@ -29,7 +29,7 @@
 	.text
 	.pushsection	.hyp.text, "ax"
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 .macro save_callee_saved_regs
 	stp	lr, x0,   [sp, #-16]!
 	stp	x28, x29, [sp, #-16]!
@@ -126,7 +126,7 @@ el1_sync:				// Guest trapped into EL2
 	lsr	x0, x0, #ESR_ELx_EC_SHIFT
 	cmp	x0, #ESR_ELx_EC_HVC64
 	ccmp	x0, #ESR_ELx_EC_HVC32, #4, ne
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	b.ne	el1_trap
 
 	mrs	x1, vttbr_el2		// If vttbr is valid, the guest
@@ -179,7 +179,7 @@ el1_sync:				// Guest trapped into EL2
 	br	x5
 
 1:
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	save_callee_saved_regs
 	mov	x0, sp
 	bl	handle_host_hvc
@@ -246,7 +246,7 @@ wa_epilogue:
 	eret
 
 el1_trap:
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	get_vcpu_ptr	x1, x0
 #else
 	mrs	x1, tpidr_el2
@@ -255,7 +255,7 @@ el1_trap:
 	b	__guest_exit
 
 el1_irq:
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	get_vcpu_ptr	x1, x0
 #else
 	mrs	x1, tpidr_el2
@@ -264,7 +264,7 @@ el1_irq:
 	b	__guest_exit
 
 el1_error:
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	get_vcpu_ptr	x1, x0
 #else
 	mrs	x1, tpidr_el2

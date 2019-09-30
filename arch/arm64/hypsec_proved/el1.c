@@ -316,3 +316,13 @@ void el2_decrypt_buf(u32 vmid, void *buf, uint32_t len)
 {
 	kvm_call_core(HVC_DECRYPT_BUF, vmid, buf, len);
 }
+
+int hypsec_register_kvm(void)
+{
+	return kvm_call_core(HVC_REGISTER_KVM);
+}
+
+int hypsec_register_vcpu(u32 vmid, int vcpu_id)
+{
+	return kvm_call_core((void *)HVC_REGISTER_VCPU, vmid, vcpu_id);
+}

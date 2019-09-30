@@ -62,7 +62,7 @@ ENTRY(__guest_enter)
 	// Store the host regs
 	save_callee_saved_regs x1
 
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	add	x18, x0, #VCPU_CONTEXT
 #else
 	// Store the host_ctxt for use at exit time
@@ -97,7 +97,7 @@ ENTRY(__guest_exit)
 	// x2-x29,lr: vcpu regs
 	// vcpu x0-x1 on the stack
 
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	add	x1, x1, #VCPU_CONTEXT
 #endif
 
@@ -123,7 +123,7 @@ ENTRY(__guest_exit)
 	// Store the guest regs x19-x29, lr
 	save_callee_saved_regs x1
 
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	get_host_ctxt	x2, x3
 #else
 	// Restore the host_ctxt from the stack

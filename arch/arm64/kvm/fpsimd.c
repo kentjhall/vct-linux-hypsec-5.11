@@ -13,7 +13,7 @@
 #include <asm/kvm_host.h>
 #include <asm/kvm_mmu.h>
 #include <asm/sysreg.h>
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 #include <asm/hypsec_host.h>
 #endif
 /*
@@ -25,7 +25,7 @@
  * such that on entering hyp the relevant parts of current are already
  * mapped.
  */
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 int kvm_arch_vcpu_run_map_fp(struct kvm_vcpu *vcpu)
 {
 	int ret;

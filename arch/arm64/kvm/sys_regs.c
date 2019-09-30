@@ -45,7 +45,7 @@
 
 #include "trace.h"
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 #include <asm/kvm_hyp.h>
 #include <asm/hypsec_host.h>
 #endif
@@ -2073,7 +2073,7 @@ int kvm_handle_sys_reg(struct kvm_vcpu *vcpu, struct kvm_run *run)
 	return ret;
 }
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 int __hyp_text find_s2_sys_reg(struct sys_reg_params *params)
 {
 	struct el2_data *el2_data;

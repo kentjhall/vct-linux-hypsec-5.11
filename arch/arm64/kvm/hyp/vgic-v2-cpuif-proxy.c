@@ -23,9 +23,7 @@
 #include <asm/kvm_emulate.h>
 #include <asm/kvm_hyp.h>
 #include <asm/kvm_mmu.h>
-#ifdef CONFIG_STAGE2_KERNEL
-#include <asm/hypsec_host.h>
-#endif
+
 static bool __hyp_text __is_be(struct kvm_vcpu *vcpu)
 {
 	if (vcpu_mode_is_32bit(vcpu))
@@ -45,14 +43,9 @@ static bool __hyp_text __is_be(struct kvm_vcpu *vcpu)
  *  0: Not a GICV access
  * -1: Illegal GICV access
  */
-#if 0
 int __hyp_text __vgic_v2_perform_cpuif_access(struct kvm_vcpu *vcpu)
 {
-#ifndef CONFIG_STAGE2_KERNEL
 	struct kvm *kvm = kern_hyp_va(vcpu->kvm);
-#else
-	struct kvm *kvm = hypsec_vmid_to_kvm(vcpu->arch.vmid);
-#endif
 	struct vgic_dist *vgic = &kvm->arch.vgic;
 	phys_addr_t fault_ipa;
 	void __iomem *addr;
@@ -80,11 +73,7 @@ int __hyp_text __vgic_v2_perform_cpuif_access(struct kvm_vcpu *vcpu)
 	addr += fault_ipa - vgic->vgic_cpu_base;
 
 	if (kvm_vcpu_dabt_iswrite(vcpu)) {
-#ifndef CONFIG_STAGE2_KERNEL
 		u32 data = vcpu_get_reg(vcpu, rd);
-#else
-		u32 data = shadow_vcpu_get_reg(vcpu, rd);
-#endif
 		if (__is_be(vcpu)) {
 			/* guest pre-swabbed data, undo this for writel() */
 			data = swab32(data);
@@ -96,13 +85,8 @@ int __hyp_text __vgic_v2_perform_cpuif_access(struct kvm_vcpu *vcpu)
 			/* guest expects swabbed data */
 			data = swab32(data);
 		}
-#ifndef CONFIG_STAGE2_KERNEL
 		vcpu_set_reg(vcpu, rd, data);
-#else
-		shadow_vcpu_set_reg(vcpu, rd, data);
-#endif
 	}
 
 	return 1;
 }
-#endif

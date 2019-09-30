@@ -180,7 +180,7 @@ void sysreg_restore_guest_state_vhe(struct kvm_cpu_context *ctxt)
 
 void __hyp_text __sysreg32_save_state(struct kvm_vcpu *vcpu)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	u64 *spsr, *sysreg;
 
 	if (!vcpu_el1_is_32bit(vcpu))
@@ -204,7 +204,7 @@ void __hyp_text __sysreg32_save_state(struct kvm_vcpu *vcpu)
 
 void __hyp_text __sysreg32_restore_state(struct kvm_vcpu *vcpu)
 {
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	u64 *spsr, *sysreg;
 
 	if (!vcpu_el1_is_32bit(vcpu))

@@ -19,3 +19,4 @@ obj-y += Helper.o
 obj-y += VCPUOpsAux.o
 obj-y += VCPUOps.o
 obj-y += el1.o
+obj-y += el2.o
