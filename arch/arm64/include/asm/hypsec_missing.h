@@ -27,3 +27,6 @@ void __hyp_text hypsec_set_vcpu_state(u32 vmid, int vcpu_id, int state) {};
 
 void el2_memset(void *b, int c, int len);
 void el2_memcpy(void *dest, void *src, size_t len);
+
+
+void __hyp_text protect_el2_mem(void) {};

@@ -23,17 +23,35 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 {
 }
 
+//TODO: Did we prove the following?
+static void __hyp_text hvc_enable_s2_trans(void)
+{
+	struct el2_data *el2_data;
+
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+
+	if (!el2_data->installed) {
+		protect_el2_mem();
+		el2_data->installed = true;
+	}
+
+	__init_stage2_translation();
+
+	write_sysreg(el2_data->host_vttbr, vttbr_el2);
+	write_sysreg(HCR_HOST_NVHE_FLAGS, hcr_el2);
+	__kvm_flush_vm_context();
+}
+
 void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 {
 	u64 ret = 0, callno = hr->regs[0];
 
 	/* FIXME: we write return val to reg[31] as this will be restored to x0 */
-	/*
 	switch (callno) {
 	case HVC_ENABLE_S2_TRANS:
 		hvc_enable_s2_trans();
 		break;
-	case HVC_VCPU_RUN:
+	/*case HVC_VCPU_RUN:
 		ret = (u64)__kvm_vcpu_run_nvhe((u32)hr->regs[1], (int)hr->regs[2]);
 		hr->regs[31] = ret;
 		break;
@@ -93,9 +111,8 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 	case HVC_REGISTER_VCPU:
 		ret = (int)__hypsec_register_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
 		hr->regs[31] = (u64)ret;
-		break;
+		break;*/
 	default:
 		__hyp_panic();
 	};
-	*/
 }
