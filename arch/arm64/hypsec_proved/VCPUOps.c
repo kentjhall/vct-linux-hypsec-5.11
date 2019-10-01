@@ -7,7 +7,7 @@
 void save_shadow_kvm_regs()
 {
     u32 vmid = get_cur_vmid();
-    u32 vcpuid = get_cur_vcpuid();
+    u32 vcpuid = get_cur_vcpu_id();
     u64 ec = get_shadow_ctxt(vmid, vcpuid, V_EC);
     if (ec == ARM_EXCEPTION_TRAP)
     {
@@ -31,8 +31,8 @@ void save_shadow_kvm_regs()
 void restore_shadow_kvm_regs()
 {
     u32 vmid = get_cur_vmid();
-    u32 vcpuid = get_cur_vcpuid();
-    u64 dirty = get_shadow_ctxt(vmid, vcpuid, DIRTY);
+    u32 vcpuid = get_cur_vcpu_id();
+    u64 dirty = get_shadow_ctxt(vmid, vcpuid, V_DIRTY);
 
     if (dirty == INVALID64)
     {
@@ -46,7 +46,7 @@ void restore_shadow_kvm_regs()
             reset_sys_regs(vmid, vcpuid);
         }
         save_sys_regs(vmid, vcpuid);
-        set_shadow_ctxt(vmid, vcpuid, DIRTY, 0UL);
+        set_shadow_ctxt(vmid, vcpuid, V_DIRTY, 0UL);
     }
     else
     {
@@ -59,7 +59,7 @@ void restore_shadow_kvm_regs()
             u64 pc = get_shadow_ctxt(vmid, vcpuid, V_PC);
             set_shadow_ctxt(vmid, vcpuid, V_PC, pc + 4UL);
         }
-        set_shadow_ctxt(vmid, vcpuid, DIRTY, 0UL);
+        set_shadow_ctxt(vmid, vcpuid, V_DIRTY, 0UL);
         set_shadow_ctxt(vmid, vcpuid, V_FAR_EL2, 0UL);
 
         if (get_shadow_ctxt(vmid, vcpuid, V_FLAGS) & PENDING_FSC_FAULT)

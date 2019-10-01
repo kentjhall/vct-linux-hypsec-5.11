@@ -98,28 +98,6 @@ void deactivate_traps_vhe_put(void)
 {
 }
 
-static inline void __hyp_text set_per_cpu(int vmid, int vcpu_id)
-{
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
-	el2_data->per_cpu_data[pcpuid].vmid = vmid;
-	el2_data->per_cpu_data[pcpuid].vcpu_id = vcpu_id;
-}
-
-static inline int __hyp_text get_cur_vmid(void)
-{
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
-	return el2_data->per_cpu_data[pcpuid].vmid;
-}
-
-static inline int __hyp_text get_cur_vcpu_id(void)
-{
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
-	return el2_data->per_cpu_data[pcpuid].vcpu_id;
-}
-
 static void __hyp_text __activate_vm(u64 vmid)
 {
 	u64 shadow_vttbr = get_shadow_vttbr((u32)vmid);
@@ -251,7 +229,7 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code,
 
 	ec = ESR_ELx_EC(esr_el2);
 	if (ec == ESR_ELx_EC_HVC64) {
-		if (handle_pvops(shadow_ctxt) > 0)
+		if (handle_pvops() > 0)
 			return true;
 		else
 			return false;
@@ -328,7 +306,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 	__sysreg_restore_state_nvhe(shadow_ctxt);
 
 	__fpsimd_save_state(&host_ctxt->gp_regs.fp_regs);
-	__fpsimd_restore_state(&shadow_ctxt->gp_regs.fp_regs);
+	__fpsimd_restore_state(&prot_ctxt->fp_regs);
 
 	do {
 		/* Jump in the fire! */
@@ -349,7 +327,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 
 	__sysreg_restore_state_nvhe(host_ctxt);
 
-	__fpsimd_save_state(&shadow_ctxt->gp_regs.fp_regs);
+	__fpsimd_save_state(&prot_ctxt->fp_regs);
 	__fpsimd_restore_state(&host_ctxt->gp_regs.fp_regs);
 
 	__save_shadow_kvm_regs(vcpu, prot_ctxt, exit_code);

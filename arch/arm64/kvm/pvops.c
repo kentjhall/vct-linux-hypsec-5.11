@@ -11,11 +11,13 @@
 
 #include <kvm/pvops.h>
 
-int __hyp_text handle_pvops(struct shadow_vcpu_context *shadow_ctxt)
+int __hyp_text handle_pvops(void)
 {
-#if 0
-	unsigned long call_num = shadow_vcpu_get_reg(shadow_ctxt, 0);
+	u32 vmid = get_cur_vmid();
+	u32 vcpu_id = get_cur_vcpu_id();
+	unsigned long call_num = get_shadow_ctxt(vmid, vcpu_id, 0);
 
+#if 0
 	switch (call_num) {
 		case KVM_SET_DESC_PFN:
 			grant_stage2_sg_gpa(shadow_ctxt);

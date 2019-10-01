@@ -45,4 +45,5 @@ extern int sec_el2_handle_sys_reg(u32 esr);
 
 void __save_encrypted_vcpu(u32 vmid, int vcpu_id);
 void hypsec_inject_undef(struct shadow_vcpu_context *shadow_ctxt);
+
 #endif /* __ARM_STAGE2_H__ */

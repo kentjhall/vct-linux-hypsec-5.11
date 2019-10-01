@@ -92,10 +92,8 @@ void    set_next_vmid(u32 vmid);
 u64     get_next_remap_ptr(void);
 void    set_next_remap_ptr(u64 remap);
 
-u32     get_cur_vmid(void);
-u32     get_cur_vcpuid(void);
-u64     get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index);
-void    set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value);
+int     get_cur_vmid(void);
+int     get_cur_vcpuid(void);
 u64     get_int_ctxt(u32 vmid, u32 vcpuid, u32 index);
 void    set_int_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value);
 void    clear_shadow_gp_regs(u32 vmid, u32 vcpuid);
@@ -245,6 +243,9 @@ void v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid);
 void save_shadow_kvm_regs(void);
 void restore_shadow_kvm_regs(void);
 //void save_encrypted_vcpu(u32 vmid, u32 vcpuid);
+
+#define VCPU_IDX(vmid, vcpu_id) \
+	(vmid * HYPSEC_MAX_VCPUS) + vcpu_id
 
 #endif //HYPSEC_HYPSEC_H
 

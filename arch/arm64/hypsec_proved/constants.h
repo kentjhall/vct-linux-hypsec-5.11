@@ -56,22 +56,32 @@
 #define SHARED_VCPU_START 1
 #define VCPU_PER_VM	8
 
-#define DIRTY 1
 //#define SHADOW_SYS_REGS_SIZE 1
-#define V_PC 2
-#define V_PSTATE 3
-#define V_FAR_EL2 0
-#define V_ESR_EL2 1
+#define V_SP		32
+#define V_PC		33
+#define V_PSTATE 	34
+#define	V_SP_EL1	35
+#define V_ELR_EL1	36
+#define V_SPSR_EL1	37
+#define V_SPSR_ABT	38
+#define V_SPSR_UND	39
+#define V_SPSR_IRQ	40
+#define V_SPSR_FIQ	41
+#define END_SYS_REGS	41 + NR_SYS_REGS
+#define V_FAR_EL2	END_SYS_REGS + 1
+#define V_HPFAR_EL2	END_SYS_REGS + 2
+#define V_HCR_EL2	END_SYS_REGS + 3
+#define V_EC		END_SYS_REGS + 4
+#define V_DIRTY		END_SYS_REGS + 5
+#define V_FLAGS		END_SYS_REGS + 6
+
 #define V_MPIDR_EL1 2
 #define V_DACR32_EL2 3
 #define V_IFSR32_EL2 4
 #define V_FPEXC32_EL2 5
-#define V_HPFAR_EL2 6
-#define V_ELR_EL1 7
+#define V_ESR_EL2 7
 #define V_SPSR_0 8
 #define V_ESR_EL1 9
-#define V_EC 100
-#define V_FLAGS 102
 #define V_HPFAR_MASK 65535UL
 
 /*

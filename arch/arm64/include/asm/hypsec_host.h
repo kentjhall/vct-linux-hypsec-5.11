@@ -112,7 +112,7 @@ extern unsigned long search_load_info(u32 vmid, struct el2_data *el2_data,
 
 extern int el2_alloc_vm_info(struct kvm *kvm);
 
-int handle_pvops(struct shadow_vcpu_context *shadow_ctxt);
+int handle_pvops(void);
 void save_encrypted_vcpu(struct kvm_vcpu *vcpu);
 
 //extern void set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,
@@ -151,4 +151,11 @@ static inline int is_smmu_range(struct el2_data *el2_data, phys_addr_t addr)
 	}
 	return ret;
 }
+
+void set_per_cpu(int vmid, int vcpu_id);
+int get_cur_vmid(void);
+int get_cur_vcpu_id(void);
+
+u64     get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index);
+void    set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value);
 #endif /* __ARM_STAGE2_H__ */
