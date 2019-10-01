@@ -36,7 +36,9 @@ void reset_sys_regs(u32 vmid, u32 vcpuid)
         }
         else
         {
-            val = get_sys_reg_desc_val(i);
+	    //TODO:this will not work, we need to pass vmid and vcpuid
+            //val = get_sys_reg_desc_val(i);
+	    BUG();
         }
         set_shadow_ctxt(vmid, vcpuid, i, val);
         i += 1U;

@@ -86,7 +86,7 @@ static inline void vcpu_set_vsesr(struct kvm_vcpu *vcpu, u64 vsesr)
 	vcpu->arch.vsesr_el2 = vsesr;
 }
 
-#ifdef CONFIG_VERIFIED_KVM
+#if 0 
 static inline unsigned long *shadow_vcpu_pc(struct shadow_vcpu_context *shadow_ctxt)
 {
 	return (unsigned long *)&vcpu_shadow_gp_regs(shadow_ctxt)->regs.pc;
@@ -178,7 +178,7 @@ static inline void vcpu_set_reg(struct kvm_vcpu *vcpu, u8 reg_num,
 		vcpu_gp_regs(vcpu)->regs.regs[reg_num] = val;
 }
 
-#ifdef CONFIG_VERIFIED_KVM
+#if 0 
 static inline unsigned long shadow_vcpu_get_reg(struct shadow_vcpu_context *shadow_ctxt,
                                                 u8 reg_num)
 {

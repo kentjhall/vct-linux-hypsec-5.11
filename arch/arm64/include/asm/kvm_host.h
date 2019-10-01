@@ -219,14 +219,15 @@ typedef struct kvm_cpu_context kvm_cpu_context_t;
 #define PENDING_EXCEPT_INJECT_FLAG	(PENDING_DABT_INJECT | \
 					 PENDING_IABT_INJECT | \
 					 PENDING_UNDEF_INJECT)
-
+#define KVM_REGS_SIZE	sizeof(struct kvm_regs) / sizeof(u64)
 
 struct shadow_vcpu_context {
-	struct kvm_regs gp_regs;
+	/*struct kvm_regs gp_regs;
 	union {
 		u64 sys_regs[NR_SYS_REGS];
 		u32 copro[NR_COPRO_REGS];
-	};
+	};*/
+	u64 regs[KVM_REGS_SIZE + NR_SYS_REGS];
 	u32 esr;
 	u32 vmid;
 	u64 ec;
@@ -354,7 +355,7 @@ struct kvm_vcpu_arch {
  */
 #define __vcpu_sys_reg(v,r)	((v)->arch.ctxt.sys_regs[(r)])
 
-#ifdef CONFIG_VERIFIED_KVM
+#if 0
 #define vcpu_shadow_gp_regs(v)	(&(v)->gp_regs)
 #endif
 

@@ -22,12 +22,14 @@ u32 verify_image(u32 vmid, u64 addr) {
     return 0;
 }
 
+/*
 u64 get_sys_reg_desc_val(u32 index) {
     // TODO: make the following work
     int vcpuid = 0, vmid = 0;
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].shadow_ctxt[vcpuid]->sys_regs[index];
 }
+*/
 
 u64 get_exception_vector(u64 pstate) {
     // TODO
@@ -284,11 +286,6 @@ void    set_next_remap_ptr(u64 remap) {
 u32     get_cur_vmid(void) { return 0; }
 u32     get_cur_vcpuid(void) { return 0; }
 
-u64     get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index) {
-	BUG();
-	return 0;
-}
-
 void    set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
 	BUG();
 }
@@ -326,6 +323,12 @@ u32     get_int_new_level(u32 vmid, u32 vcpuid) {
 	return 0;
 }
 
+u64 __hyp_text get_shadow_ctxt(u32 vmid, u32 vcpu_id, u32 index)
+{
+       struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+       int offset = (vmid * HYPSEC_MAX_VCPUS) + vcpu_id;
+       return el2_data->shadow_vcpu_ctxt[offset].regs[index]; 
+};
 #if 0
 void    int_to_shadow_decrypt(u32 vmid, u32 vcpuid);
 void    shadow_to_int_encrypt(u32 vmid, u32 vcpuid);
