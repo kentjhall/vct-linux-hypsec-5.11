@@ -104,6 +104,8 @@ u32     get_shadow_dirty_bit(u32 vmid, u32 vcpuid, u32 index);
 void    set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u32 index, u32 value);
 u64     get_int_new_pte(u32 vmid, u32 vcpuid);
 u32     get_int_new_level(u32 vmid, u32 vcpuid);
+u32     get_shadow_esr(u32 vmid, u32 vcpuid);
+u32     get_int_esr(u32 vmid, u32 vcpuid);
 
 
 /*

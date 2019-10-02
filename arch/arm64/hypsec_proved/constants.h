@@ -75,13 +75,13 @@
 #define V_DIRTY		END_SYS_REGS + 5
 #define V_FLAGS		END_SYS_REGS + 6
 
-#define V_MPIDR_EL1 2
-#define V_DACR32_EL2 3
-#define V_IFSR32_EL2 4
-#define V_FPEXC32_EL2 5
-#define V_ESR_EL2 7
+// Do we need the 32 bit registers?
+#define V_MPIDR_EL1 	41 + MPIDR_EL1
+#define V_DACR32_EL2	41 + DACR32_EL2
+#define V_IFSR32_EL2	41 + IFSR32_EL2
+#define V_FPEXC32_EL2	41 + FPEXC32_EL2
+#define V_ESR_EL1	41 + ESR_EL1
 #define V_SPSR_0 8
-#define V_ESR_EL1 9
 #define V_HPFAR_MASK 65535UL
 
 /*

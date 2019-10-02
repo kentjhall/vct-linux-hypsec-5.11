@@ -296,6 +296,21 @@ void __hyp_text set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
 	el2_data->shadow_vcpu_ctxt[offset].regs[index] = value;
 }
 
+u32 __hyp_text get_shadow_esr(u32 vmid, u32 vcpuid) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int offset = VCPU_IDX(vmid, vcpuid);
+	return el2_data->shadow_vcpu_ctxt[offset].esr;
+}
+
+u32 __hyp_text get_int_esr(u32 vmid, u32 vcpuid) {
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	return vcpu->arch.fault.esr_el2;
+}
+
 u64     get_int_ctxt(u32 vmid, u32 vcpuid, u32 index) {
 	BUG();
 	return 0;

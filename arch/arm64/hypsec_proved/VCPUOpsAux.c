@@ -106,7 +106,7 @@ void prep_hvc(u32 vmid, u32 vcpuid)
 
 void prep_abort(u32 vmid, u32 vcpuid)
 {
-    u64 esr = get_int_ctxt(vmid, vcpuid, V_ESR_EL2);
+    u64 esr = get_int_esr(vmid, vcpuid);
     u32 Rd = (u32)((esr / 65536UL) % 32UL);
     u64 fault_ipa = (get_shadow_ctxt(vmid, vcpuid, V_HPFAR_EL2) / 16UL) * 4096UL;
 
@@ -148,7 +148,8 @@ void v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid)
     u64 addr = (hpfar & V_HPFAR_MASK) * 256UL;
     u64 pte = get_int_new_pte(vmid, vcpuid);
     u32 level = get_int_new_level(vmid, vcpuid);
-    u64 esr = get_shadow_ctxt(vmid, vcpuid, V_ESR_EL2);
+
+    u64 esr = get_shadow_esr(vmid, vcpuid);
     u64 esr_ec = (esr / ESR_ELx_EC_SHIFT) % ESR_ELx_EC_MASK;
     u32 is_iabt = 0U;
     if (esr_ec == ESR_ELx_EC_IABT_LOW) is_iabt = 1U;

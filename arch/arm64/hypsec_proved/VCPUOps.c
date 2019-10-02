@@ -11,7 +11,7 @@ void save_shadow_kvm_regs()
     u64 ec = get_shadow_ctxt(vmid, vcpuid, V_EC);
     if (ec == ARM_EXCEPTION_TRAP)
     {
-        u64 hsr = get_shadow_ctxt(vmid, vcpuid, V_ESR_EL2);
+        u64 hsr = get_shadow_esr(vmid, vcpuid);
         u64 hsr_ec = (hsr / ESR_ELx_EC_SHIFT) % ESR_ELx_EC_MASK;
         if (hsr_ec == ESR_ELx_EC_WFx)
             prep_wfx(vmid, vcpuid);
