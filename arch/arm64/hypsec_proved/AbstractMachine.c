@@ -311,13 +311,27 @@ u32 __hyp_text get_int_esr(u32 vmid, u32 vcpuid) {
 	return vcpu->arch.fault.esr_el2;
 }
 
-u64     get_int_ctxt(u32 vmid, u32 vcpuid, u32 index) {
-	BUG();
-	return 0;
+//make sure we only use get_int_ctxt to access general purposes regs
+u64 __hyp_text get_int_ctxt(u32 vmid, u32 vcpuid, u32 index) {
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	if (index >= 32)
+		__hyp_panic();
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	return vcpu->arch.ctxt.gp_regs.regs.regs[index];
 }
 
-void    set_int_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
-
+void __hyp_text set_int_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	if (index >= 32)
+		__hyp_panic();
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	vcpu->arch.ctxt.gp_regs.regs.regs[index] = value;
 }
 
 void    clear_shadow_gp_regs(u32 vmid, u32 vcpuid) {
@@ -328,12 +342,16 @@ void    int_to_shadow_fp_regs(u32 vmid, u32 vcpuid) {
 
 }
 
-u32     get_shadow_dirty_bit(u32 vmid, u32 vcpuid, u32 index) {
-	return 0;
+u32 __hyp_text get_shadow_dirty_bit(u32 vmid, u32 vcpuid, u32 index) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int offset = VCPU_IDX(vmid, vcpuid);
+	return el2_data->shadow_vcpu_ctxt[offset].dirty;
 }
 
-void    set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u32 index, u32 value) {
-
+void __hyp_text set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u32 index, u32 value) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int offset = VCPU_IDX(vmid, vcpuid);
+	el2_data->shadow_vcpu_ctxt[offset].dirty = value;
 }
 
 u64     get_int_new_pte(u32 vmid, u32 vcpuid) {
