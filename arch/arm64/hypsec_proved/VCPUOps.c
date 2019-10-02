@@ -45,7 +45,7 @@ void restore_shadow_kvm_regs()
             reset_gp_regs(vmid, vcpuid);
             reset_sys_regs(vmid, vcpuid);
         }
-        save_sys_regs(vmid, vcpuid);
+        //save_sys_regs(vmid, vcpuid);
         set_shadow_ctxt(vmid, vcpuid, V_DIRTY, 0UL);
     }
     else

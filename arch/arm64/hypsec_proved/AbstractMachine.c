@@ -312,7 +312,7 @@ u32 __hyp_text get_int_esr(u32 vmid, u32 vcpuid) {
 }
 
 //make sure we only use get_int_ctxt to access general purposes regs
-u64 __hyp_text get_int_ctxt(u32 vmid, u32 vcpuid, u32 index) {
+u64 __hyp_text get_int_gpr(u32 vmid, u32 vcpuid, u32 index) {
 	struct shared_data *shared_data;
 	int offset = VCPU_IDX(vmid, vcpuid);
 	struct kvm_vcpu *vcpu;
@@ -323,7 +323,25 @@ u64 __hyp_text get_int_ctxt(u32 vmid, u32 vcpuid, u32 index) {
 	return vcpu->arch.ctxt.gp_regs.regs.regs[index];
 }
 
-void __hyp_text set_int_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
+u64 __hyp_text get_int_pc(u32 vmid, u32 vcpuid) {
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	return vcpu->arch.ctxt.gp_regs.regs.pc;
+}
+
+u64 __hyp_text get_int_pstate(u32 vmid, u32 vcpuid) {
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	return vcpu->arch.ctxt.gp_regs.regs.pstate;
+}
+
+void __hyp_text set_int_gpr(u32 vmid, u32 vcpuid, u32 index, u64 value) {
 	struct shared_data *shared_data;
 	int offset = VCPU_IDX(vmid, vcpuid);
 	struct kvm_vcpu *vcpu;
@@ -342,13 +360,13 @@ void    int_to_shadow_fp_regs(u32 vmid, u32 vcpuid) {
 
 }
 
-u32 __hyp_text get_shadow_dirty_bit(u32 vmid, u32 vcpuid, u32 index) {
+u32 __hyp_text get_shadow_dirty_bit(u32 vmid, u32 vcpuid) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	int offset = VCPU_IDX(vmid, vcpuid);
 	return el2_data->shadow_vcpu_ctxt[offset].dirty;
 }
 
-void __hyp_text set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u32 index, u32 value) {
+void __hyp_text set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	int offset = VCPU_IDX(vmid, vcpuid);
 	el2_data->shadow_vcpu_ctxt[offset].dirty = value;

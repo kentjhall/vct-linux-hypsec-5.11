@@ -8,11 +8,11 @@
 
 void reset_gp_regs(u32 vmid, u32 vcpuid)
 {
-    u64 pc = get_int_ctxt(vmid, vcpuid, V_PC);
+    u64 pc = get_int_pc(vmid, vcpuid), pstate;
     if (v_search_load_info(vmid, pc))
     {
         clear_shadow_gp_regs(vmid, vcpuid);
-        u64 pstate = get_int_ctxt(vmid, vcpuid, V_PSTATE);
+        pstate = get_int_pstate(vmid, vcpuid);
         set_shadow_ctxt(vmid, vcpuid, V_PSTATE, pstate);
         set_shadow_ctxt(vmid, vcpuid, V_PC, pc);
         int_to_shadow_fp_regs(vmid, vcpuid);
@@ -45,7 +45,7 @@ void reset_sys_regs(u32 vmid, u32 vcpuid)
     }
 }
 
-void save_sys_regs(u32 vmid, u32 vcpuid)
+/*void save_sys_regs(u32 vmid, u32 vcpuid)
 {
     set_shadow_ctxt(vmid, vcpuid, V_DACR32_EL2, get_int_ctxt(vmid, vcpuid, V_DACR32_EL2));
     set_shadow_ctxt(vmid, vcpuid, V_IFSR32_EL2, get_int_ctxt(vmid, vcpuid, V_IFSR32_EL2));
@@ -61,15 +61,16 @@ void restore_sys_regs(u32 vmid, u32 vcpuid)
     set_int_ctxt(vmid, vcpuid, V_DACR32_EL2, get_shadow_ctxt(vmid, vcpuid, V_DACR32_EL2));
     set_int_ctxt(vmid, vcpuid, V_IFSR32_EL2, get_shadow_ctxt(vmid, vcpuid, V_IFSR32_EL2));
     set_int_ctxt(vmid, vcpuid, V_FPEXC32_EL2, get_shadow_ctxt(vmid, vcpuid, V_FPEXC32_EL2));
-}
+}*/
 
+// could have some problems here
 void sync_dirty_to_shadow(u32 vmid, u32 vcpuid)
 {
     u32 i = 0U;
     while (i < 31U)
     {
-        if (get_shadow_dirty_bit(vmid, vcpuid, i) == 1U) {
-            u64 reg = get_int_ctxt(vmid, vcpuid, i);
+        if (get_shadow_dirty_bit(vmid, vcpuid) == 1U) {
+            u64 reg = get_int_gpr(vmid, vcpuid, i);
             set_shadow_ctxt(vmid, vcpuid, i, reg);
         }
         i += 1U;
@@ -78,25 +79,25 @@ void sync_dirty_to_shadow(u32 vmid, u32 vcpuid)
 
 void prep_wfx(u32 vmid, u32 vcpuid)
 {
-    set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG, 1U);
+    set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG);
 }
 
 void prep_hvc(u32 vmid, u32 vcpuid)
 {
     u64 psci_fn = get_shadow_ctxt(vmid, vcpuid, 0UL);
-    set_shadow_dirty_bit(vmid, vcpuid, 0U, 1U);
-    set_int_ctxt(vmid, vcpuid, 0U, psci_fn);
+    set_shadow_dirty_bit(vmid, vcpuid, 0U);
+    set_int_gpr(vmid, vcpuid, 0U, psci_fn);
     if (psci_fn == PSCI_0_2_FN64_CPU_ON)
     {
-        set_int_ctxt(vmid, vcpuid, 1U, get_shadow_ctxt(vmid, vcpuid, 1U));
-        set_int_ctxt(vmid, vcpuid, 2U, get_shadow_ctxt(vmid, vcpuid, 2U));
-        set_int_ctxt(vmid, vcpuid, 3U, get_shadow_ctxt(vmid, vcpuid, 3U));
+        set_int_gpr(vmid, vcpuid, 1U, get_shadow_ctxt(vmid, vcpuid, 1U));
+        set_int_gpr(vmid, vcpuid, 2U, get_shadow_ctxt(vmid, vcpuid, 2U));
+        set_int_gpr(vmid, vcpuid, 3U, get_shadow_ctxt(vmid, vcpuid, 3U));
     }
     else if (psci_fn == PSCI_0_2_FN_AFFINITY_INFO ||
              psci_fn == PSCI_0_2_FN64_AFFINITY_INFO)
     {
-        set_int_ctxt(vmid, vcpuid, 1U, get_shadow_ctxt(vmid, vcpuid, 1U));
-        set_int_ctxt(vmid, vcpuid, 2U, get_shadow_ctxt(vmid, vcpuid, 2U));
+        set_int_gpr(vmid, vcpuid, 1U, get_shadow_ctxt(vmid, vcpuid, 1U));
+        set_int_gpr(vmid, vcpuid, 2U, get_shadow_ctxt(vmid, vcpuid, 2U));
 
     }
     else if (psci_fn == PSCI_0_2_FN_SYSTEM_OFF) {
@@ -112,21 +113,21 @@ void prep_abort(u32 vmid, u32 vcpuid)
 
     if (fault_ipa < MAX_MMIO_ADDR)
     {
-        set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG, 1UL);
+        set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG);
 
         if ((esr / 64UL) % 4UL == 0UL) {
-            set_shadow_dirty_bit(vmid, vcpuid, Rd, 1U);
+            set_shadow_dirty_bit(vmid, vcpuid, Rd);
         }
         else {
             u64 reg = get_shadow_ctxt(vmid, vcpuid, Rd);
-            set_int_ctxt(vmid, vcpuid, Rd, reg);
+            set_int_gpr(vmid, vcpuid, Rd, reg);
         }
     }
 }
 
 void v_hypsec_inject_undef(u32 vmid, u32 vcpuid)
 {
-    set_shadow_dirty_bit(vmid, vcpuid, PENDING_UNDEF_INJECT, 1U);
+    //set_shadow_dirty_bit(vmid, vcpuid, PENDING_UNDEF_INJECT, 1U);
 }
 
 void v_update_exception_gp_regs(u32 vmid, u32 vcpuid)
@@ -134,8 +135,8 @@ void v_update_exception_gp_regs(u32 vmid, u32 vcpuid)
     u64 esr = ESR_ELx_EC_UNKNOWN;
     u64 pstate = get_shadow_ctxt(vmid, vcpuid, V_PSTATE);
     u64 pc = get_shadow_ctxt(vmid, vcpuid, V_PC);
-    set_shadow_ctxt(vmid, vcpuid, V_ELR_EL1, pc);
     u64 new_pc = get_exception_vector(pstate);
+    set_shadow_ctxt(vmid, vcpuid, V_ELR_EL1, pc);
     set_shadow_ctxt(vmid, vcpuid, V_PC, new_pc);
     set_shadow_ctxt(vmid, vcpuid, V_PSTATE, PSTATE_FAULT_BITS_64);
     set_shadow_ctxt(vmid, vcpuid, V_SPSR_0, pstate);
