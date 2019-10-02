@@ -61,3 +61,6 @@ void set_pfn_host(u64 gfn, u64 num, u64 pfn, u64 prot)
     release_lock_pt(HOSTVISOR);
 }
 
+asm (
+	".popsection\n\t"
+);

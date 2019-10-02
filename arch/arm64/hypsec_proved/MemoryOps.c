@@ -4,6 +4,11 @@
  * MemoryOps
  */
 
+asm (
+	".text \n\t"
+	".pushsection \".hyp.text\", \"ax\" \n\t"
+);
+
 void __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 {
     u32 poweron = get_vm_poweron(vmid);
@@ -82,3 +87,6 @@ void v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
     }
 }
 
+asm (
+	".popsection\n\t"
+);

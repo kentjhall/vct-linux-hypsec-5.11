@@ -4,6 +4,11 @@
  * PageManager
  */
 
+asm (
+	".text \n\t"
+	".pushsection \".hyp.text\", \"ax\" \n\t"
+);
+
 u32 get_pfn_owner(u64 pfn)
 {
     u64 index = get_s2_page_index(pfn * PAGE_SIZE);
@@ -43,3 +48,6 @@ void set_pfn_count(u64 pfn, u32 count)
     }
 }
 
+asm (
+	".popsection\n\t"
+);

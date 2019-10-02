@@ -4,6 +4,11 @@
  * BootOps
  */
 
+asm (
+	".text \n\t"
+	".pushsection \".hyp.text\", \"ax\" \n\t"
+);
+
 u32 vm_is_inc_exe(u32 vmid)
 {
     u32 inc_exe;
@@ -193,3 +198,6 @@ void verify_and_load_images(u32 vmid)
     release_lock_vm(vmid);
 }
 
+asm (
+	".popsection\n\t"
+);

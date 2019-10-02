@@ -6,6 +6,11 @@
  * VCPUOpsAux
  */
 
+asm (
+	".text \n\t"
+	".pushsection \".hyp.text\", \"ax\" \n\t"
+);
+
 void reset_gp_regs(u32 vmid, u32 vcpuid)
 {
     u64 pc = get_int_pc(vmid, vcpuid), pstate;
@@ -157,3 +162,6 @@ void v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid)
     prot_and_map_vm_s2pt(vmid, addr, pte, level, is_iabt);
 }
 
+asm (
+	".popsection\n\t"
+);

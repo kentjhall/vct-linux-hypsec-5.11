@@ -4,7 +4,12 @@
  * MemManager
  */
 
-void map_page_host(u64 addr)
+asm (
+	".text \n\t"
+	".pushsection \".hyp.text\", \"ax\" \n\t"
+);
+
+void __hyp_text map_page_host(u64 addr)
 {
     u64 pfn = addr / PAGE_SIZE;
     u64 new_pte = 0UL, perm;
@@ -26,7 +31,7 @@ void map_page_host(u64 addr)
     release_lock_s2page();
 }
 
-void clear_vm_page(u32 vmid, u64 pfn)
+void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
 {
     u32 owner;
     u64 perm;
@@ -41,7 +46,7 @@ void clear_vm_page(u32 vmid, u64 pfn)
     release_lock_s2page();
 }
 
-void assign_pfn_to_vm(u32 vmid, u64 pfn)
+void __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn)
 {
     u32 owner, count;
     u64 perm;
@@ -59,7 +64,7 @@ void assign_pfn_to_vm(u32 vmid, u64 pfn)
     release_lock_s2page();
 }
 
-void map_pfn_vm(u32 vmid, u64 addr, u64 new_pte, u32 level, u32 exec)
+void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 new_pte, u32 level, u32 exec)
 {
     u64 paddr = phys_page(new_pte);
     u64 pte;
@@ -77,7 +82,7 @@ void map_pfn_vm(u32 vmid, u64 addr, u64 new_pte, u32 level, u32 exec)
     mmap_s2pt(vmid, addr, level, pte);
 }
 
-void grant_vm_page(u32 vmid, u64 pfn)
+void __hyp_text grant_vm_page(u32 vmid, u64 pfn)
 {
     u32 owner, count;
     acquire_lock_s2page();
@@ -89,7 +94,7 @@ void grant_vm_page(u32 vmid, u64 pfn)
     release_lock_s2page();
 }
 
-void revoke_vm_page(u32 vmid, u64 pfn)
+void __hyp_text revoke_vm_page(u32 vmid, u64 pfn)
 {
     u32 owner, count;
     u64 perm;
@@ -106,3 +111,6 @@ void revoke_vm_page(u32 vmid, u64 pfn)
     release_lock_s2page();
 }
 
+asm (
+	".popsection\n\t"
+);

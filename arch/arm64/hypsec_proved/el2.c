@@ -17,10 +17,14 @@
 #include <asm/spinlock_types.h>
 #include <linux/serial_reg.h>
 
+#include "hypsec.h"
+
 extern int __hypsec_register_vm(struct kvm *kvm);
 void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 					struct s2_host_regs *host_regs)
 {
+	phys_addr_t addr = (read_sysreg(hpfar_el2) & HPFAR_MASK) << 8;
+	map_page_host(addr);
 }
 
 //TODO: Did we prove the following?

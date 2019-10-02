@@ -4,6 +4,11 @@
  * PTWalk
  */
 
+asm (
+	".text \n\t"
+	".pushsection \".hyp.text\", \"ax\" \n\t"
+);
+
 u64 walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc)
 {
     u64 vttbr_pa = phys_page(vttbr);
@@ -66,3 +71,7 @@ void v_set_pte(u32 vmid, u64 pmd, u64 addr, u64 pte)
     u64 pte_idx = pte_idx(addr);
     pt_store(vmid, pmd_pa + pte_idx * 8UL, pte);
 }
+
+asm (
+	".popsection\n\t"
+);

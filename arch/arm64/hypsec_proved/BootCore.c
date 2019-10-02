@@ -4,6 +4,11 @@
  * BootCore
  */
 
+asm (
+	".text \n\t"
+	".pushsection \".hyp.text\", \"ax\" \n\t"
+);
+
 u32 gen_vmid()
 {
     u32 vmid;
@@ -29,3 +34,6 @@ u64 alloc_remap_addr(u64 pgnum)
     return remap;
 }
 
+asm (
+	".popsection\n\t"
+);

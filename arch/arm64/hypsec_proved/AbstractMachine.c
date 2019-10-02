@@ -1,5 +1,10 @@
 #include "hypsec.h"
 
+asm (
+	".text \n\t"
+	".pushsection \".hyp.text\", \"ax\" \n\t"
+);
+
 void v_panic(void) {
     __hyp_panic();
 }
@@ -405,3 +410,7 @@ int __hyp_text get_cur_vcpu_id(void)
 void    int_to_shadow_decrypt(u32 vmid, u32 vcpuid);
 void    shadow_to_int_encrypt(u32 vmid, u32 vcpuid);
 #endif
+
+asm (
+	".popsection\n\t"
+);

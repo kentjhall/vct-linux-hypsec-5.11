@@ -4,6 +4,11 @@
  * NPTWalk
  */
 
+asm (
+	".text \n\t"
+	".pushsection \".hyp.text\", \"ax\" \n\t"
+);
+
 void init_npt(u32 vmid)
 {
     u64 vttbr_pa = pool_start(vmid);
@@ -72,3 +77,7 @@ void set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
         }
     }
 }
+
+asm (
+	".popsection\n\t"
+);

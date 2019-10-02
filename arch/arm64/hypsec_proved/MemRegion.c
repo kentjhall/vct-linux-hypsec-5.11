@@ -4,6 +4,11 @@
  * MemRegion
  */
 
+asm (
+	".text \n\t"
+	".pushsection \".hyp.text\", \"ax\" \n\t"
+);
+
 u32 mem_region_search(u64 addr)
 {
     u32 total_regions = get_mem_region_cnt();
@@ -21,3 +26,6 @@ u32 mem_region_search(u64 addr)
     return res;
 }
 
+asm (
+	".popsection\n\t"
+);
