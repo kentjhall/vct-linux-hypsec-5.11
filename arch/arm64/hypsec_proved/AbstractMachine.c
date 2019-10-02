@@ -290,7 +290,7 @@ u64 __hyp_text get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index)
 };
 
 //TODO: Define the following
-void __hyp set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
+void __hyp_text set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	int offset = VCPU_IDX(vmid, vcpuid);
 	el2_data->shadow_vcpu_ctxt[offset].regs[index] = value;
