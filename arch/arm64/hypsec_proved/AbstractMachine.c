@@ -107,147 +107,147 @@ void __hyp_text acquire_lock_s2page(void) {
     stage2_spin_lock(&el2_data->s2pages_lock);
 }
 
-void    release_lock_s2page(void) {
+void __hyp_text release_lock_s2page(void) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     stage2_spin_unlock(&el2_data->s2pages_lock);
 }
 
-u32     get_s2_page_vmid(u64 index) {
+u32 __hyp_text get_s2_page_vmid(u64 index) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->s2_pages[index].vmid;
 }
 
-void    set_s2_page_vmid(u64 index, u32 vmid) {
+void __hyp_text set_s2_page_vmid(u64 index, u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->s2_pages[index].vmid = vmid;
 }
 
-u32     get_s2_page_count(u64 index) {
+u32 __hyp_text get_s2_page_count(u64 index) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->s2_pages[index].count;
 }
 
-void    set_s2_page_count(u64 index, u32 count) {
+void __hyp_text set_s2_page_count(u64 index, u32 count) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->s2_pages[index].count = count;
 }
 
-void    acquire_lock_vm(u32 vmid) {
+void __hyp_text acquire_lock_vm(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     stage2_spin_lock(&el2_data->vm_info[vmid].vm_lock);
 }
 
-void    release_lock_vm(u32 vmid) {
+void __hyp_text release_lock_vm(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     stage2_spin_unlock(&el2_data->vm_info[vmid].vm_lock);
 }
 
-u32     get_vm_state(u32 vmid) {
+u32 __hyp_text get_vm_state(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].state;
 }
 
-void    set_vm_state(u32 vmid, u32 state) {
+void __hyp_text set_vm_state(u32 vmid, u32 state) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->vm_info[vmid].state = state;
 }
 
-u32     get_vcpu_state(u32 vmid, u32 vcpuid) {
+u32 __hyp_text get_vcpu_state(u32 vmid, u32 vcpuid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].int_vcpus[vcpuid].state;
 }
 
-void    set_vcpu_state(u32 vmid, u32 vcpuid, u32 state) {
+void __hyp_text set_vcpu_state(u32 vmid, u32 vcpuid, u32 state) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->vm_info[vmid].int_vcpus[vcpuid].state = state;
 }
 
-void     set_vm_power(u32 vmid, u32 power) {
+void __hyp_text set_vm_power(u32 vmid, u32 power) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->vm_info[vmid].powered_on = power;
 }
 
-u32     get_vm_power(u32 vmid) {
+u32 __hyp_text get_vm_power(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].powered_on;
 }
 
-u32     get_vm_inc_exe(u32 vmid) {
+u32 __hyp_text get_vm_inc_exe(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].inc_exe;
 }
 
-void    set_vm_inc_exe(u32 vmid, u32 inc_exe) {
+void __hyp_text set_vm_inc_exe(u32 vmid, u32 inc_exe) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->vm_info[vmid].inc_exe = inc_exe;
 }
 
-u64 	get_vm_kvm(u32 vmid) {
+u64 __hyp_text get_vm_kvm(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return (u64)el2_data->vm_info[vmid].kvm;
 }
 
-void    set_vm_kvm(u32 vmid, u64 kvm) {
+void __hyp_text set_vm_kvm(u32 vmid, u64 kvm) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->vm_info[vmid].kvm = (struct kvm*)kvm;
 }
 
-u64     get_vm_vcpu(u32 vmid, u32 vcpuid) {
+u64 __hyp_text get_vm_vcpu(u32 vmid, u32 vcpuid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return (u64)el2_data->vm_info[vmid].int_vcpus[vcpuid].vcpu;
 }
 
-void    set_vm_vcpu(u32 vmid, u32 vcpuid, u64 vcpu) {
+void __hyp_text set_vm_vcpu(u32 vmid, u32 vcpuid, u64 vcpu) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->vm_info[vmid].int_vcpus[vcpuid].vcpu = (struct kvm_vcpu*)vcpu;
 }
 
-u32     get_vm_next_load_idx(u32 vmid) {
+u32 __hyp_text get_vm_next_load_idx(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].load_info_cnt;
 }
 
-void    set_vm_next_load_idx(u32 vmid, u32 load_idx) {
+void __hyp_text set_vm_next_load_idx(u32 vmid, u32 load_idx) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->vm_info[vmid].load_info_cnt = load_idx;
 }
 
-u64     get_vm_load_addr(u32 vmid, u32 load_idx) {
+u64 __hyp_text get_vm_load_addr(u32 vmid, u32 load_idx) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].load_info[load_idx].load_addr;
 }
 
-void    set_vm_load_addr(u32 vmid, u32 load_idx, u64 load_addr) {
+void __hyp_text set_vm_load_addr(u32 vmid, u32 load_idx, u64 load_addr) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->vm_info[vmid].load_info[load_idx].load_addr = load_addr;
 }
 
-u64     get_vm_load_size(u32 vmid, u32 load_idx) {
+u64 __hyp_text get_vm_load_size(u32 vmid, u32 load_idx) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].load_info[load_idx].size;
 }
 
-void    set_vm_load_size(u32 vmid, u32 load_idx, u64 size) {
+void __hyp_text set_vm_load_size(u32 vmid, u32 load_idx, u64 size) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->vm_info[vmid].load_info[load_idx].size = size;
 }
 
-u64     get_vm_remap_addr(u32 vmid, u32 load_idx) {
+u64 __hyp_text get_vm_remap_addr(u32 vmid, u32 load_idx) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].load_info[load_idx].el2_remap_addr;
 }
 
-void    set_vm_remap_addr(u32 vmid, u32 load_idx, u64 remap_addr) {
+void __hyp_text set_vm_remap_addr(u32 vmid, u32 load_idx, u64 remap_addr) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->vm_info[vmid].load_info[load_idx].el2_remap_addr = remap_addr;
 }
 
-u64     get_vm_mapped_pages(u32 vmid, u32 load_idx) {
+u64 __hyp_text get_vm_mapped_pages(u32 vmid, u32 load_idx) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].load_info[load_idx].el2_mapped_pages;
 }
 
-void    set_vm_mapped_pages(u32 vmid, u32 load_idx, u64 mapped) {
+void __hyp_text set_vm_mapped_pages(u32 vmid, u32 load_idx, u64 mapped) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->vm_info[vmid].load_info[load_idx].el2_mapped_pages = mapped;
 }
@@ -277,7 +277,7 @@ u64     get_next_remap_ptr(void) {
     return el2_data->last_remap_ptr;
 }
 
-void    set_next_remap_ptr(u64 remap) {
+void __hyp_text set_next_remap_ptr(u64 remap) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->last_remap_ptr = remap;
 }
@@ -352,11 +352,11 @@ void __hyp_text set_int_gpr(u32 vmid, u32 vcpuid, u32 index, u64 value) {
 	vcpu->arch.ctxt.gp_regs.regs.regs[index] = value;
 }
 
-void    clear_shadow_gp_regs(u32 vmid, u32 vcpuid) {
+void __hyp_text clear_shadow_gp_regs(u32 vmid, u32 vcpuid) {
 
 }
 
-void    int_to_shadow_fp_regs(u32 vmid, u32 vcpuid) {
+void __hyp_text int_to_shadow_fp_regs(u32 vmid, u32 vcpuid) {
 
 }
 
@@ -372,11 +372,11 @@ void __hyp_text set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value) {
 	el2_data->shadow_vcpu_ctxt[offset].dirty = value;
 }
 
-u64     get_int_new_pte(u32 vmid, u32 vcpuid) {
+u64 __hyp_text get_int_new_pte(u32 vmid, u32 vcpuid) {
 	return 0;
 }
 
-u32     get_int_new_level(u32 vmid, u32 vcpuid) {
+u32 __hyp_text get_int_new_level(u32 vmid, u32 vcpuid) {
 	return 0;
 }
 
