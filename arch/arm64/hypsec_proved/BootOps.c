@@ -4,12 +4,7 @@
  * BootOps
  */
 
-asm (
-	".text \n\t"
-	".pushsection \".hyp.text\", \"ax\" \n\t"
-);
-
-u32 vm_is_inc_exe(u32 vmid)
+u32 __hyp_text vm_is_inc_exe(u32 vmid)
 {
     u32 inc_exe;
     acquire_lock_vm(vmid);
@@ -18,14 +13,14 @@ u32 vm_is_inc_exe(u32 vmid)
     return inc_exe;
 }
 
-void boot_from_inc_exe(u32 vmid)
+void __hyp_text boot_from_inc_exe(u32 vmid)
 {
     acquire_lock_vm(vmid);
     set_vm_inc_exe(vmid, 1U);
     release_lock_vm(vmid);
 }
 
-void set_vcpu_active(u32 vmid, u32 vcpuid)
+void __hyp_text set_vcpu_active(u32 vmid, u32 vcpuid)
 {
     u32 vm_state, vcpu_state;
     acquire_lock_vm(vmid);
@@ -40,7 +35,7 @@ void set_vcpu_active(u32 vmid, u32 vcpuid)
     release_lock_vm(vmid);
 }
 
-void set_vcpu_inactive(u32 vmid, u32 vcpuid)
+void __hyp_text set_vcpu_inactive(u32 vmid, u32 vcpuid)
 {
     u32 vcpu_state;
     acquire_lock_vm(vmid);
@@ -54,7 +49,7 @@ void set_vcpu_inactive(u32 vmid, u32 vcpuid)
     release_lock_vm(vmid);
 }
 
-u64 v_search_load_info(u32 vmid, u64 addr)
+u64 __hyp_text v_search_load_info(u32 vmid, u64 addr)
 {
     u32 load_info_cnt, load_idx;
     u64 ret; 
@@ -77,7 +72,7 @@ u64 v_search_load_info(u32 vmid, u64 addr)
     return ret;
 } 
 
-u32 register_vcpu(u32 vmid, u32 vcpuid)
+u32 __hyp_text register_vcpu(u32 vmid, u32 vcpuid)
 {
     u32 vm_state, vcpu_state;
     u64 vcpu;
@@ -96,7 +91,7 @@ u32 register_vcpu(u32 vmid, u32 vcpuid)
     return 0U;
 }
 
-u32 register_kvm()
+u32 __hyp_text register_kvm()
 {
     u32 vmid = gen_vmid();
     u32 state;
@@ -122,7 +117,7 @@ u32 register_kvm()
     return vmid;
 }
 
-void set_boot_info(u32 vmid, u64 load_addr, u64 size)
+void __hyp_text set_boot_info(u32 vmid, u64 load_addr, u64 size)
 {
     u32 state, load_idx;
     u64 page_count, remap_addr;
@@ -145,7 +140,7 @@ void set_boot_info(u32 vmid, u64 load_addr, u64 size)
     release_lock_vm(vmid);
 }
 
-void remap_vm_image(u32 vmid, u32 load_idx, u64 pfn)
+void __hyp_text remap_vm_image(u32 vmid, u32 load_idx, u64 pfn)
 {
     u32 state, load_info_cnt;
     u64 size, page_count, mapped, remap_addr, target;
@@ -171,7 +166,7 @@ void remap_vm_image(u32 vmid, u32 load_idx, u64 pfn)
     release_lock_vm(vmid);
 }
 
-void verify_and_load_images(u32 vmid)
+void __hyp_text verify_and_load_images(u32 vmid)
 {
     u32 state, load_info_cnt, load_idx, valid;
     u64 load_addr, remap_addr, mapped;
@@ -197,7 +192,3 @@ void verify_and_load_images(u32 vmid)
     }
     release_lock_vm(vmid);
 }
-
-asm (
-	".popsection\n\t"
-);

@@ -4,12 +4,7 @@
  * BootCore
  */
 
-asm (
-	".text \n\t"
-	".pushsection \".hyp.text\", \"ax\" \n\t"
-);
-
-u32 gen_vmid()
+u32 __hyp_text gen_vmid()
 {
     u32 vmid;
     acquire_lock_core();
@@ -24,7 +19,7 @@ u32 gen_vmid()
     return vmid;
 }
 
-u64 alloc_remap_addr(u64 pgnum)
+u64 __hyp_text alloc_remap_addr(u64 pgnum)
 {
     u64 remap;
     acquire_lock_core();
@@ -33,7 +28,3 @@ u64 alloc_remap_addr(u64 pgnum)
     release_lock_core();
     return remap;
 }
-
-asm (
-	".popsection\n\t"
-);

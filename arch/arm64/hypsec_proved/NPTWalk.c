@@ -4,12 +4,7 @@
  * NPTWalk
  */
 
-asm (
-	".text \n\t"
-	".pushsection \".hyp.text\", \"ax\" \n\t"
-);
-
-void init_npt(u32 vmid)
+void __hyp_text init_npt(u32 vmid)
 {
     u64 vttbr_pa = pool_start(vmid);
     u64 vmid64 = ((u64)(vmid & 255U) << VTTBR_VMID_SHIFT);
@@ -24,7 +19,7 @@ void init_npt(u32 vmid)
     }
 }
 
-u32 get_npt_level(u32 vmid, u64 addr)
+u32 __hyp_text get_npt_level(u32 vmid, u64 addr)
 {
     u64 vttbr = get_pt_vttbr(vmid);
     u64 pgd = walk_pgd(vmid, vttbr, addr, 0U);
@@ -42,7 +37,7 @@ u32 get_npt_level(u32 vmid, u64 addr)
     return ret;
 }
 
-u64 walk_npt(u32 vmid, u64 addr)
+u64 __hyp_text walk_npt(u32 vmid, u64 addr)
 {
     u64 vttbr = get_pt_vttbr(vmid);
     u64 pgd = walk_pgd(vmid, vttbr, addr, 0U);
@@ -58,7 +53,7 @@ u64 walk_npt(u32 vmid, u64 addr)
     return ret;
 }
 
-void set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
+void __hyp_text set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 {
     u64 vttbr = get_pt_vttbr(vmid);
     u64 pgd = walk_pgd(vmid, vttbr, addr, 1U);
@@ -77,7 +72,3 @@ void set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
         }
     }
 }
-
-asm (
-	".popsection\n\t"
-);

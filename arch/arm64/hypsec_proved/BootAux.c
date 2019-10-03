@@ -4,12 +4,7 @@
  * BootAux
  */
 
-asm (
-	".text \n\t"
-	".pushsection \".hyp.text\", \"ax\" \n\t"
-);
-
-void v_unmap_image_from_host_s2pt(u32 vmid, u64 remap_addr, u64 num)
+void __hyp_text v_unmap_image_from_host_s2pt(u32 vmid, u64 remap_addr, u64 num)
 {
     while (num >= 0UL)
     {
@@ -22,7 +17,7 @@ void v_unmap_image_from_host_s2pt(u32 vmid, u64 remap_addr, u64 num)
     }
 }
 
-void v_load_image_to_shadow_s2pt(u32 vmid, u64 target_addr, u64 remap_addr, u64 num)
+void __hyp_text v_load_image_to_shadow_s2pt(u32 vmid, u64 target_addr, u64 remap_addr, u64 num)
 {
     while (num > 0UL)
     {
@@ -35,7 +30,3 @@ void v_load_image_to_shadow_s2pt(u32 vmid, u64 target_addr, u64 remap_addr, u64 
         num--;
     }
 }
-
-asm (
-	".popsection\n\t"
-);

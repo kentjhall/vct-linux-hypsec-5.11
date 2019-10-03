@@ -4,12 +4,7 @@
  * VCPUOps
  */
 
-asm (
-	".text \n\t"
-	".pushsection \".hyp.text\", \"ax\" \n\t"
-);
-
-void save_shadow_kvm_regs()
+void __hyp_text save_shadow_kvm_regs()
 {
     u32 vmid = get_cur_vmid();
     u32 vcpuid = get_cur_vcpu_id();
@@ -33,7 +28,7 @@ void save_shadow_kvm_regs()
     }
 }
 
-void restore_shadow_kvm_regs()
+void __hyp_text restore_shadow_kvm_regs()
 {
     u32 vmid = get_cur_vmid();
     u32 vcpuid = get_cur_vcpu_id();
@@ -84,6 +79,3 @@ void save_encrypted_vcpu(u32 vmid, u32 vcpuid)
     set_int_ctxt(vmid, vcpuid, V_PSTATE, pstate);
 }
 */
-asm (
-	".popsection\n\t"
-);

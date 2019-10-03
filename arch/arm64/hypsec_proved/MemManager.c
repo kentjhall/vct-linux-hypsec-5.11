@@ -4,31 +4,26 @@
  * MemManager
  */
 
-asm (
-	".text \n\t"
-	".pushsection \".hyp.text\", \"ax\" \n\t"
-);
-
 void __hyp_text map_page_host(u64 addr)
 {
-    u64 pfn = addr / PAGE_SIZE;
-    u64 new_pte = 0UL, perm;
-    u32 owner, count;
-    acquire_lock_s2page();
-    owner = get_pfn_owner(pfn);
-    count = get_pfn_count(pfn);
-    if (owner == HOSTVISOR || count > 0U) {
-	perm = pgprot_val(PAGE_S2_KERNEL);
-        new_pte = pfn * PAGE_SIZE + perm;
-        mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
-    }
-    else {
-	perm = pgprot_val(PAGE_S2_DEVICE);
-	perm += S2_RDWR;
-        new_pte = (addr & PAGE_MASK) + perm;
-        mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
-    }
-    release_lock_s2page();
+	u64 pfn = addr / PAGE_SIZE;
+	u64 new_pte = 0UL, perm;
+	u32 owner, count;
+
+	acquire_lock_s2page();
+	owner = get_pfn_owner(pfn);
+	count = get_pfn_count(pfn);
+	if (owner == HOSTVISOR || count > 0U) {
+		perm = pgprot_val(PAGE_S2_KERNEL);
+		new_pte = pfn * PAGE_SIZE + perm;
+		mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
+	} else {
+		perm = pgprot_val(PAGE_S2_DEVICE);
+		perm += S2_RDWR;
+		new_pte = (addr & PAGE_MASK) + perm;
+		mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
+	}
+	release_lock_s2page();
 }
 
 void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
@@ -110,7 +105,3 @@ void __hyp_text revoke_vm_page(u32 vmid, u64 pfn)
     }
     release_lock_s2page();
 }
-
-asm (
-	".popsection\n\t"
-);

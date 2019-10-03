@@ -4,12 +4,7 @@
  * PageIndex
  */
 
-asm (
-	".text \n\t"
-	".pushsection \".hyp.text\", \"ax\" \n\t"
-);
-
-u64 get_s2_page_index(u64 addr)
+u64 __hyp_text get_s2_page_index(u64 addr)
 {
     u32 region_index = mem_region_search(addr);
     u64 ret = INVALID64;
@@ -22,7 +17,3 @@ u64 get_s2_page_index(u64 addr)
     }
     return ret;
 }
-
-asm (
-	".popsection\n\t"
-);

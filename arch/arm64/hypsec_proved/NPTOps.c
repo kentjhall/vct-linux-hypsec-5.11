@@ -4,14 +4,14 @@
  * NPTOps
  */
 
-void init_s2pt(u32 vmid)
+void __hyp_text init_s2pt(u32 vmid)
 {
     acquire_lock_pt(vmid);
     init_npt(vmid);
     release_lock_pt(vmid);
 }
 
-u64 get_vm_vttbr(u32 vmid)
+u64 __hyp_text get_vm_vttbr(u32 vmid)
 {
     u64 vttbr;
     acquire_lock_pt(vmid);
@@ -20,7 +20,7 @@ u64 get_vm_vttbr(u32 vmid)
     return vttbr;
 }
 
-u32 get_level_s2pt(u32 vmid, u64 addr)
+u32 __hyp_text get_level_s2pt(u32 vmid, u64 addr)
 {
     u32 ret;
     acquire_lock_pt(vmid);
@@ -29,7 +29,7 @@ u32 get_level_s2pt(u32 vmid, u64 addr)
     return ret;
 }
 
-u64 walk_s2pt(u32 vmid, u64 addr)
+u64 __hyp_text walk_s2pt(u32 vmid, u64 addr)
 {
     u64 ret;
     acquire_lock_pt(vmid);
@@ -38,14 +38,14 @@ u64 walk_s2pt(u32 vmid, u64 addr)
     return ret;
 }
 
-void mmap_s2pt(u32 vmid, u64 addr, u32 level, u64 pte)
+void __hyp_text mmap_s2pt(u32 vmid, u64 addr, u32 level, u64 pte)
 {
     acquire_lock_pt(vmid);
     set_npt(vmid, addr, level, pte);
     release_lock_pt(vmid);
 }
 
-void set_pfn_host(u64 gfn, u64 num, u64 pfn, u64 prot)
+void __hyp_text set_pfn_host(u64 gfn, u64 num, u64 pfn, u64 prot)
 {
     u32 level;
     acquire_lock_pt(HOSTVISOR);
@@ -60,7 +60,3 @@ void set_pfn_host(u64 gfn, u64 num, u64 pfn, u64 prot)
     }
     release_lock_pt(HOSTVISOR);
 }
-
-asm (
-	".popsection\n\t"
-);

@@ -4,12 +4,7 @@
  * PageManager
  */
 
-asm (
-	".text \n\t"
-	".pushsection \".hyp.text\", \"ax\" \n\t"
-);
-
-u32 get_pfn_owner(u64 pfn)
+u32 __hyp_text get_pfn_owner(u64 pfn)
 {
     u64 index = get_s2_page_index(pfn * PAGE_SIZE);
     u32 ret = INVALID;
@@ -19,7 +14,7 @@ u32 get_pfn_owner(u64 pfn)
     return ret;
 }
 
-void set_pfn_owner(u64 pfn, u64 num, u32 vmid)
+void __hyp_text set_pfn_owner(u64 pfn, u64 num, u32 vmid)
 {
     while (num > 0U)
     {
@@ -30,7 +25,7 @@ void set_pfn_owner(u64 pfn, u64 num, u32 vmid)
     }
 }
 
-u32 get_pfn_count(u64 pfn)
+u32 __hyp_text get_pfn_count(u64 pfn)
 {
     u64 index = get_s2_page_index(pfn * PAGE_SIZE);
     u32 ret = INVALID;
@@ -40,14 +35,10 @@ u32 get_pfn_count(u64 pfn)
     return ret;
 }
 
-void set_pfn_count(u64 pfn, u32 count)
+void __hyp_text set_pfn_count(u64 pfn, u32 count)
 {
     u64 index = get_s2_page_index(pfn * PAGE_SIZE);
     if (index != INVALID) {
 	set_s2_page_count(index, count);
     }
 }
-
-asm (
-	".popsection\n\t"
-);

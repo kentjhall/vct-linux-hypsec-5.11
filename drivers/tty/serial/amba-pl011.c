@@ -48,7 +48,7 @@
 #include <linux/acpi.h>
 
 #include "amba-pl011.h"
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 #include <asm/hypsec_host.h>
 #endif
 
@@ -2577,7 +2577,7 @@ static int pl011_setup_port(struct device *dev, struct uart_amba_port *uap,
 {
 	void __iomem *base;
 
-#ifdef CONFIG_STAGE2_KERNEL
+#ifdef CONFIG_VERIFIED_KVM
 	struct el2_data *el2_data = kvm_ksym_ref(el2_data_start);
 	if (!el2_data->pl011_base)
 		el2_data->pl011_base = mmiobase->start;

@@ -6,12 +6,7 @@
  * VCPUOpsAux
  */
 
-asm (
-	".text \n\t"
-	".pushsection \".hyp.text\", \"ax\" \n\t"
-);
-
-void reset_gp_regs(u32 vmid, u32 vcpuid)
+void __hyp_text reset_gp_regs(u32 vmid, u32 vcpuid)
 {
     u64 pc = get_int_pc(vmid, vcpuid), pstate;
     if (v_search_load_info(vmid, pc))
@@ -27,7 +22,7 @@ void reset_gp_regs(u32 vmid, u32 vcpuid)
     }
 }
 
-void reset_sys_regs(u32 vmid, u32 vcpuid)
+void __hyp_text reset_sys_regs(u32 vmid, u32 vcpuid)
 {
     u64 val;
     u32 i = 1U;
@@ -69,7 +64,7 @@ void restore_sys_regs(u32 vmid, u32 vcpuid)
 }*/
 
 // could have some problems here
-void sync_dirty_to_shadow(u32 vmid, u32 vcpuid)
+void __hyp_text sync_dirty_to_shadow(u32 vmid, u32 vcpuid)
 {
     u32 i = 0U;
     while (i < 31U)
@@ -82,12 +77,12 @@ void sync_dirty_to_shadow(u32 vmid, u32 vcpuid)
     }
 }
 
-void prep_wfx(u32 vmid, u32 vcpuid)
+void __hyp_text prep_wfx(u32 vmid, u32 vcpuid)
 {
     set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG);
 }
 
-void prep_hvc(u32 vmid, u32 vcpuid)
+void __hyp_text prep_hvc(u32 vmid, u32 vcpuid)
 {
     u64 psci_fn = get_shadow_ctxt(vmid, vcpuid, 0UL);
     set_shadow_dirty_bit(vmid, vcpuid, 0U);
@@ -110,7 +105,7 @@ void prep_hvc(u32 vmid, u32 vcpuid)
     }
 }
 
-void prep_abort(u32 vmid, u32 vcpuid)
+void __hyp_text prep_abort(u32 vmid, u32 vcpuid)
 {
     u64 esr = get_int_esr(vmid, vcpuid);
     u32 Rd = (u32)((esr / 65536UL) % 32UL);
@@ -130,12 +125,12 @@ void prep_abort(u32 vmid, u32 vcpuid)
     }
 }
 
-void v_hypsec_inject_undef(u32 vmid, u32 vcpuid)
+void __hyp_text v_hypsec_inject_undef(u32 vmid, u32 vcpuid)
 {
     //set_shadow_dirty_bit(vmid, vcpuid, PENDING_UNDEF_INJECT, 1U);
 }
 
-void v_update_exception_gp_regs(u32 vmid, u32 vcpuid)
+void __hyp_text v_update_exception_gp_regs(u32 vmid, u32 vcpuid)
 {
     u64 esr = ESR_ELx_EC_UNKNOWN;
     u64 pstate = get_shadow_ctxt(vmid, vcpuid, V_PSTATE);
@@ -148,7 +143,7 @@ void v_update_exception_gp_regs(u32 vmid, u32 vcpuid)
     set_shadow_ctxt(vmid, vcpuid, V_ESR_EL1, esr);
 }
 
-void v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid)
+void __hyp_text v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid)
 {
     u64 hpfar = get_shadow_ctxt(vmid, vcpuid, V_HPFAR_EL2);
     u64 addr = (hpfar & V_HPFAR_MASK) * 256UL;
@@ -161,7 +156,3 @@ void v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid)
     if (esr_ec == ESR_ELx_EC_IABT_LOW) is_iabt = 1U;
     prot_and_map_vm_s2pt(vmid, addr, pte, level, is_iabt);
 }
-
-asm (
-	".popsection\n\t"
-);

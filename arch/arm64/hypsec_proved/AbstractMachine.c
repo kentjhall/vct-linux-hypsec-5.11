@@ -1,27 +1,22 @@
 #include "hypsec.h"
 
-asm (
-	".text \n\t"
-	".pushsection \".hyp.text\", \"ax\" \n\t"
-);
-
-void v_panic(void) {
+void __hyp_text v_panic(void) {
     __hyp_panic();
 }
 
-void clear_phys_mem(u64 pfn) {
+void __hyp_text clear_phys_mem(u64 pfn) {
     el2_memset((void *)kern_hyp_va(pfn << PAGE_SHIFT), 0, PAGE_SIZE);
 }
 
-u64 get_shared_kvm(u32 vmid) {
+u64 __hyp_text get_shared_kvm(u32 vmid) {
     return SHARED_KVM_START + vmid * sizeof(struct kvm);
 }
 
-u64 get_shared_vcpu(u32 vmid, u32 vcpuid) {
+u64 __hyp_text get_shared_vcpu(u32 vmid, u32 vcpuid) {
     return SHARED_VCPU_START + (vmid * VCPU_PER_VM + vcpuid) * sizeof(struct kvm_vcpu);
 }
 
-u32 verify_image(u32 vmid, u64 addr) {
+u32 __hyp_text verify_image(u32 vmid, u64 addr) {
     // TODO:
     //return ed25519_verify(load_info.signature, kern_img, load_info.size, vm_info->public_key);
     return 0;
@@ -36,78 +31,78 @@ u64 get_sys_reg_desc_val(u32 index) {
 }
 */
 
-u64 get_exception_vector(u64 pstate) {
+u64 __hyp_text get_exception_vector(u64 pstate) {
     // TODO
 	return 0;
 }
 
-void acquire_lock_pt(u32 vmid) {
+void __hyp_text acquire_lock_pt(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     stage2_spin_lock(&el2_data->vm_info[vmid].shadow_pt_lock);
 };
 
-void release_lock_pt(u32 vmid) {
+void __hyp_text release_lock_pt(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     stage2_spin_unlock(&el2_data->vm_info[vmid].shadow_pt_lock);
 };
 
-u64 get_pt_next(u32 vmid) {
+u64 __hyp_text get_pt_next(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].used_pages;
 };
 
-void set_pt_next(u32 vmid, u64 next) {
+void __hyp_text set_pt_next(u32 vmid, u64 next) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->vm_info[vmid].used_pages = next;
 };
 
 // TODO: make the following work
-u64 pt_load(u32 vmid, u64 addr) {
+u64 __hyp_text pt_load(u32 vmid, u64 addr) {
 	BUG();
 	return 0;
 };
 
 // TODO: make the following work
-void pt_store(u32 vmid, u64 addr, u64 value) {
+void __hyp_text pt_store(u32 vmid, u64 addr, u64 value) {
 	BUG();
 };
 
-u64 get_pt_vttbr(u32 vmid) {
+u64 __hyp_text get_pt_vttbr(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].vttbr;
 	return 0;
 };
 
-void set_pt_vttbr(u32 vmid, u64 vttbr) {
+void __hyp_text set_pt_vttbr(u32 vmid, u64 vttbr) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->vm_info[vmid].vttbr = vttbr;
 };
 
-u32 get_mem_region_cnt(void) {
+u32 __hyp_text get_mem_region_cnt(void) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	return el2_data->regions_cnt;
 }
 
-u64 get_mem_region_base(u32 index) {
+u64 __hyp_text get_mem_region_base(u32 index) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	return el2_data->regions[index].base;
 }
-u64 get_mem_region_size(u32 index) {
+u64 __hyp_text get_mem_region_size(u32 index) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	return el2_data->regions[index].size;
 }
 
-u64 get_mem_region_index(u32 index) {
+u64 __hyp_text get_mem_region_index(u32 index) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	return el2_data->s2_memblock_info[index].index;
 }
 
-u64 get_mem_region_flag(u32 index) {
+u64 __hyp_text get_mem_region_flag(u32 index) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	return el2_data->regions[index].flags;
 }
 
-void    acquire_lock_s2page(void) {
+void __hyp_text acquire_lock_s2page(void) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     stage2_spin_lock(&el2_data->s2pages_lock);
 }
@@ -410,7 +405,3 @@ int __hyp_text get_cur_vcpu_id(void)
 void    int_to_shadow_decrypt(u32 vmid, u32 vcpuid);
 void    shadow_to_int_encrypt(u32 vmid, u32 vcpuid);
 #endif
-
-asm (
-	".popsection\n\t"
-);

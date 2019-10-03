@@ -4,12 +4,7 @@
  * PTWalk
  */
 
-asm (
-	".text \n\t"
-	".pushsection \".hyp.text\", \"ax\" \n\t"
-);
-
-u64 walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc)
+u64 __hyp_text walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc)
 {
     u64 vttbr_pa = phys_page(vttbr);
     u64 ret = 0UL;
@@ -28,7 +23,7 @@ u64 walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc)
     return ret;
 }
 
-u64 walk_pmd(u32 vmid, u64 pgd, u64 addr, u32 alloc)
+u64 __hyp_text walk_pmd(u32 vmid, u64 pgd, u64 addr, u32 alloc)
 {
     u64 pgd_pa = phys_page(pgd);
     u64 ret = 0UL;
@@ -47,7 +42,7 @@ u64 walk_pmd(u32 vmid, u64 pgd, u64 addr, u32 alloc)
     return ret;
 }
 
-u64 walk_pte(u32 vmid, u64 pmd, u64 addr)
+u64 __hyp_text walk_pte(u32 vmid, u64 pmd, u64 addr)
 {
     u64 pmd_pa = phys_page(pmd);
     u64 ret = 0UL;
@@ -58,20 +53,16 @@ u64 walk_pte(u32 vmid, u64 pmd, u64 addr)
     return ret;
 }
 
-void v_set_pmd(u32 vmid, u64 pgd, u64 addr, u64 pmd)
+void __hyp_text v_set_pmd(u32 vmid, u64 pgd, u64 addr, u64 pmd)
 {
     u64 pgd_pa = phys_page(pgd);
     u64 pmd_idx = pmd_idx(addr);
     pt_store(vmid, pgd_pa + pmd_idx * 8UL, pmd);
 }
 
-void v_set_pte(u32 vmid, u64 pmd, u64 addr, u64 pte)
+void __hyp_text v_set_pte(u32 vmid, u64 pmd, u64 addr, u64 pte)
 {
     u64 pmd_pa = phys_page(pmd);
     u64 pte_idx = pte_idx(addr);
     pt_store(vmid, pmd_pa + pte_idx * 8UL, pte);
 }
-
-asm (
-	".popsection\n\t"
-);

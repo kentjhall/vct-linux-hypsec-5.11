@@ -4,12 +4,7 @@
  * MemoryOps
  */
 
-asm (
-	".text \n\t"
-	".pushsection \".hyp.text\", \"ax\" \n\t"
-);
-
-void __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
+void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 {
     u32 poweron = get_vm_poweron(vmid);
     if (size == KVM_PHYS_SIZE && poweron == 0U) {
@@ -37,7 +32,7 @@ void __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
     }
 }
 
-void prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 level, u32 iabt)
+void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 level, u32 iabt)
 {
     u64 target_addr = phys_page(new_pte);
     u64 target_pfn = target_addr / PAGE_SIZE;
@@ -45,7 +40,7 @@ void prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 level, u32 
     map_pfn_vm(vmid, fault_addr, new_pte, level, iabt);
 }
 
-void v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
+void __hyp_text v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
 {
     u64 len = size / PAGE_SIZE;
     while (len > 0UL)
@@ -66,7 +61,7 @@ void v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
     }
 }
 
-void v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
+void __hyp_text v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
 {
     u64 len = size / PAGE_SIZE;
     while (len > 0UL)
@@ -86,7 +81,3 @@ void v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
         len -= 1UL;
     }
 }
-
-asm (
-	".popsection\n\t"
-);
