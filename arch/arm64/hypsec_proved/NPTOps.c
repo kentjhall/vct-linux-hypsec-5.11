@@ -40,9 +40,9 @@ u64 __hyp_text walk_s2pt(u32 vmid, u64 addr)
 
 void __hyp_text mmap_s2pt(u32 vmid, u64 addr, u32 level, u64 pte)
 {
-    acquire_lock_pt(vmid);
-    set_npt(vmid, addr, level, pte);
-    release_lock_pt(vmid);
+	acquire_lock_pt(vmid);
+	set_npt(vmid, addr, level, pte);
+	release_lock_pt(vmid);
 }
 
 void __hyp_text set_pfn_host(u64 gfn, u64 num, u64 pfn, u64 prot)

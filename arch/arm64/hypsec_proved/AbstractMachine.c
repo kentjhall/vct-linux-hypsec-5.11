@@ -58,13 +58,14 @@ void __hyp_text set_pt_next(u32 vmid, u64 next) {
 
 // TODO: make the following work
 u64 __hyp_text pt_load(u32 vmid, u64 addr) {
-	BUG();
-	return 0;
+	unsigned long *ptr = __el2_va(addr);
+	return (u64)*ptr;
 };
 
 // TODO: make the following work
 void __hyp_text pt_store(u32 vmid, u64 addr, u64 value) {
-	BUG();
+	unsigned long *ptr = __el2_va(addr);
+	*ptr = value;
 };
 
 u64 __hyp_text get_pt_vttbr(u32 vmid) {
