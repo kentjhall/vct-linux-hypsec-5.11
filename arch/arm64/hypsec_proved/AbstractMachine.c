@@ -46,14 +46,26 @@ void __hyp_text release_lock_pt(u32 vmid) {
     stage2_spin_unlock(&el2_data->vm_info[vmid].shadow_pt_lock);
 };
 
+u64 __hyp_text pool_start(u32 vmid) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->vm_info[vmid].page_pool_start;
+}
+
+u64 __hyp_text pool_end(u32 vmid) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->vm_info[vmid].page_pool_start + PT_POOL_PER_VM;
+}
+
 u64 __hyp_text get_pt_next(u32 vmid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    return el2_data->vm_info[vmid].used_pages;
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
+	u64 used_pages = el2_data->vm_info[vmid].used_pages;
+	return pool_start + used_pages * PAGE_SIZE;
 };
 
 void __hyp_text set_pt_next(u32 vmid, u64 next) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    el2_data->vm_info[vmid].used_pages = next;
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	el2_data->vm_info[vmid].used_pages += next;
 };
 
 // TODO: make the following work

@@ -11,7 +11,7 @@ u64 __hyp_text alloc_s2pt_page(u32 vmid)
     u64 ret = next;
 
     if (next + PAGE_SIZE <= end) {
-        set_pt_next(vmid, next + PAGE_SIZE);
+        set_pt_next(vmid, 1);
     }
     else {
 	ret = INVALID64;

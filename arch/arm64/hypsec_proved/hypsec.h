@@ -40,6 +40,8 @@ u64     get_exception_vector(u64 pstate);
 
 void    acquire_lock_pt(u32 vmid);
 void    release_lock_pt(u32 vmid);
+u64	pool_start(u32 vmid);
+u64	pool_end(u32 vmid);
 u64     get_pt_next(u32 vmid);
 void    set_pt_next(u32 vmid, u64 next);
 u64     pt_load(u32 vmid, u64 addr);

@@ -107,8 +107,6 @@
 // Micros
 
 #define PT_POOL_SIZE (MAX_VM_NUM * PT_POOL_PER_VM)
-#define pool_start(vm) (PT_POOL_PER_VM*(vm))
-#define pool_end(vm) (PT_POOL_PER_VM * ((vm) + 1UL))
 #define phys_page(addr) ((addr) & PHYS_MASK & PAGE_MASK)
 #define pgd_idx(addr) (((addr) >> S2_PGDIR_SHIFT) & PTRS_PER_PGD)
 #define pmd_idx(addr) (((addr) >> S2_PMD_SHIFT) & PTRS_PER_PMD)

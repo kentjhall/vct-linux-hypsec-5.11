@@ -12,7 +12,7 @@ void __hyp_text init_npt(u32 vmid)
     u64 next = get_pt_next(vmid);
     if (next == vttbr_pa) {
         set_pt_vttbr(vmid, vttbr);
-        set_pt_next(vmid, vttbr_pa + 2UL * PAGE_SIZE);
+        set_pt_next(vmid, 2);
     }
     else {
         v_panic();
