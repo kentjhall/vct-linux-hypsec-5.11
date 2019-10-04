@@ -25,6 +25,7 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 {
 	phys_addr_t addr = (read_sysreg(hpfar_el2) & HPFAR_MASK) << 8;
 	map_page_host(addr);
+	return;
 }
 
 //TODO: Did we prove the following?
