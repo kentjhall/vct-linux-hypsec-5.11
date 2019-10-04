@@ -64,11 +64,11 @@ void __hyp_text set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 	else
 	{
 		u64 pmd = walk_pmd(vmid, pgd, addr, 1U);
-		if (v_pmd_table(pmd) == 0UL) {
+		//if (v_pmd_table(pmd) == 0UL) {
 			v_set_pte(vmid, pmd, addr, pte);
-		}
-		else {
-			v_panic();
-		}
+		//}
+		//else {
+		//	v_panic();
+		//}
 	}
 }

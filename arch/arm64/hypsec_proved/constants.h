@@ -108,9 +108,9 @@
 
 #define PT_POOL_SIZE (MAX_VM_NUM * PT_POOL_PER_VM)
 #define phys_page(addr) ((addr) & PHYS_MASK & PAGE_MASK)
-#define pgd_idx(addr) (((addr) >> S2_PGDIR_SHIFT) & PTRS_PER_PGD)
-#define pmd_idx(addr) (((addr) >> S2_PMD_SHIFT) & PTRS_PER_PMD)
-#define pte_idx(addr) (((addr) >> S2_PTE_SHIFT) & PTRS_PER_PTE)
+#define pgd_idx(addr)	stage2_pgd_index(addr)
+#define pmd_idx(addr)	pmd_index(addr)
+#define pte_idx(addr)	pte_index(addr)
 #define v_pmd_table(pmd) (((pmd) >> PMD_TABLE_SHIFT) & 1UL)
 #define writable(pte) (((pte) >> 2UL) & 1UL)
 
