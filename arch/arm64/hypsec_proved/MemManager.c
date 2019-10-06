@@ -13,8 +13,8 @@ void __hyp_text map_page_host(u64 addr)
 	u32 owner, count;
 
 	acquire_lock_s2page();
-	//owner = get_pfn_owner(pfn);
-	//count = get_pfn_count(pfn);
+	owner = get_pfn_owner(pfn);
+	count = get_pfn_count(pfn);
 	//if (owner == HOSTVISOR || count > 0U) {
 	if (addr >= 0x40000000) {
 		perm = pgprot_val(PAGE_S2_KERNEL);
