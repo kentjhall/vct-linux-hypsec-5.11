@@ -18,8 +18,8 @@ void __hyp_text map_page_host(u64 addr)
 	//if (owner == HOSTVISOR || count > 0U) {
 	if (addr >= 0x40000000) {
 		perm = pgprot_val(PAGE_S2_KERNEL);
-		//new_pte = pfn * PAGE_SIZE + perm;
-		new_pte = pte_val(pfn_pte(pfn, PAGE_S2_KERNEL));
+		new_pte = pfn * PAGE_SIZE + perm;
+		//new_pte = pte_val(pfn_pte(pfn, PAGE_S2_KERNEL));
 		t_mmap_s2pt(addr, new_pte, 3, HOSTVISOR);
 		//mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
 	} else {
