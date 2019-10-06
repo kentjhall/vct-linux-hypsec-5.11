@@ -20,15 +20,15 @@ void __hyp_text map_page_host(u64 addr)
 		perm = pgprot_val(PAGE_S2_KERNEL);
 		new_pte = pfn * PAGE_SIZE + perm;
 		//new_pte = pte_val(pfn_pte(pfn, PAGE_S2_KERNEL));
-		t_mmap_s2pt(addr, new_pte, 3, HOSTVISOR);
-		//mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
-	} else {
+		//t_mmap_s2pt(addr, new_pte, 3, HOSTVISOR);
 		//printhex_ul(addr);
+		mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
+	} else {
 		perm = pgprot_val(PAGE_S2_DEVICE);
 		perm |= S2_RDWR;
 		new_pte = (addr & PAGE_MASK) + perm;
-		//mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
-		t_mmap_s2pt(addr, new_pte, 3, HOSTVISOR);
+		mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
+		//t_mmap_s2pt(addr, new_pte, 3, HOSTVISOR);
 	}
 	release_lock_s2page();
 }
