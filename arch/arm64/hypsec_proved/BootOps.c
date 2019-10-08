@@ -103,7 +103,7 @@ u32 __hyp_text register_kvm()
         acquire_lock_vm(vmid);
         state = get_vm_state(vmid);
         if (state != UNUSED) {
-			v_panic();
+		v_panic();
         }
         else {
             set_vm_inc_exe(vmid, 0U);

@@ -231,18 +231,6 @@ out_err:
 	return;
 }
 
-//hypsec_boot.c
-struct kvm_vcpu* hypsec_alloc_vcpu(u32 vmid, int vcpu_id)
-{
-	struct shared_data *shared_data;
-	int index;
-	shared_data = kvm_ksym_ref(shared_data_start);
-	if (vmid >= EL2_MAX_VMID || vcpu_id >= HYPSEC_MAX_VCPUS)
-		BUG();
-	index = (vmid * HYPSEC_MAX_VCPUS) + vcpu_id;
-	return &shared_data->vcpu_pool[index];
-}
-
 //hypsec_mmu.c
 phys_addr_t host_alloc_stage2_page(unsigned int num)
 {

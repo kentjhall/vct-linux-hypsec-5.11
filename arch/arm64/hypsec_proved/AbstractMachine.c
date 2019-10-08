@@ -9,11 +9,16 @@ void __hyp_text clear_phys_mem(u64 pfn) {
 }
 
 u64 __hyp_text get_shared_kvm(u32 vmid) {
-    return SHARED_KVM_START + vmid * sizeof(struct kvm);
+    //return SHARED_KVM_START + vmid * sizeof(struct kvm);
+    u64 shared_kvm_start = (u64)kvm_ksym_ref(shared_data_start);
+    return shared_kvm_start + vmid * sizeof(struct kvm);
 }
 
 u64 __hyp_text get_shared_vcpu(u32 vmid, u32 vcpuid) {
-    return SHARED_VCPU_START + (vmid * VCPU_PER_VM + vcpuid) * sizeof(struct kvm_vcpu);
+    //return SHARED_VCPU_START + (vmid * VCPU_PER_VM + vcpuid) * sizeof(struct kvm_vcpu);
+    u64 vcpu_off = sizeof(struct kvm) * EL2_MAX_VMID;
+    u64 shared_vcpu_start = (u64)kvm_ksym_ref(shared_data_start) + vcpu_off;
+    return shared_vcpu_start + (vmid * VCPU_PER_VM + vcpuid) * sizeof(struct kvm_vcpu);
 }
 
 u32 __hyp_text verify_image(u32 vmid, u64 addr) {
@@ -265,27 +270,27 @@ void __hyp_text set_vm_mapped_pages(u32 vmid, u32 load_idx, u64 mapped) {
     el2_data->vm_info[vmid].load_info[load_idx].el2_mapped_pages = mapped;
 }
 
-void    acquire_lock_core(void) {
+void __hyp_text acquire_lock_core(void) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     stage2_spin_lock(&el2_data->abs_lock);
 }
 
-void    release_lock_core(void) {
+void __hyp_text release_lock_core(void) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     stage2_spin_unlock(&el2_data->abs_lock);
 }
 
-u32     get_next_vmid(void) {
+u32 __hyp_text get_next_vmid(void) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->next_vmid;
 }
 
-void    set_next_vmid(u32 vmid) {
+void __hyp_text set_next_vmid(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->next_vmid = vmid;
 }
 
-u64     get_next_remap_ptr(void) {
+u64 __hyp_text get_next_remap_ptr(void) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->last_remap_ptr;
 }

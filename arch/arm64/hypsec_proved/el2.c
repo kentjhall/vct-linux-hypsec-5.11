@@ -19,6 +19,19 @@
 
 #include "hypsec.h"
 
+static void __hyp_text self_test(void)
+{
+	int vmid, i = 0;
+
+	print_string("\rregister kvm\n");
+	vmid = register_kvm();
+	do {
+		print_string("\rregister vcpu\n");
+		printhex_ul((unsigned long)i);
+		register_vcpu(vmid, i++);
+	} while (i < 4);
+}
+
 extern int __hypsec_register_vm(struct kvm *kvm);
 void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 					struct s2_host_regs *host_regs)
@@ -45,6 +58,8 @@ static void __hyp_text hvc_enable_s2_trans(void)
 	write_sysreg(el2_data->host_vttbr, vttbr_el2);
 	write_sysreg(HCR_HOST_NVHE_FLAGS, hcr_el2);
 	__kvm_flush_vm_context();
+
+	//self_test();
 }
 
 void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
@@ -56,7 +71,7 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 	case HVC_ENABLE_S2_TRANS:
 		hvc_enable_s2_trans();
 		break;
-	/*case HVC_VCPU_RUN:
+	case HVC_VCPU_RUN:
 		ret = (u64)__kvm_vcpu_run_nvhe((u32)hr->regs[1], (int)hr->regs[2]);
 		hr->regs[31] = ret;
 		break;
@@ -64,7 +79,7 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		__kvm_timer_set_cntvoff((u32)hr->regs[1], (u32)hr->regs[2]);
 		break;
 	// The following can only be called when VM terminates.
-	case HVC_CLEAR_VM_S2_RANGE:
+	/*case HVC_CLEAR_VM_S2_RANGE:
 		__clear_vm_stage2_range((u32)hr->regs[1],
 					(phys_addr_t)hr->regs[2], (u64)hr->regs[3]);
 		break;
@@ -108,16 +123,38 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		break;
 	case HVC_SAVE_CRYPT_VCPU:
 		__save_encrypted_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
-		break;
+		break;*/
 	case HVC_REGISTER_KVM:
-		ret = (int)__hypsec_register_kvm();
+		ret = (int)register_kvm();
 		hr->regs[31] = (u64)ret;
 		break;
 	case HVC_REGISTER_VCPU:
-		ret = (int)__hypsec_register_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
+		ret = (int)register_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
 		hr->regs[31] = (u64)ret;
-		break;*/
+		break;
 	default:
 		__hyp_panic();
 	};
 }
+
+struct kvm* __hyp_text hypsec_alloc_vm(u32 vmid)
+{
+	struct shared_data *shared_data;
+	shared_data = kvm_ksym_ref(shared_data_start);
+	if (vmid >= EL2_MAX_VMID)
+		BUG();
+	return &shared_data->kvm_pool[vmid];
+}
+
+struct kvm_vcpu* __hyp_text hypsec_alloc_vcpu(u32 vmid, int vcpu_id)
+{
+	struct shared_data *shared_data;
+	int index;
+	shared_data = kvm_ksym_ref(shared_data_start);
+	if (vmid >= EL2_MAX_VMID || vcpu_id >= HYPSEC_MAX_VCPUS)
+		BUG();
+	index = (vmid * HYPSEC_MAX_VCPUS) + vcpu_id;
+	return &shared_data->vcpu_pool[index];
+}
+
+
