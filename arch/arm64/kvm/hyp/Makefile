@@ -16,7 +16,11 @@ obj-$(CONFIG_KVM_ARM_HOST) += vgic-v2-cpuif-proxy.o
 obj-$(CONFIG_KVM_ARM_HOST) += sysreg-sr.o
 obj-$(CONFIG_KVM_ARM_HOST) += debug-sr.o
 obj-$(CONFIG_KVM_ARM_HOST) += entry.o
+ifeq ($(CONFIG_VERIFIED_KVM), y)
 obj-$(CONFIG_KVM_ARM_HOST) += switch-simple.o
+else
+obj-$(CONFIG_KVM_ARM_HOST) += switch.o
+endif
 obj-$(CONFIG_KVM_ARM_HOST) += fpsimd.o
 obj-$(CONFIG_KVM_ARM_HOST) += tlb.o
 obj-$(CONFIG_KVM_ARM_HOST) += hyp-entry.o

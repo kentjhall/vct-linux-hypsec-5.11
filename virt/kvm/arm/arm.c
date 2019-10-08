@@ -128,6 +128,7 @@ void kvm_arch_check_processor_compat(void *rtn)
 	*(int *)rtn = 0;
 }
 
+#ifdef CONFIG_VERIFIED_KVM
 struct kvm* hypsec_arch_alloc_vm(void)
 {
 	struct kvm *kvm;
@@ -137,6 +138,7 @@ struct kvm* hypsec_arch_alloc_vm(void)
 	kvm->arch.vmid = (u32)vmid;
 	return kvm;
 }
+#endif
 
 /**
  * kvm_arch_init_vm - initializes a VM data structure
