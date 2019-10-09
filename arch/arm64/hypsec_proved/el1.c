@@ -151,6 +151,7 @@ void init_el2_data_page(void)
 	el2_data->s2pages_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	el2_data->abs_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 	el2_data->el2_pt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->console_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
 	memset(&el2_data->arch, 0, sizeof(struct s2_cpu_arch));
 

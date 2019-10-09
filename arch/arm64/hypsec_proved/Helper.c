@@ -97,6 +97,11 @@ void __hyp_text printhex_ul(unsigned long input)
 {
 	char word;
 	int len = 60;
+	struct el2_data *el2_data;
+
+	el2_data = (void *)kvm_ksym_ref(el2_data_start);
+
+	stage2_spin_lock(&el2_data->console_lock);
 
 	word = '\r';
 	senduart(word);
@@ -120,17 +125,26 @@ void __hyp_text printhex_ul(unsigned long input)
 
 	word = '\n';
 	senduart(word);
+
+	stage2_spin_unlock(&el2_data->console_lock);
 }
 
 void __hyp_text print_string(char *input)
 {
 	char *word;
+	struct el2_data *el2_data;
+
+	el2_data = (void *)kvm_ksym_ref(el2_data_start);
+
+	stage2_spin_lock(&el2_data->console_lock);
 
 	word = input;
 	while (*word != '\0') {
 		senduart(*word);
 		word++;
 	}
+
+	stage2_spin_unlock(&el2_data->console_lock);
 }
 
 void __hyp_text el2_memset(void *b, int c, int len)

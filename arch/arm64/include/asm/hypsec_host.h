@@ -36,10 +36,12 @@ struct el2_data {
 	unsigned long used_pages;
 	unsigned long used_tmp_pages;
 	unsigned long pl011_base;
+	unsigned long uart_8250_base;
 
 	arch_spinlock_t s2pages_lock;
 	arch_spinlock_t abs_lock;
 	arch_spinlock_t el2_pt_lock;
+	arch_spinlock_t console_lock;
 
 	kvm_pfn_t ram_start_pfn;
 	struct s2_page s2_pages[S2_PFN_SIZE];
