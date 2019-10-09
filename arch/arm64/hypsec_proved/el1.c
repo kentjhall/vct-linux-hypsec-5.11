@@ -209,6 +209,18 @@ void init_hypsec_io(void)
 	struct el2_arm_smmu_device *smmu;
 
 	el2_data = (void *)kvm_ksym_ref(el2_data_start);
+
+#ifdef CONFIG_SERIAL_8250_CONSOLE
+	//TODO: Hacky stuff for prints on m400
+	err = create_hypsec_io_mappings((phys_addr_t)0x1c021000,
+					 PAGE_SIZE,
+					 &el2_data->uart_8250_base);
+	if (err) {
+		kvm_err("Cannot map uart 8250\n");
+		goto out_err;
+	}
+#endif
+
 	err = create_hypsec_io_mappings((phys_addr_t)el2_data->pl011_base,
 					 PAGE_SIZE,
 					 &el2_data->pl011_base);

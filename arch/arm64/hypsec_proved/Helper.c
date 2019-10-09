@@ -18,6 +18,38 @@
 #include <linux/serial_reg.h>
 #include <linux/amba/serial.h>
 
+#ifdef CONFIG_SERIAL_8250_CONSOLE
+static inline void __hyp_text senduart(char word)
+{
+	unsigned long base, addr;
+	int offset, timeout = 10000;
+	struct el2_data *el2_data;
+	u8 val;
+
+	el2_data = (void *)kvm_ksym_ref(el2_data_start);
+	base = el2_data->uart_8250_base;
+	//TODO: use macro instead
+	offset = 5;
+	addr = offset + base;
+
+	for (;;) {
+		asm volatile(ALTERNATIVE("ldrb %w0, [%1]",
+					 "ldarb %w0, [%1]",
+					 ARM64_WORKAROUND_DEVICE_LOAD_ACQUIRE)
+					: "=r" (val) : "r" (base));
+	
+		asm volatile("dsb ld"  : : : "memory");
+		if ((val & 0x20) == 0x20 || --timeout == 0)
+				break ;
+	}
+
+	offset = 0;
+	addr = offset + base;
+	asm volatile("dsb st"  : : : "memory");
+	asm volatile("strb %w0, [%1]" : : "rZ" (word), "r" (base));
+}
+
+#else
 static inline unsigned long __hyp_text waituart(void)
 {
 	unsigned long ret, base, REG_FR;
@@ -59,6 +91,7 @@ static inline void __hyp_text senduart(char word)
 		:"x14", "cc"
 	);
 }
+#endif
 
 void __hyp_text printhex_ul(unsigned long input)
 {
