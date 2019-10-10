@@ -160,4 +160,7 @@ int get_cur_vcpu_id(void);
 
 u64     get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index);
 void    set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value);
+
+void save_shadow_kvm_regs(void);
+void restore_shadow_kvm_regs(void);
 #endif /* __ARM_STAGE2_H__ */

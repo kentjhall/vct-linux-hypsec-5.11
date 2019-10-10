@@ -159,4 +159,102 @@ struct kvm_vcpu* __hyp_text hypsec_alloc_vcpu(u32 vmid, int vcpu_id)
 	return &shared_data->vcpu_pool[index];
 }
 
+//added by shih-wei
+struct el2_vm_info* __hyp_text vmid_to_vm_info(u32 vmid)
+{
+	struct el2_data *el2_data;
 
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	if (vmid < EL2_MAX_VMID)
+		return &el2_data->vm_info[vmid];
+	else
+		__hyp_panic();
+}
+
+struct int_vcpu* __hyp_text vcpu_id_to_int_vcpu(
+			struct el2_vm_info *vm_info, int vcpu_id)
+{
+	if (vcpu_id < 0 || vcpu_id >= HYPSEC_MAX_VCPUS)
+		return NULL;
+	else
+		return &vm_info->int_vcpus[vcpu_id];
+}
+int __hyp_text hypsec_set_vcpu_active(u32 vmid, int vcpu_id)
+{
+	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
+	struct int_vcpu *int_vcpu;
+	int ret = 1;
+
+	stage2_spin_lock(&vm_info->vm_lock);
+	if (vm_info->state != VERIFIED) {
+		ret = 0;
+		goto out;
+	}
+
+	int_vcpu = vcpu_id_to_int_vcpu(vm_info, vcpu_id);
+	if (int_vcpu->state == READY)
+		int_vcpu->state = ACTIVE;
+	else
+		ret = 0;
+out:
+	stage2_spin_unlock(&vm_info->vm_lock);
+	return ret;
+}
+
+struct kvm_vcpu* __hyp_text hypsec_vcpu_id_to_vcpu(u32 vmid, int vcpu_id)
+{
+	struct kvm_vcpu *vcpu = NULL;
+	struct el2_vm_info *vm_info;
+
+	if (vcpu_id >= HYPSEC_MAX_VCPUS)
+		__hyp_panic();
+
+	vm_info = vmid_to_vm_info(vmid);
+	vcpu = vm_info->int_vcpus[vcpu_id].vcpu;
+	if (!vcpu)
+		__hyp_panic();
+	else
+		return vcpu;
+}
+
+struct kvm* __hyp_text hypsec_vmid_to_kvm(u32 vmid)
+{
+	struct kvm *kvm = NULL;
+	struct el2_vm_info *vm_info;
+
+	// Check vmid bound here
+	vm_info = vmid_to_vm_info(vmid);
+	kvm = vm_info->kvm;
+	if (!kvm)
+		__hyp_panic();
+	else
+		return kvm;
+}
+
+struct shadow_vcpu_context* __hyp_text hypsec_vcpu_id_to_shadow_ctxt(
+	u32 vmid, int vcpu_id)
+{
+	struct shadow_vcpu_context *shadow_ctxt = NULL;
+	struct el2_vm_info *vm_info;
+
+	if (vcpu_id >= HYPSEC_MAX_VCPUS)
+		__hyp_panic();
+
+	vm_info = vmid_to_vm_info(vmid);
+	shadow_ctxt = vm_info->shadow_ctxt[vcpu_id];
+	if (!shadow_ctxt)
+		__hyp_panic();
+	else
+		return shadow_ctxt;
+}
+
+void __hyp_text hypsec_set_vcpu_state(u32 vmid, int vcpu_id, int state)
+{
+	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
+	struct int_vcpu *int_vcpu;
+
+	stage2_spin_lock(&vm_info->vm_lock);
+	int_vcpu = vcpu_id_to_int_vcpu(vm_info, vcpu_id);
+	int_vcpu->state = state;
+	stage2_spin_unlock(&vm_info->vm_lock);
+}
