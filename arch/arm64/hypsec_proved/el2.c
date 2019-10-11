@@ -59,8 +59,6 @@ static void __hyp_text hvc_enable_s2_trans(void)
 	write_sysreg(HCR_HOST_NVHE_FLAGS, hcr_el2);
 	__kvm_flush_vm_context();
 
-	print_string("\rmoron!\n");
-	printhex_ul(el2_data->host_vttbr);
 	//self_test();
 }
 
