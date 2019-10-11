@@ -276,6 +276,26 @@ phys_addr_t host_alloc_stage2_page(unsigned int num)
 	return (phys_addr_t)p_addr;
 }
 
+struct kvm* hypsec_alloc_vm(u32 vmid)
+{
+	struct shared_data *shared_data;
+	shared_data = kvm_ksym_ref(shared_data_start);
+	if (vmid >= EL2_MAX_VMID)
+		BUG();
+	return &shared_data->kvm_pool[vmid];
+}
+
+struct kvm_vcpu* hypsec_alloc_vcpu(u32 vmid, int vcpu_id)
+{
+	struct shared_data *shared_data;
+	int index;
+	shared_data = kvm_ksym_ref(shared_data_start);
+	if (vmid >= EL2_MAX_VMID || vcpu_id >= HYPSEC_MAX_VCPUS)
+		BUG();
+	index = (vmid * HYPSEC_MAX_VCPUS) + vcpu_id;
+	return &shared_data->vcpu_pool[index];
+}
+
 int el2_set_boot_info(u32 vmid, unsigned long load_addr,
 			unsigned long size, int type)
 {

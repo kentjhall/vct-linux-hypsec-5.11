@@ -139,26 +139,6 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 	};
 }
 
-struct kvm* __hyp_text hypsec_alloc_vm(u32 vmid)
-{
-	struct shared_data *shared_data;
-	shared_data = kvm_ksym_ref(shared_data_start);
-	if (vmid >= EL2_MAX_VMID)
-		BUG();
-	return &shared_data->kvm_pool[vmid];
-}
-
-struct kvm_vcpu* __hyp_text hypsec_alloc_vcpu(u32 vmid, int vcpu_id)
-{
-	struct shared_data *shared_data;
-	int index;
-	shared_data = kvm_ksym_ref(shared_data_start);
-	if (vmid >= EL2_MAX_VMID || vcpu_id >= HYPSEC_MAX_VCPUS)
-		BUG();
-	index = (vmid * HYPSEC_MAX_VCPUS) + vcpu_id;
-	return &shared_data->vcpu_pool[index];
-}
-
 //added by shih-wei
 struct el2_vm_info* __hyp_text vmid_to_vm_info(u32 vmid)
 {
