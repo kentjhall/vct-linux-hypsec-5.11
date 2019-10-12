@@ -91,12 +91,14 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 	case HVC_REMAP_VM_IMAGE:
 		__el2_remap_vm_image((u32)hr->regs[1], (unsigned long)hr->regs[2],
 				     (int)hr->regs[3]);
-		break;
+		break;*/
 	case HVC_VERIFY_VM_IMAGES:
-		ret = (u64)__el2_verify_and_load_images((u32)hr->regs[1]);
-		hr->regs[31] = (u64)ret;
+		//ret = (u64)__el2_verify_and_load_images((u32)hr->regs[1]);
+		//hr->regs[31] = (u64)ret;
+		verify_and_load_images((u32)hr->regs[1]);
+		hr->regs[31] = 1;
 		break;
-	case HVC_FREE_SMMU_PGD:
+	/*case HVC_FREE_SMMU_PGD:
 		__el2_free_smmu_pgd((unsigned long)hr->regs[1]);
 		break;
 	case HVC_ALLOC_SMMU_PGD:
@@ -133,7 +135,10 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		hr->regs[31] = (u64)ret;
 		break;
 	default:
-		__hyp_panic();
+		print_string("\rno support hvc:\n");
+		printhex_ul(callno);
+		break;
+		//__hyp_panic();
 	};
 }
 
@@ -212,14 +217,15 @@ struct kvm* __hyp_text hypsec_vmid_to_kvm(u32 vmid)
 struct shadow_vcpu_context* __hyp_text hypsec_vcpu_id_to_shadow_ctxt(
 	u32 vmid, int vcpu_id)
 {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	struct shadow_vcpu_context *shadow_ctxt = NULL;
-	struct el2_vm_info *vm_info;
+	int index;
 
 	if (vcpu_id >= HYPSEC_MAX_VCPUS)
 		__hyp_panic();
 
-	vm_info = vmid_to_vm_info(vmid);
-	shadow_ctxt = vm_info->shadow_ctxt[vcpu_id];
+	index = (vmid * HYPSEC_MAX_VCPUS) + vcpu_id;
+	shadow_ctxt = &el2_data->shadow_vcpu_ctxt[index];
 	if (!shadow_ctxt)
 		__hyp_panic();
 	else

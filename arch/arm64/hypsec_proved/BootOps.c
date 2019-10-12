@@ -86,7 +86,7 @@ u32 __hyp_text register_vcpu(u32 vmid, u32 vcpuid)
         vcpu = get_shared_vcpu(vmid, vcpuid);
 	vcpu = kern_hyp_va(vcpu);
         set_vm_vcpu(vmid, vcpuid, vcpu);
-		set_vcpu_state(vmid, vcpuid, READY);
+	set_vcpu_state(vmid, vcpuid, READY);
     }
     release_lock_vm(vmid);
     return 0U;
@@ -176,7 +176,7 @@ void __hyp_text verify_and_load_images(u32 vmid)
     state = get_vm_state(vmid);
     if (state == READY)
     {
-        load_info_cnt = get_vm_next_load_idx(vmid);
+        /*load_info_cnt = get_vm_next_load_idx(vmid);
         load_idx = 0U;
         while (load_idx < load_info_cnt)
         {
@@ -189,7 +189,7 @@ void __hyp_text verify_and_load_images(u32 vmid)
                 v_load_image_to_shadow_s2pt(vmid, load_addr, remap_addr, mapped);
             }
             load_idx += 1U;
-        }
+        }*/
         set_vm_state(vmid, VERIFIED);
     }
     release_lock_vm(vmid);

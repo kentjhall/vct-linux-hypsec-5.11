@@ -391,11 +391,15 @@ void __hyp_text set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value) {
 }
 
 u64 __hyp_text get_int_new_pte(u32 vmid, u32 vcpuid) {
-	return 0;
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	struct kvm_vcpu *vcpu = el2_data->vm_info[vmid].int_vcpus[vcpuid].vcpu;
+	return vcpu->arch.walk_result.desc;
 }
 
 u32 __hyp_text get_int_new_level(u32 vmid, u32 vcpuid) {
-	return 0;
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	struct kvm_vcpu *vcpu = el2_data->vm_info[vmid].int_vcpus[vcpuid].vcpu;
+	return vcpu->arch.walk_result.level;
 }
 
 void __hyp_text set_per_cpu(int vmid, int vcpu_id)
