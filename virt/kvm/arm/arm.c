@@ -344,7 +344,7 @@ struct kvm_vcpu *kvm_arch_vcpu_create(struct kvm *kvm, unsigned int id)
 	err = hypsec_register_vcpu(kvm->arch.vmid, id);
 	if (err < 0)
 		goto vcpu_uninit;
-
+	vcpu->arch.vmid = kvm->arch.vmid;
 #endif
 
 	return vcpu;
@@ -1317,7 +1317,7 @@ long kvm_arch_vm_ioctl(struct file *filp,
 	}
 #ifdef CONFIG_VERIFIED_KVM
 	case KVM_ARM_SET_BOOT_INFO: {
-		struct kvm_boot_info info;
+		/*struct kvm_boot_info info;
 		struct page *page[1];
 		int npages, id;
 		unsigned long start, end, virt_addr;
@@ -1335,7 +1335,7 @@ long kvm_arch_vm_ioctl(struct file *filp,
 				el2_remap_vm_image(kvm->arch.vmid, page_to_pfn(page[0]), id);
 			else
 				return -EFAULT;
-		}
+		}*/
 
 		return 0;
 	}

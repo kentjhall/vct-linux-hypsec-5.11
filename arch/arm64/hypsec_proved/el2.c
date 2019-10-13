@@ -79,19 +79,20 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		__kvm_timer_set_cntvoff((u32)hr->regs[1], (u32)hr->regs[2]);
 		break;
 	// The following can only be called when VM terminates.
-	/*case HVC_CLEAR_VM_S2_RANGE:
-		__clear_vm_stage2_range((u32)hr->regs[1],
-					(phys_addr_t)hr->regs[2], (u64)hr->regs[3]);
+	case HVC_CLEAR_VM_S2_RANGE:
+		//__clear_vm_stage2_range((u32)hr->regs[1],
+		//			(phys_addr_t)hr->regs[2], (u64)hr->regs[3]);
 		break;
 	case HVC_SET_BOOT_INFO:
-		ret = __el2_set_boot_info((u32)hr->regs[1], (unsigned long)hr->regs[2],
-				    (unsigned long)hr->regs[3], (int)hr->regs[4]);
-		hr->regs[31] = (int)ret;
+		//ret = __el2_set_boot_info((u32)hr->regs[1], (unsigned long)hr->regs[2],
+		//		    (unsigned long)hr->regs[3], (int)hr->regs[4]);
+		//hr->regs[31] = (int)ret;
+		hr->regs[31] = 1;
 		break;
 	case HVC_REMAP_VM_IMAGE:
-		__el2_remap_vm_image((u32)hr->regs[1], (unsigned long)hr->regs[2],
-				     (int)hr->regs[3]);
-		break;*/
+		//__el2_remap_vm_image((u32)hr->regs[1], (unsigned long)hr->regs[2],
+		//		     (int)hr->regs[3]);
+		break;
 	case HVC_VERIFY_VM_IMAGES:
 		//ret = (u64)__el2_verify_and_load_images((u32)hr->regs[1]);
 		//hr->regs[31] = (u64)ret;
