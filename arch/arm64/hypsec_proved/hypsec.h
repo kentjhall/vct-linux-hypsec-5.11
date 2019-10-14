@@ -20,7 +20,7 @@
 #include <asm/spinlock_types.h>
 #include <linux/serial_reg.h>
 
-#include "constants.h"
+#include <asm/hypsec_constant.h>
 
 typedef unsigned long long u64;
 typedef unsigned u32;
