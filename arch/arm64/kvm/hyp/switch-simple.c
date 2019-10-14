@@ -100,7 +100,8 @@ void deactivate_traps_vhe_put(void)
 
 static void __hyp_text __activate_vm(u64 vmid)
 {
-	u64 shadow_vttbr = get_shadow_vttbr((u32)vmid);
+	//u64 shadow_vttbr = get_shadow_vttbr((u32)vmid);
+	u64 shadow_vttbr = get_pt_vttbr((u32)vmid);
 	set_vttbr_el2(shadow_vttbr);
 }
 
@@ -315,7 +316,6 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 
 		/* And we're baaack! */
 	} while (fixup_guest_exit(vcpu, &exit_code, prot_ctxt));
-
 
 	__sysreg_save_state_nvhe(shadow_ctxt);
 	__sysreg32_save_state(vcpu);

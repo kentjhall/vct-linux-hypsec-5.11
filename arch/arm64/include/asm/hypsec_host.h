@@ -163,4 +163,5 @@ void    set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value);
 
 void save_shadow_kvm_regs(void);
 void restore_shadow_kvm_regs(void);
+u64 get_pt_vttbr(u32 vmid);
 #endif /* __ARM_STAGE2_H__ */

@@ -27,14 +27,11 @@ u32 __hyp_text verify_image(u32 vmid, u64 addr) {
     return 0;
 }
 
-/*
-u64 get_sys_reg_desc_val(u32 index) {
-    // TODO: make the following work
-    int vcpuid = 0, vmid = 0;
+u64 __hyp_text get_sys_reg_desc_val(u32 index) {
+    // TODO
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    return el2_data->vm_info[vmid].shadow_ctxt[vcpuid]->sys_regs[index];
+    return el2_data->s2_sys_reg_descs[index].val;
 }
-*/
 
 u64 __hyp_text get_exception_vector(u64 pstate) {
     // TODO
@@ -88,7 +85,6 @@ void __hyp_text pt_store(u32 vmid, u64 addr, u64 value) {
 u64 __hyp_text get_pt_vttbr(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].vttbr;
-	return 0;
 };
 
 void __hyp_text set_pt_vttbr(u32 vmid, u64 vttbr) {
@@ -371,7 +367,11 @@ void __hyp_text set_int_gpr(u32 vmid, u32 vcpuid, u32 index, u64 value) {
 }
 
 void __hyp_text clear_shadow_gp_regs(u32 vmid, u32 vcpuid) {
-
+	struct el2_data *el2_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	el2_memset(el2_data->shadow_vcpu_ctxt[offset].regs,
+			0, sizeof(struct kvm_regs));
 }
 
 void __hyp_text int_to_shadow_fp_regs(u32 vmid, u32 vcpuid) {

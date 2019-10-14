@@ -21,6 +21,9 @@
 #include <asm/kvm_asm.h>
 #include <asm/kvm_emulate.h>
 #include <asm/kvm_hyp.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#endif
 
 /*
  * Non-VHE: Both host and guest must save everything.
@@ -152,6 +155,8 @@ static void __hyp_text __sysreg_restore_el1_state(struct kvm_cpu_context *ctxt)
 static void __hyp_text
 __sysreg_restore_el2_return_state(struct kvm_cpu_context *ctxt)
 {
+	print_string("\rpc\n")
+	printhex_ul(ctxt->gp_regs.regs.pc);
 	write_sysreg_el2(ctxt->gp_regs.regs.pc,		elr);
 	write_sysreg_el2(ctxt->gp_regs.regs.pstate,	spsr);
 

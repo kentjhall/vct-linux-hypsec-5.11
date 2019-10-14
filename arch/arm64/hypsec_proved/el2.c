@@ -188,13 +188,15 @@ out:
 struct kvm_vcpu* __hyp_text hypsec_vcpu_id_to_vcpu(u32 vmid, int vcpu_id)
 {
 	struct kvm_vcpu *vcpu = NULL;
-	struct el2_vm_info *vm_info;
+	int offset;
+	struct shared_data *shared_data;
 
 	if (vcpu_id >= HYPSEC_MAX_VCPUS)
 		__hyp_panic();
 
-	vm_info = vmid_to_vm_info(vmid);
-	vcpu = vm_info->int_vcpus[vcpu_id].vcpu;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	offset = VCPU_IDX(vmid, vcpu_id);
+	vcpu = &shared_data->vcpu_pool[offset];
 	if (!vcpu)
 		__hyp_panic();
 	else
@@ -204,11 +206,10 @@ struct kvm_vcpu* __hyp_text hypsec_vcpu_id_to_vcpu(u32 vmid, int vcpu_id)
 struct kvm* __hyp_text hypsec_vmid_to_kvm(u32 vmid)
 {
 	struct kvm *kvm = NULL;
-	struct el2_vm_info *vm_info;
+	struct shared_data *shared_data;
 
-	// Check vmid bound here
-	vm_info = vmid_to_vm_info(vmid);
-	kvm = vm_info->kvm;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	kvm = &shared_data->kvm_pool[vmid];
 	if (!kvm)
 		__hyp_panic();
 	else
@@ -225,7 +226,7 @@ struct shadow_vcpu_context* __hyp_text hypsec_vcpu_id_to_shadow_ctxt(
 	if (vcpu_id >= HYPSEC_MAX_VCPUS)
 		__hyp_panic();
 
-	index = (vmid * HYPSEC_MAX_VCPUS) + vcpu_id;
+	index = VCPU_IDX(vmid, vcpu_id);
 	shadow_ctxt = &el2_data->shadow_vcpu_ctxt[index];
 	if (!shadow_ctxt)
 		__hyp_panic();
@@ -242,4 +243,17 @@ void __hyp_text hypsec_set_vcpu_state(u32 vmid, int vcpu_id, int state)
 	int_vcpu = vcpu_id_to_int_vcpu(vm_info, vcpu_id);
 	int_vcpu->state = state;
 	stage2_spin_unlock(&vm_info->vm_lock);
+}
+
+void __hyp_text reset_fp_regs(u32 vmid, int vcpu_id)
+{
+	struct shadow_vcpu_context *shadow_ctxt = NULL;
+	struct kvm_vcpu *vcpu = vcpu;
+	struct kvm_regs *kvm_regs;
+
+	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
+	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
+	kvm_regs = &vcpu->arch.ctxt.gp_regs;
+	el2_memcpy(&shadow_ctxt->fp_regs, &kvm_regs->fp_regs,
+					sizeof(struct user_fpsimd_state));
 }

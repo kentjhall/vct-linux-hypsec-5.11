@@ -1,21 +1,23 @@
 #include "hypsec.h"
 #include <uapi/linux/psci.h>
 
-
 /*
  * VCPUOpsAux
  */
 
+extern void reset_fp_regs(u32 vmid, int vcpu_id);
 void __hyp_text reset_gp_regs(u32 vmid, u32 vcpuid)
 {
     u64 pc = get_int_pc(vmid, vcpuid), pstate;
-    if (v_search_load_info(vmid, pc))
+    //if (v_search_load_info(vmid, pc))
+    if (1)
     {
         clear_shadow_gp_regs(vmid, vcpuid);
         pstate = get_int_pstate(vmid, vcpuid);
         set_shadow_ctxt(vmid, vcpuid, V_PSTATE, pstate);
         set_shadow_ctxt(vmid, vcpuid, V_PC, pc);
-        int_to_shadow_fp_regs(vmid, vcpuid);
+        //int_to_shadow_fp_regs(vmid, vcpuid);
+	reset_fp_regs(vmid, vcpuid);
     }
     else {
         v_panic();
@@ -37,10 +39,9 @@ void __hyp_text reset_sys_regs(u32 vmid, u32 vcpuid)
         else
         {
 	    //TODO:this will not work, we need to pass vmid and vcpuid
-            //val = get_sys_reg_desc_val(i);
-	    BUG();
+            val = get_sys_reg_desc_val(i);
         }
-        set_shadow_ctxt(vmid, vcpuid, i, val);
+        set_shadow_ctxt(vmid, vcpuid, i + KVM_REGS_SIZE, val);
         i += 1U;
     }
 }

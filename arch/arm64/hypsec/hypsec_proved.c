@@ -25,7 +25,7 @@ u32     verify_image(u32 vmid, u64 addr) {
 
 u64     get_sys_reg_desc_val(u32 index) {
     // TODO
-    return host_sys_reg_descs[index];
+    return el2_data->host_sys_reg_descs[index];
 }
 
 u64     get_exception_vector(u64 pstate) {
