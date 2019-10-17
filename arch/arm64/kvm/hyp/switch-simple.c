@@ -22,6 +22,7 @@
 #include <asm/processor.h>
 #include <asm/thread_info.h>
 #include <asm/hypsec_host.h>
+#include <asm/hypsec_constant.h>
 
 #include "switch-simple.h"
 
@@ -208,11 +209,13 @@ static bool __hyp_text __populate_fault_info(struct kvm_vcpu *vcpu, u64 esr,
  * main run loop. We try to handle VM exit early here.
  */
 static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code,
-					struct shadow_vcpu_context *shadow_ctxt)
+					u32 vmid, u32 vcpuid)
 {
 	u32 esr_el2 = 0;
 	u8 ec;
+	struct shadow_vcpu_context *shadow_ctxt;
 
+	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpuid);
 	if (ARM_EXCEPTION_CODE(*exit_code) != ARM_EXCEPTION_IRQ) {
 		esr_el2 = get_esr_el2();
 		vcpu->arch.fault.esr_el2 = esr_el2;
@@ -315,7 +318,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 		exit_code = __guest_enter(shadow_ctxt, &core_ctxt);
 
 		/* And we're baaack! */
-	} while (fixup_guest_exit(vcpu, &exit_code, prot_ctxt));
+	} while (fixup_guest_exit(vcpu, &exit_code, vmid, vcpu_id));
 
 	__vm_sysreg_save_state_nvhe(vmid, vcpu_id);
 	__sysreg32_save_state(vcpu);
@@ -333,6 +336,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 
 	//__save_shadow_kvm_regs(vcpu, prot_ctxt, exit_code);
 	save_shadow_kvm_regs();
+	set_shadow_ctxt(vmid, vcpu_id, V_EC, exit_code);
 
 	set_per_cpu(0, read_cpuid_mpidr() & MPIDR_HWID_BITMASK);
 	hypsec_set_vcpu_state(vmid, vcpu_id, READY);

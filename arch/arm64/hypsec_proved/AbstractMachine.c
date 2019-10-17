@@ -391,14 +391,20 @@ void __hyp_text set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value) {
 }
 
 u64 __hyp_text get_int_new_pte(u32 vmid, u32 vcpuid) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	struct kvm_vcpu *vcpu = el2_data->vm_info[vmid].int_vcpus[vcpuid].vcpu;
-	return vcpu->arch.walk_result.desc;
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	return vcpu->arch.walk_result.output;
 }
 
 u32 __hyp_text get_int_new_level(u32 vmid, u32 vcpuid) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	struct kvm_vcpu *vcpu = el2_data->vm_info[vmid].int_vcpus[vcpuid].vcpu;
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
 	return vcpu->arch.walk_result.level;
 }
 

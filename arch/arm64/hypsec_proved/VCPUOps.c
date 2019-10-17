@@ -12,7 +12,8 @@ void __hyp_text save_shadow_kvm_regs()
     if (ec == ARM_EXCEPTION_TRAP)
     {
         u64 hsr = get_shadow_esr(vmid, vcpuid);
-        u64 hsr_ec = (hsr / ESR_ELx_EC_SHIFT) % ESR_ELx_EC_MASK;
+        //u64 hsr_ec = (hsr / ESR_ELx_EC_SHIFT) % ESR_ELx_EC_MASK;
+        u64 hsr_ec = ESR_ELx_EC(hsr);
         if (hsr_ec == ESR_ELx_EC_WFx)
             prep_wfx(vmid, vcpuid);
         else if (hsr_ec == ESR_ELx_EC_HVC32)
@@ -49,7 +50,7 @@ void __hyp_text restore_shadow_kvm_regs()
         set_shadow_ctxt(vmid, vcpuid, V_DIRTY, 0UL);
     }
     else
-    {
+    {	
         u64 ec = get_shadow_ctxt(vmid, vcpuid, V_EC);
         if (ec == ARM_EXCEPTION_TRAP)
             sync_dirty_to_shadow(vmid, vcpuid);
