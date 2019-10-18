@@ -68,9 +68,10 @@ void restore_sys_regs(u32 vmid, u32 vcpuid)
 void __hyp_text sync_dirty_to_shadow(u32 vmid, u32 vcpuid)
 {
     u32 i = 0U;
+    u64 dirty = get_shadow_dirty_bit(vmid, vcpuid);
     while (i < 31U)
     {
-        if (get_shadow_dirty_bit(vmid, vcpuid) == 1U) {
+        if (dirty & (1U << i)) {
             u64 reg = get_int_gpr(vmid, vcpuid, i);
             set_shadow_ctxt(vmid, vcpuid, i, reg);
         }
@@ -117,7 +118,7 @@ void __hyp_text prep_abort(u32 vmid, u32 vcpuid)
         set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG);
 
         if ((esr / 64UL) % 4UL == 0UL) {
-            set_shadow_dirty_bit(vmid, vcpuid, Rd);
+            set_shadow_dirty_bit(vmid, vcpuid, 1 << Rd);
         }
         else {
             u64 reg = get_shadow_ctxt(vmid, vcpuid, Rd);

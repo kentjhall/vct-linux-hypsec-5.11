@@ -387,7 +387,10 @@ u32 __hyp_text get_shadow_dirty_bit(u32 vmid, u32 vcpuid) {
 void __hyp_text set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	int offset = VCPU_IDX(vmid, vcpuid);
-	el2_data->shadow_vcpu_ctxt[offset].dirty = value;
+	if (value)
+		el2_data->shadow_vcpu_ctxt[offset].dirty |= value;
+	else
+		el2_data->shadow_vcpu_ctxt[offset].dirty = 0;
 }
 
 u64 __hyp_text get_int_new_pte(u32 vmid, u32 vcpuid) {
