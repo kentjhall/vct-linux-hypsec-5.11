@@ -25,7 +25,7 @@ void __hyp_text save_shadow_kvm_regs()
         else if (hsr_ec == ESR_ELx_EC_DABT_LOW)
             prep_abort(vmid, vcpuid);
         else
-			v_panic();
+	    v_panic();
     }
 }
 

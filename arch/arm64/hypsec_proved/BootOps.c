@@ -93,6 +93,7 @@ u32 __hyp_text register_vcpu(u32 vmid, u32 vcpuid)
     return 0U;
 }
 
+extern void map_vgic_to_vm(u32 vmid);
 u32 __hyp_text register_kvm()
 {
     u32 vmid = gen_vmid();
@@ -113,6 +114,7 @@ u32 __hyp_text register_kvm()
 	    //kvm = kern_hyp_va(kvm);
             set_vm_kvm(vmid, kvm);
             init_s2pt(vmid);
+	    map_vgic_to_vm(vmid);
             set_vm_state(vmid, READY);
         }
         release_lock_vm(vmid);

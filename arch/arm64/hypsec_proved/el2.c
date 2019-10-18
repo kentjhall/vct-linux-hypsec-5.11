@@ -257,3 +257,12 @@ void __hyp_text reset_fp_regs(u32 vmid, int vcpu_id)
 	el2_memcpy(&shadow_ctxt->fp_regs, &kvm_regs->fp_regs,
 					sizeof(struct user_fpsimd_state));
 }
+
+void __hyp_text map_vgic_to_vm(u32 vmid)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	unsigned long vgic_cpu_gpa = 0x08010000;
+	u64 pte = el2_data->vgic_cpu_base + (pgprot_val(PAGE_S2_DEVICE) | S2_RDWR);
+	mmap_s2pt(vmid, vgic_cpu_gpa, 3U, pte);
+	mmap_s2pt(vmid, vgic_cpu_gpa + PAGE_SIZE, 3U, pte + PAGE_SIZE);
+}

@@ -74,10 +74,11 @@ void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 new_pte, u32 level, u32 exec)
     u64 pte;
     //u64 write = writable(new_pte);
 
-    if (mem_region_search(paddr) == INVALID) {
-        pte = paddr + pgprot_val(PAGE_S2_DEVICE) + S2_RDWR;
-    }
-    else {
+    //if (mem_region_search(paddr) == INVALID_MEM) {
+        //pte = paddr + pgprot_val(PAGE_S2_DEVICE);
+	//pte != S2_RDWR;
+    //}
+    //else {
         if (level == 2U) {
 	    pte = paddr + pgprot_val(PAGE_S2_KERNEL); 
 	    pte &= ~PMD_TABLE_BIT; 
@@ -94,7 +95,7 @@ void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 new_pte, u32 level, u32 exec)
 	    printhex_ul(pte);*/
             //pte = paddr + pgprot_val(PAGE_S2) + write * PTE_S2_RDWR + exec * PTE_S2_XN;
 	}
-    }
+    //}
     mmap_s2pt(vmid, addr, level, pte);
     //t_mmap_s2pt(addr, pte, level, vmid);
 }
