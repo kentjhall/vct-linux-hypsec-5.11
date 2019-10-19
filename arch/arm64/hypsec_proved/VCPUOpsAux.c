@@ -24,18 +24,30 @@ void __hyp_text reset_gp_regs(u32 vmid, u32 vcpuid)
     }
 }
 
+static u64 __hyp_text el2_reset_mpidr(u32 vcpu_id)
+{
+	u64 mpidr;
+	mpidr = (vcpu_id & 0x0f) << MPIDR_LEVEL_SHIFT(0);
+	mpidr |= ((vcpu_id >> 4) & 0xff) << MPIDR_LEVEL_SHIFT(1);
+	mpidr |= ((vcpu_id >> 12) & 0xff) << MPIDR_LEVEL_SHIFT(2);
+	return ((1ULL << 31) | mpidr);
+}
+
 void __hyp_text reset_sys_regs(u32 vmid, u32 vcpuid)
 {
     u64 val;
     u32 i = 1U;
     while (i <= SHADOW_SYS_REGS_SIZE)
     {
-        if (i == V_MPIDR_EL1)
+        if (i == MPIDR_EL1)
         {
             u64 mpidr = (vcpuid % 16U) + ((vcpuid / 16U) % 256U) * 256U +
                                   ((vcpuid / 4096U) % 256U) * 65536U;
             val = mpidr + 2147483648UL;
+	    val = el2_reset_mpidr(vcpuid);
         }
+	else if (i == ACTLR_EL1)
+		val = read_sysreg(actlr_el1);
         else
         {
 	    //TODO:this will not work, we need to pass vmid and vcpuid
@@ -86,9 +98,9 @@ void __hyp_text prep_wfx(u32 vmid, u32 vcpuid)
 
 void __hyp_text prep_hvc(u32 vmid, u32 vcpuid)
 {
-    u64 psci_fn = get_shadow_ctxt(vmid, vcpuid, 0UL);
-    set_shadow_dirty_bit(vmid, vcpuid, 0U);
-    set_int_gpr(vmid, vcpuid, 0U, psci_fn);
+    u64 psci_fn = get_shadow_ctxt(vmid, vcpuid, 0UL) & ~((u32) 0);
+    set_shadow_dirty_bit(vmid, vcpuid, 1 << 0U);
+    set_int_gpr(vmid, vcpuid, 0U, get_shadow_ctxt(vmid, vcpuid, 0UL));
     if (psci_fn == PSCI_0_2_FN64_CPU_ON)
     {
         set_int_gpr(vmid, vcpuid, 1U, get_shadow_ctxt(vmid, vcpuid, 1U));
@@ -112,12 +124,15 @@ void __hyp_text prep_abort(u32 vmid, u32 vcpuid)
     u64 esr = get_int_esr(vmid, vcpuid);
     u32 Rd = (u32)((esr / 65536UL) % 32UL);
     u64 fault_ipa = (get_shadow_ctxt(vmid, vcpuid, V_HPFAR_EL2) / 16UL) * 4096UL;
+    bool is_write;
 
     if (fault_ipa < MAX_MMIO_ADDR)
     {
         set_shadow_dirty_bit(vmid, vcpuid, DIRTY_PC_FLAG);
 
-        if ((esr / 64UL) % 4UL == 0UL) {
+        //if ((esr / 64UL) % 4UL == 0UL) {
+	is_write = !!(esr & ESR_ELx_WNR) || !!(esr & ESR_ELx_S1PTW);
+	if (!is_write) {
             set_shadow_dirty_bit(vmid, vcpuid, 1 << Rd);
         }
         else {
