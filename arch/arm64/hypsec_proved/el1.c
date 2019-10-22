@@ -200,6 +200,7 @@ void init_el2_data_page(void)
 		el2_data->per_cpu_data[i].vcpu_id = i;
 	}
 
+	printk("%s reg size %lu 42\n", __func__, KVM_REGS_SIZE);
 	return;
 }
 

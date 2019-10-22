@@ -53,7 +53,7 @@ void __hyp_text reset_sys_regs(u32 vmid, u32 vcpuid)
 	    //TODO:this will not work, we need to pass vmid and vcpuid
             val = get_sys_reg_desc_val(i);
         }
-        set_shadow_ctxt(vmid, vcpuid, i + KVM_REGS_SIZE, val);
+        set_shadow_ctxt(vmid, vcpuid, i + SYSREGS_START, val);
         i += 1U;
     }
 }
@@ -153,7 +153,7 @@ void __hyp_text v_update_exception_gp_regs(u32 vmid, u32 vcpuid)
     u64 pstate = get_shadow_ctxt(vmid, vcpuid, V_PSTATE);
     u64 pc = get_shadow_ctxt(vmid, vcpuid, V_PC);
     u64 new_pc = get_exception_vector(pstate);
-    set_shadow_ctxt(vmid, vcpuid, V_ELR_EL1, pc);
+    //set_shadow_ctxt(vmid, vcpuid, V_ELR_EL1, pc);
     set_shadow_ctxt(vmid, vcpuid, V_PC, new_pc);
     set_shadow_ctxt(vmid, vcpuid, V_PSTATE, PSTATE_FAULT_BITS_64);
     set_shadow_ctxt(vmid, vcpuid, V_SPSR_0, pstate);

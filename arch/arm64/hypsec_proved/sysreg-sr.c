@@ -8,7 +8,7 @@
 #include <asm/hypsec_host.h>
 #include <asm/hypsec_constant.h>
 
-#define OFF KVM_REGS_SIZE
+#define OFF SYSREGS_START 
 
 static void __hyp_text __vm_sysreg_save_common_state(u32 vmid, u32 vcpuid)
 {

@@ -1,7 +1,17 @@
 #include "hypsec.h"
 
 void __hyp_text v_panic(void) {
-    __hyp_panic();
+	//__hyp_panic();
+	u32 vmid = get_cur_vmid();
+	u32 vcpuid = get_cur_vcpu_id();
+	if (vmid) {
+		print_string("\rvm\n");
+		printhex_ul(get_shadow_ctxt(vmid, vcpuid, V_PC));
+	} else {
+		print_string("\rhost\n");
+		printhex_ul(read_sysreg(elr_el2));
+	}
+	printhex_ul(ESR_ELx_EC(read_sysreg(esr_el2)));
 }
 
 void __hyp_text clear_phys_mem(u64 pfn) {
@@ -298,16 +308,58 @@ void __hyp_text set_next_remap_ptr(u64 remap) {
 
 u64 __hyp_text get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index)
 {
-       struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-       int offset = VCPU_IDX(vmid, vcpuid);
-       return el2_data->shadow_vcpu_ctxt[offset].regs[index]; 
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int offset = VCPU_IDX(vmid, vcpuid);
+	u64 val;
+	if (index < V_FAR_EL2)
+		val = el2_data->shadow_vcpu_ctxt[offset].regs[index]; 
+	else if (index == V_FAR_EL2)
+		val = el2_data->shadow_vcpu_ctxt[offset].far_el2;
+	else if (index == V_HPFAR_EL2)
+		val = el2_data->shadow_vcpu_ctxt[offset].hpfar;
+	else if (index == V_HCR_EL2)
+		val = el2_data->shadow_vcpu_ctxt[offset].hcr_el2;
+	else if (index == V_EC)
+		val = el2_data->shadow_vcpu_ctxt[offset].ec;
+	else if (index == V_DIRTY)
+		val = el2_data->shadow_vcpu_ctxt[offset].dirty;
+	else if (index == V_FLAGS)
+		val = el2_data->shadow_vcpu_ctxt[offset].flags;
+	else if (index >= SYSREGS_START) {
+		index -= SYSREGS_START;
+		val = el2_data->shadow_vcpu_ctxt[offset].sys_regs[index];
+	} else {
+		print_string("\rinvalid get shadow ctxt\n");
+		val = INVALID64;
+	}
+
+	return val;
 };
 
 //TODO: Define the following
 void __hyp_text set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	int offset = VCPU_IDX(vmid, vcpuid);
-	el2_data->shadow_vcpu_ctxt[offset].regs[index] = value;
+	//el2_data->shadow_vcpu_ctxt[offset].regs[index] = value;
+	if (index < V_FAR_EL2)
+		el2_data->shadow_vcpu_ctxt[offset].regs[index] = value; 
+	else if (index == V_FAR_EL2)
+		el2_data->shadow_vcpu_ctxt[offset].far_el2 = value;
+	else if (index == V_HPFAR_EL2)
+		el2_data->shadow_vcpu_ctxt[offset].hpfar = value;
+	else if (index == V_HCR_EL2)
+		el2_data->shadow_vcpu_ctxt[offset].hcr_el2 = value;
+	else if (index == V_EC)
+		el2_data->shadow_vcpu_ctxt[offset].ec = value;
+	else if (index == V_DIRTY)
+		el2_data->shadow_vcpu_ctxt[offset].dirty = value;
+	else if (index == V_FLAGS)
+		el2_data->shadow_vcpu_ctxt[offset].flags = value;
+	else if (index >= SYSREGS_START) {
+		index -= SYSREGS_START;
+		el2_data->shadow_vcpu_ctxt[offset].sys_regs[index] = value;
+	} else
+		print_string("\rinvalid set shadow ctxt\n");
 }
 
 u32 __hyp_text get_shadow_esr(u32 vmid, u32 vcpuid) {

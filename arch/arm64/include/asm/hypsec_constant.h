@@ -58,29 +58,25 @@
 #define VCPU_PER_VM	8
 
 //#define SHADOW_SYS_REGS_SIZE 1
-#define V_SP		32
-#define V_PC		33
-#define V_PSTATE 	34
-#define	V_SP_EL1	35
-#define V_ELR_EL1	36
-#define V_SPSR_EL1	37
-#define V_SPSR_ABT	38
-#define V_SPSR_UND	39
-#define V_SPSR_IRQ	40
-#define V_SPSR_FIQ	41
-#define END_SYS_REGS	41 + NR_SYS_REGS
-#define V_FAR_EL2	END_SYS_REGS + 1
-#define V_HPFAR_EL2	END_SYS_REGS + 2
-#define V_HCR_EL2	END_SYS_REGS + 3
-#define V_EC		END_SYS_REGS + 4
-#define V_DIRTY		END_SYS_REGS + 5
-#define V_FLAGS		END_SYS_REGS + 6
+#define V_SP		31
+#define V_PC		32
+#define V_PSTATE 	33
+#define	V_SP_EL1	34
+#define V_ELR_EL1	35
+#define V_SPSR_EL1	36
+#define V_SPSR_ABT	37
+#define V_SPSR_UND	38
+#define V_SPSR_IRQ	39
+#define V_SPSR_FIQ	40
+#define V_FAR_EL2	41
+#define V_HPFAR_EL2	42
+#define V_HCR_EL2	43
+#define V_EC		44
+#define V_DIRTY		45
+#define V_FLAGS		46
+#define SYSREGS_START	47
 
 // Do we need the 32 bit registers?
-#define V_MPIDR_EL1 	41 + MPIDR_EL1
-#define V_DACR32_EL2	41 + DACR32_EL2
-#define V_IFSR32_EL2	41 + IFSR32_EL2
-#define V_FPEXC32_EL2	41 + FPEXC32_EL2
 #define V_ESR_EL1	41 + ESR_EL1
 #define V_SPSR_0 8
 #define V_HPFAR_MASK 65535UL
