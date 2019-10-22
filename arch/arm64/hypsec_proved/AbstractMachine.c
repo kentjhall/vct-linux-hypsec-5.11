@@ -445,6 +445,15 @@ void __hyp_text set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value) {
 		el2_data->shadow_vcpu_ctxt[offset].dirty = 0;
 }
 
+bool __hyp_text get_int_writable(u32 vmid, u32 vcpuid) {
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	return vcpu->arch.walk_result.writable;
+}
+
 u64 __hyp_text get_int_new_pte(u32 vmid, u32 vcpuid) {
 	struct shared_data *shared_data;
 	int offset = VCPU_IDX(vmid, vcpuid);
