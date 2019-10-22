@@ -340,8 +340,8 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 	__fpsimd_restore_state(&host_ctxt->gp_regs.fp_regs);
 
 	//__save_shadow_kvm_regs(vcpu, prot_ctxt, exit_code);
-	save_shadow_kvm_regs();
 	set_shadow_ctxt(vmid, vcpu_id, V_EC, exit_code);
+	save_shadow_kvm_regs();
 
 	set_per_cpu(0, read_cpuid_mpidr() & MPIDR_HWID_BITMASK);
 	hypsec_set_vcpu_state(vmid, vcpu_id, READY);
