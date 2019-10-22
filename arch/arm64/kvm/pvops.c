@@ -31,6 +31,7 @@ int __hyp_text handle_pvops(void)
 		default:
 			return -EINVAL;
 	}
-#endif
 	return 1;
+#endif
+	return -EINVAL;
 }
