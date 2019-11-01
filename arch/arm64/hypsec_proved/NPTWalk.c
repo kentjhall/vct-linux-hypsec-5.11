@@ -25,7 +25,7 @@ u32 __hyp_text get_npt_level(u32 vmid, u64 addr)
     u64 pgd = walk_pgd(vmid, vttbr, addr, 0U);
     u64 pmd = walk_pmd(vmid, pgd, addr, 0U);
     u32 ret;
-    if (v_pmd_table(pmd) == 1UL) {
+    if (v_pmd_table(pmd) == 0UL) {
         if (phys_page(pmd) == 0UL) ret = 0U;
         else ret = 2U;
     }
@@ -43,7 +43,7 @@ u64 __hyp_text walk_npt(u32 vmid, u64 addr)
     u64 pgd = walk_pgd(vmid, vttbr, addr, 0U);
     u64 pmd = walk_pmd(vmid, pgd, addr, 0U);
     u64 ret;
-    if (v_pmd_table(pmd) == 1UL) {
+    if (v_pmd_table(pmd) == 0UL) {
         ret = pmd;
     }
     else {
