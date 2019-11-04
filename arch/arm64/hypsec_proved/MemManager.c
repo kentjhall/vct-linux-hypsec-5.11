@@ -35,7 +35,7 @@ void __hyp_text map_page_host(u64 addr)
 
 void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
 {
-    u32 owner;
+    u32 owner, level;
     u64 perm;
     acquire_lock_s2page();
     owner = get_pfn_owner(pfn);
@@ -43,7 +43,9 @@ void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
         set_pfn_owner(pfn, 1UL, HOSTVISOR);
         set_pfn_count(pfn, 0U);
         perm = pgprot_val(PAGE_NONE);
-        set_pfn_host(pfn, 1UL, 0UL, perm);
+        level = get_npt_level(vmid, pfn * PAGE_SIZE);
+        mmap_s2pt(vmid, pfn * PAGE_SIZE, level, perm);
+        //set_pfn_host(pfn, 1UL, 0UL, perm);
     }
     release_lock_s2page();
 }
@@ -60,9 +62,9 @@ void __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn)
         perm = pgprot_val(PAGE_GUEST);
         set_pfn_host(pfn, 1UL, 0UL, perm);
     }
-    else {
-        v_panic();
-    }
+    //else {
+    //    v_panic();
+    //}
     release_lock_s2page();
 }
 

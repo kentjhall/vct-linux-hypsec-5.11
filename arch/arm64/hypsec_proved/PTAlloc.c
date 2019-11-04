@@ -14,6 +14,7 @@ u64 __hyp_text alloc_s2pt_page(u32 vmid)
 		set_pt_next(vmid, 1);
 	}
 	else {
+	        print_string("\rwe used all s2 pages\n");
 		ret = INVALID64;
 	}
 
