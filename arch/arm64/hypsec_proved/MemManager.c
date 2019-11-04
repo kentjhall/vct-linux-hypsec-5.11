@@ -15,20 +15,24 @@ void __hyp_text map_page_host(u64 addr)
 	acquire_lock_s2page();
 	owner = get_pfn_owner(pfn);
 	count = get_pfn_count(pfn);
-	if (owner == HOSTVISOR || count > 0U) {
-	//if (addr >= 0x40000000) {
-		perm = pgprot_val(PAGE_S2_KERNEL);
-		new_pte = pfn * PAGE_SIZE + perm;
-		//new_pte = pte_val(pfn_pte(pfn, PAGE_S2_KERNEL));
-		//t_mmap_s2pt(addr, new_pte, 3, HOSTVISOR);
-		//printhex_ul(addr);
-		mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
-	} else {
+	if (owner == INVALID_MEM) {
 		perm = pgprot_val(PAGE_S2_DEVICE);
 		perm |= S2_RDWR;
 		new_pte = (addr & PAGE_MASK) + perm;
 		mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
 		//t_mmap_s2pt(addr, new_pte, 3, HOSTVISOR);
+	} else {
+		if (owner == HOSTVISOR || count > 0U) {
+		//if (addr >= 0x40000000) {
+			perm = pgprot_val(PAGE_S2_KERNEL);
+			new_pte = pfn * PAGE_SIZE + perm;
+		//new_pte = pte_val(pfn_pte(pfn, PAGE_S2_KERNEL));
+		//t_mmap_s2pt(addr, new_pte, 3, HOSTVISOR);
+		//printhex_ul(addr);
+			mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
+		} else {
+			v_panic();
+		}
 	}
 	release_lock_s2page();
 }
