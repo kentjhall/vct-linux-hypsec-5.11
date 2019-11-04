@@ -50,7 +50,10 @@ void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 
 
 void __hyp_text v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
 {
-    u64 len = size / PAGE_SIZE;
+    u64 len = (size & (PAGE_SIZE - 1) ? 1 : 0);
+    if (size >> PAGE_SHIFT)
+	len += size >> PAGE_SHIFT;
+
     while (len > 0UL)
     {
         u64 pte = walk_s2pt(vmid, addr);
@@ -72,7 +75,10 @@ void __hyp_text v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
 
 void __hyp_text v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
 {
-    u64 len = size / PAGE_SIZE;
+    u64 len = (size & (PAGE_SIZE - 1) ? 1 : 0);
+    if (size >> PAGE_SHIFT)
+	len += size >> PAGE_SHIFT;
+
     while (len > 0UL)
     {
         u64 pte = walk_s2pt(vmid, addr);
