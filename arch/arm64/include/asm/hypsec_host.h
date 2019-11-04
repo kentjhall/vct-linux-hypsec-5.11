@@ -167,4 +167,7 @@ u64 get_pt_vttbr(u32 vmid);
 
 void __vm_sysreg_restore_state_nvhe(u32 vmid, u32 vcpuid);
 void __vm_sysreg_save_state_nvhe(u32 vmid, u32 vcpuid);
+
+void v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
+void v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
 #endif /* __ARM_STAGE2_H__ */

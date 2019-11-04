@@ -60,7 +60,8 @@ void __hyp_text v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
         {
             u64 pfn = pte_pa / PAGE_SIZE;
             if (level == 2U) {
-                pfn += (pte_pa & PMD_PAGE_MASK) / PAGE_SIZE;
+                //pfn += (pte_pa & PMD_PAGE_MASK) / PAGE_SIZE;
+                pfn += (addr & (PMD_SIZE - 1)) / PAGE_SIZE;
             }
             grant_vm_page(vmid, pfn);
         }
@@ -81,7 +82,8 @@ void __hyp_text v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
         {
             u64 pfn = pte_pa / PAGE_SIZE;
             if (level == 2U) {
-                pfn += (pte_pa & PMD_PAGE_MASK) / PAGE_SIZE;
+                //pfn += (pte_pa & PMD_PAGE_MASK) / PAGE_SIZE;
+                pfn += (addr & (PMD_SIZE - 1)) / PAGE_SIZE;
             }
             revoke_vm_page(vmid, pfn);
         }
