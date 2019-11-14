@@ -493,6 +493,12 @@ int __hyp_text get_cur_vcpu_id(void)
 	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
 	return el2_data->per_cpu_data[pcpuid].vcpu_id;
 };
+
+void __hyp_text clear_phys_page(unsigned long pfn)
+{
+	unsigned long addr = __el2_va(pfn << PAGE_SHIFT);
+	el2_memset((void *)addr, 0, PAGE_SIZE);
+}
 #if 0
 void    int_to_shadow_decrypt(u32 vmid, u32 vcpuid);
 void    shadow_to_int_encrypt(u32 vmid, u32 vcpuid);
