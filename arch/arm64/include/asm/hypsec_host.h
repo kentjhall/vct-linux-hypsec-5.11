@@ -24,6 +24,56 @@ struct el2_per_cpu_data {
 	int vcpu_id;
 };
 
+typedef struct b_arch_spinlock_t b_arch_spinlock_t;
+struct b_arch_spinlock_t {
+	volatile unsigned int lock;
+};
+
+enum hypsec_init_state {
+	INVALID = 0,
+	MAPPED,
+	READY,
+	VERIFIED,
+	ACTIVE
+};
+
+struct el2_load_info {
+	unsigned long load_addr;
+	unsigned long size;
+	unsigned long el2_remap_addr;
+	int el2_mapped_pages;
+	unsigned char signature[64];
+};
+
+struct int_vcpu {
+	struct kvm_vcpu *vcpu;
+	int vcpu_pg_cnt;
+	enum hypsec_init_state state;
+	u32 ctxtid;
+};
+
+struct el2_vm_info {
+	u64 vttbr;
+	int vmid;
+	int load_info_cnt;
+	int kvm_pg_cnt;
+	bool inc_exe;
+	enum hypsec_init_state state;
+	struct el2_load_info load_info[HYPSEC_MAX_LOAD_IMG];
+	b_arch_spinlock_t shadow_pt_lock;
+	b_arch_spinlock_t vm_lock;
+	struct kvm *kvm;
+	struct int_vcpu int_vcpus[HYPSEC_MAX_VCPUS];
+	struct shadow_vcpu_context *shadow_ctxt[HYPSEC_MAX_VCPUS];
+	uint8_t key[16];
+	uint8_t iv[16];
+	unsigned char public_key[32];
+	bool powered_on;
+	/* For VM private pool */
+	u64 page_pool_start;
+	unsigned long used_pages;
+};
+
 struct el2_data {
 	struct memblock_region regions[32];
 	struct s2_memblock_info s2_memblock_info[32];
@@ -38,10 +88,10 @@ struct el2_data {
 	unsigned long pl011_base;
 	unsigned long uart_8250_base;
 
-	arch_spinlock_t s2pages_lock;
-	arch_spinlock_t abs_lock;
-	arch_spinlock_t el2_pt_lock;
-	arch_spinlock_t console_lock;
+	b_arch_spinlock_t s2pages_lock;
+	b_arch_spinlock_t abs_lock;
+	b_arch_spinlock_t el2_pt_lock;
+	b_arch_spinlock_t console_lock;
 
 	kvm_pfn_t ram_start_pfn;
 	struct s2_page s2_pages[S2_PFN_SIZE];
@@ -69,14 +119,37 @@ struct el2_data {
 
 void init_el2_data_page(void);
 
-static inline void stage2_spin_lock(arch_spinlock_t *lock)
-{	
-	arch_spin_lock(lock);
+static inline void _arch_spin_lock(b_arch_spinlock_t *lock)
+{
+	unsigned int tmp;
+
+	asm volatile(
+	"	sevl\n"
+	"1:	wfe\n"
+	"2:	ldaxr	%w0, %1\n"
+	"	cbnz	%w0, 1b\n"
+	"	stxr	%w0, %w2, %1\n"
+	"	cbnz	%w0, 2b\n"
+	: "=&r" (tmp), "+Q" (lock->lock)
+	: "r" (1)
+	: "cc", "memory");
 }
 
-static inline void stage2_spin_unlock(arch_spinlock_t *lock)
+static inline void _arch_spin_unlock(b_arch_spinlock_t *lock)
 {
-	arch_spin_unlock(lock);
+	asm volatile(
+	"	stlr	%w1, %0\n"
+	: "=Q" (lock->lock) : "r" (0) : "memory");
+}
+
+static inline void stage2_spin_lock(b_arch_spinlock_t *lock)
+{	
+	_arch_spin_lock(lock);
+}
+
+static inline void stage2_spin_unlock(b_arch_spinlock_t *lock)
+{
+	_arch_spin_unlock(lock);
 }
 
 static inline void el2_init_vgic_cpu_base(phys_addr_t base)

@@ -10,6 +10,7 @@
 #define HYPSEC_MAX_VCPUS	16	
 #define HYPSEC_MAX_CPUS		32
 #define HYPSEC_MAX_LOAD_IMG	5
+
 /* Below is copied from QEMU  */
 typedef enum {
 	FIXUP_NONE = 0,   /* do nothing */
@@ -23,55 +24,10 @@ typedef enum {
 	FIXUP_MAX,
 } FixupType;
 
-enum hypsec_init_state {
-	INVALID = 0,
-	MAPPED,
-	READY,
-	VERIFIED,
-	ACTIVE
-};
-
 typedef struct ARMInsnFixup {
 	uint32_t insn;
 	FixupType fixup;
 } ARMInsnFixup;
-
-struct el2_load_info {
-	unsigned long load_addr;
-	unsigned long size;
-	unsigned long el2_remap_addr;
-	int el2_mapped_pages;
-	unsigned char signature[64];
-};
-
-struct int_vcpu {
-	struct kvm_vcpu *vcpu;
-	int vcpu_pg_cnt;
-	enum hypsec_init_state state;
-	u32 ctxtid;
-};
-
-struct el2_vm_info {
-	u64 vttbr;
-	int vmid;
-	int load_info_cnt;
-	int kvm_pg_cnt;
-	bool inc_exe;
-	enum hypsec_init_state state;
-	struct el2_load_info load_info[HYPSEC_MAX_LOAD_IMG];
-	arch_spinlock_t shadow_pt_lock;
-	arch_spinlock_t vm_lock;
-	struct kvm *kvm;
-	struct int_vcpu int_vcpus[HYPSEC_MAX_VCPUS];
-	struct shadow_vcpu_context *shadow_ctxt[HYPSEC_MAX_VCPUS];
-	uint8_t key[16];
-	uint8_t iv[16];
-	unsigned char public_key[32];
-	bool powered_on;
-	/* For VM private pool */
-	u64 page_pool_start;
-	unsigned long used_pages;
-};
 
 extern int el2_set_boot_info(u32 vmid, unsigned long load_addr,
 			unsigned long size, int image_type);

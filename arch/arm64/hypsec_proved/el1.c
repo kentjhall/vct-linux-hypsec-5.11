@@ -148,10 +148,10 @@ void init_el2_data_page(void)
 	el2_data->used_tmp_pages = 0;
 	el2_data->page_pool_start = (u64)__pa(stage2_pgs_start);
 
-	el2_data->s2pages_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->abs_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->el2_pt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->console_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->s2pages_lock.lock = 0;
+	el2_data->abs_lock.lock = 0;
+	el2_data->el2_pt_lock.lock = 0;
+	el2_data->console_lock.lock = 0;
 
 	memset(&el2_data->arch, 0, sizeof(struct s2_cpu_arch));
 
@@ -168,8 +168,7 @@ void init_el2_data_page(void)
 	el2_data->used_vm_info = 0;
 	el2_data->last_remap_ptr = 0;
 
-	el2_data->vm_info[0].shadow_pt_lock =
-		(arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->vm_info[0].shadow_pt_lock.lock = 0;
 
 	pool_start = el2_data->page_pool_start + STAGE2_CORE_PAGES_SIZE;
 	for (i = 0; i < EL2_VM_INFO_SIZE; i++) {
