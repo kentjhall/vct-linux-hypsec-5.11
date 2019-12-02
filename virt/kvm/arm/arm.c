@@ -1317,7 +1317,7 @@ long kvm_arch_vm_ioctl(struct file *filp,
 	}
 #ifdef CONFIG_VERIFIED_KVM
 	case KVM_ARM_SET_BOOT_INFO: {
-		/*struct kvm_boot_info info;
+		struct kvm_boot_info info;
 		struct page *page[1];
 		int npages, id;
 		unsigned long start, end, virt_addr;
@@ -1329,6 +1329,7 @@ long kvm_arch_vm_ioctl(struct file *filp,
 		end = start + info.datasize;
 
 		id = el2_set_boot_info(kvm->arch.vmid, info.addr, info.datasize, 0);
+		/*
 		for (virt_addr = start; virt_addr < end; virt_addr += PAGE_SIZE) {
 			npages = __get_user_pages_fast(virt_addr, 1, 1, page);
 			if (npages == 1)
