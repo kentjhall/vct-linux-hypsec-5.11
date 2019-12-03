@@ -145,7 +145,7 @@ void __hyp_text set_boot_info(u32 vmid, u64 load_addr, u64 size)
     release_lock_vm(vmid);
 }
 
-void __hyp_text remap_vm_image(u32 vmid, u32 load_idx, u64 pfn)
+void __hyp_text remap_vm_image(u32 vmid, u64 pfn, u32 load_idx)
 {
     u32 state, load_info_cnt;
     u64 size, page_count, mapped, remap_addr, target;
@@ -163,7 +163,7 @@ void __hyp_text remap_vm_image(u32 vmid, u32 load_idx, u64 pfn)
             target = remap_addr + mapped * PAGE_SIZE;
             if (mapped < page_count)
             {
-                mmap_s2pt(COREVISOR, target, 3U, pfn * PAGE_SIZE + pgprot_val(PAGE_HYP));
+                mmap_el2pt(target, pfn * PAGE_SIZE + pgprot_val(PAGE_HYP));
                 set_vm_mapped_pages(vmid, load_idx, mapped + 1UL);
             }
         }

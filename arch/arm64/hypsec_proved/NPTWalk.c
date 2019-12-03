@@ -72,3 +72,25 @@ void __hyp_text set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 		//}
 	}
 }
+
+void __hyp_text set_el2pt(u64 addr, u32 level, u64 pte)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u32 vmid = COREVISOR;
+	u64 ttbr = read_sysreg(ttbr0_el2);
+	u64 pgd = walk_hyp_pgd(vmid, ttbr, addr, 1U);
+	if (level == 2U)
+	{
+		v_set_pmd(vmid, pgd, addr, pte);
+	}
+	else
+	{
+		u64 pmd = walk_pmd(vmid, pgd, addr, 1U);
+		//if (v_pmd_table(pmd) == 0UL) {
+			v_set_pte(vmid, pmd, addr, pte);
+		//}
+		//else {
+		//	v_panic();
+		//}
+	}
+}

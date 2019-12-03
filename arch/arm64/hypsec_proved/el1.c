@@ -14,6 +14,7 @@
 #include <asm/virt.h>
 #include <asm/kernel-pgtable.h>
 #include <asm/hypsec_host.h>
+#include <asm/hypsec_constant.h>
 #include <asm/spinlock_types.h>
 #include <linux/serial_reg.h>
 
@@ -170,12 +171,15 @@ void init_el2_data_page(void)
 
 	el2_data->vm_info[0].shadow_pt_lock.lock = 0;
 
-	pool_start = el2_data->page_pool_start + STAGE2_CORE_PAGES_SIZE;
+	//pool_start = el2_data->page_pool_start + STAGE2_CORE_PAGES_SIZE;
+	pool_start = el2_data->page_pool_start;
 	for (i = 0; i < EL2_VM_INFO_SIZE; i++) {
 		el2_data->vm_info[i].page_pool_start =
 			pool_start + (STAGE2_VM_POOL_SIZE * i);
 		memset(__va(el2_data->vm_info[i].page_pool_start), 0, STAGE2_VM_POOL_SIZE);
 	}
+	el2_data->vm_info[COREVISOR].page_pool_start =
+		pool_start + STAGE2_VM_POOL_SIZE * EL2_MAX_VMID;
 
 	el2_data->host_vttbr = el2_data->vm_info[0].page_pool_start;
 	el2_data->vm_info[0].used_pages = 2;
@@ -247,7 +251,7 @@ out_err:
 //hypsec_mmu.c
 phys_addr_t host_alloc_stage2_page(unsigned int num)
 {
-	u64 p_addr, start, unaligned, append;
+	u64 p_addr, start, unaligned, append, used_pages;
 	struct el2_data *el2_data;
 
 	if (!num)
@@ -260,8 +264,9 @@ phys_addr_t host_alloc_stage2_page(unsigned int num)
 	BUG_ON(el2_data->used_pages >= STAGE2_NUM_CORE_PAGES);
 
 	/* Start allocating memory from the normal page pool */
-	start = el2_data->page_pool_start;
-	p_addr = (u64)start + (PAGE_SIZE * el2_data->used_pages);
+	start = el2_data->vm_info[COREVISOR].page_pool_start;
+	used_pages = el2_data->vm_info[COREVISOR].used_pages;
+	p_addr = (u64)start + (PAGE_SIZE * used_pages);
 
 	unaligned = p_addr % (PAGE_SIZE * num);
 	/* Append to make p_addr aligned with (PAGE_SIZE * num) */
@@ -270,7 +275,8 @@ phys_addr_t host_alloc_stage2_page(unsigned int num)
 		p_addr += append * PAGE_SIZE;
 		num += append;
 	}
-	el2_data->used_pages += num;
+
+	el2_data->vm_info[COREVISOR].used_pages += num;
 
 	stage2_spin_unlock(&el2_data->abs_lock);
 	return (phys_addr_t)p_addr;

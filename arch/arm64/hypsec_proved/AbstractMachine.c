@@ -65,7 +65,10 @@ u64 __hyp_text pool_start(u32 vmid) {
 
 u64 __hyp_text pool_end(u32 vmid) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	return el2_data->vm_info[vmid].page_pool_start + PT_POOL_PER_VM;
+	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
+	if (vmid == COREVISOR)
+		return pool_start + STAGE2_CORE_PAGES_SIZE;
+	return pool_start + PT_POOL_PER_VM;
 }
 
 u64 __hyp_text get_pt_next(u32 vmid) {

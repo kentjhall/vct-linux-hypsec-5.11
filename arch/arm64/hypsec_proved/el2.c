@@ -91,8 +91,8 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		hr->regs[31] = 1;
 		break;
 	case HVC_REMAP_VM_IMAGE:
-		//__el2_remap_vm_image((u32)hr->regs[1], (unsigned long)hr->regs[2],
-		//		     (int)hr->regs[3]);
+		remap_vm_image((u32)hr->regs[1], (unsigned long)hr->regs[2],
+				     (int)hr->regs[3]);
 		break;
 	case HVC_VERIFY_VM_IMAGES:
 		//ret = (u64)__el2_verify_and_load_images((u32)hr->regs[1]);

@@ -1329,14 +1329,14 @@ long kvm_arch_vm_ioctl(struct file *filp,
 		end = start + info.datasize;
 
 		id = el2_set_boot_info(kvm->arch.vmid, info.addr, info.datasize, 0);
-		/*
+
 		for (virt_addr = start; virt_addr < end; virt_addr += PAGE_SIZE) {
 			npages = __get_user_pages_fast(virt_addr, 1, 1, page);
 			if (npages == 1)
 				el2_remap_vm_image(kvm->arch.vmid, page_to_pfn(page[0]), id);
 			else
 				return -EFAULT;
-		}*/
+		}
 
 		return 0;
 	}
