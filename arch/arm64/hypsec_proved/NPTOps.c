@@ -47,7 +47,9 @@ void __hyp_text mmap_s2pt(u32 vmid, u64 addr, u32 level, u64 pte)
 
 void __hyp_text mmap_el2pt(u64 addr, u64 pte)
 {
+	acquire_lock_pt(COREVISOR);
 	set_el2pt(addr, 3, pte);
+	release_lock_pt(COREVISOR);
 }
 
 void __hyp_text set_pfn_host(u64 gfn, u64 num, u64 pfn, u64 prot)
