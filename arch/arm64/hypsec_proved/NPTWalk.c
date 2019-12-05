@@ -39,10 +39,17 @@ u32 __hyp_text get_npt_level(u32 vmid, u64 addr)
 
 u64 __hyp_text walk_npt(u32 vmid, u64 addr)
 {
-    u64 vttbr = get_pt_vttbr(vmid);
-    u64 pgd = walk_pgd(vmid, vttbr, addr, 0U);
-    u64 pmd = walk_pmd(vmid, pgd, addr, 0U);
-    u64 ret;
+    u64 vttbr, pgd, pmd, ret;
+
+    if (vmid < COREVISOR) {
+        vttbr = get_pt_vttbr(vmid);
+        pgd = walk_pgd(vmid, vttbr, addr, 0U);
+    } else {
+        vttbr = read_sysreg(ttbr0_el2);
+        pgd = walk_hyp_pgd(vmid, vttbr, addr, 0U);
+    }
+
+    pmd = walk_pmd(vmid, pgd, addr, 0U);
     if (v_pmd_table(pmd) == 0UL) {
         ret = pmd;
     }

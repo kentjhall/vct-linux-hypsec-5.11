@@ -24,7 +24,8 @@ void __hyp_text v_load_image_to_shadow_s2pt(u32 vmid, u64 target_addr, u64 remap
         u64 pte = walk_s2pt(COREVISOR, remap_addr);
         u64 pa = phys_page(pte);
         if (pa == 0UL) v_panic();
-        map_pfn_vm(vmid, target_addr, pa | PTE_S2_RDWR, 3U, 1U);
+        //map_pfn_vm(vmid, target_addr, pa | PTE_S2_RDWR, 3U, 1U);
+        map_pfn_vm(vmid, target_addr, pa, 3U, 1U);
         remap_addr += PAGE_SIZE;
         target_addr += PAGE_SIZE;
         num--;

@@ -84,11 +84,10 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 					(phys_addr_t)hr->regs[2], (u64)hr->regs[3]);
 		break;
 	case HVC_SET_BOOT_INFO:
-		set_boot_info((u32)hr->regs[1], (unsigned long)hr->regs[2],
+		ret = set_boot_info((u32)hr->regs[1], (unsigned long)hr->regs[2],
 			      (unsigned long)hr->regs[3]);
-		printhex_ul(hr->regs[3]);
-		//hr->regs[31] = (int)ret;
-		hr->regs[31] = 1;
+		hr->regs[31] = (u32)ret;
+		//hr->regs[31] = 1;
 		break;
 	case HVC_REMAP_VM_IMAGE:
 		remap_vm_image((u32)hr->regs[1], (unsigned long)hr->regs[2],

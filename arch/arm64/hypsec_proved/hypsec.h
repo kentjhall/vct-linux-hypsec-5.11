@@ -226,7 +226,7 @@ void set_vcpu_active(u32 vmid, u32 vcpuid);
 void set_vcpu_inactive(u32 vmid, u32 vcpuid);
 u32 register_vcpu(u32 vmid, u32 vcpuid);
 u32 register_kvm(void);
-void set_boot_info(u32 vmid, u64 load_addr, u64 size);
+u32 set_boot_info(u32 vmid, u64 load_addr, u64 size);
 void remap_vm_image(u32 vmid, u64 pfn, u32 load_idx);
 void verify_and_load_images(u32 vmid);
 
