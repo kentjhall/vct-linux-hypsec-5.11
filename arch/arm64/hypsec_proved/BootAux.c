@@ -6,7 +6,7 @@
 
 void __hyp_text v_unmap_image_from_host_s2pt(u32 vmid, u64 remap_addr, u64 num)
 {
-    while (num >= 0UL)
+    while (num > 0UL)
     {
         u64 pte = walk_s2pt(COREVISOR, remap_addr);
         u64 pa = phys_page(pte);
