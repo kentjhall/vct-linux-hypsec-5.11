@@ -89,7 +89,7 @@ void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 new_pte, u32 level, u32 exec)
     perm = pgprot_val(PAGE_S2);
     //if (!exec)
     //   perm |= PTE_S2_XN;
-    if (writable)
+    //if (writable)
 	perm |= S2_RDWR;
 
     if (level == 2U) {
