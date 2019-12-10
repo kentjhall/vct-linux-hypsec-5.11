@@ -4,8 +4,6 @@
  * MemManager
  */
 
-extern void __hyp_text t_mmap_s2pt(phys_addr_t addr, u64 desc, int level, u32 vmid);
-
 extern void reject_invalid_mem_access(phys_addr_t addr);
 
 void __hyp_text map_page_host(u64 addr)
@@ -22,15 +20,10 @@ void __hyp_text map_page_host(u64 addr)
 		perm |= S2_RDWR;
 		new_pte = (addr & PAGE_MASK) + perm;
 		mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
-		//t_mmap_s2pt(addr, new_pte, 3, HOSTVISOR);
 	} else {
 		if (owner == HOSTVISOR || count > 0U) {
-		//if (addr >= 0x40000000) {
 			perm = pgprot_val(PAGE_S2_KERNEL);
 			new_pte = pfn * PAGE_SIZE + perm;
-		//new_pte = pte_val(pfn_pte(pfn, PAGE_S2_KERNEL));
-		//t_mmap_s2pt(addr, new_pte, 3, HOSTVISOR);
-		//printhex_ul(addr);
 			mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
 		} else {
 			reject_invalid_mem_access(addr);
@@ -98,14 +91,10 @@ void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 new_pte, u32 level, u32 exec)
     if (level == 2U) {
         pte = paddr + perm;
 	pte &= ~PMD_TABLE_BIT;
-        //pte = paddr + pgprot_val(PAGE_S2) + write * PMD_S2_RDWR + exec * PMD_S2_XN;
     } else if (level == 3U) {
         pte = paddr + perm;
-        //pte = paddr + pgprot_val(PAGE_S2) + write * PTE_S2_RDWR + exec * PTE_S2_XN;
     }
-    //}
     mmap_s2pt(vmid, addr, level, pte);
-    //t_mmap_s2pt(addr, pte, level, vmid);
 }
 
 void __hyp_text grant_vm_page(u32 vmid, u64 pfn)
