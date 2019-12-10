@@ -266,3 +266,80 @@ void __hyp_text map_vgic_to_vm(u32 vmid)
 	mmap_s2pt(vmid, vgic_cpu_gpa, 3U, pte);
 	mmap_s2pt(vmid, vgic_cpu_gpa + PAGE_SIZE, 3U, pte + PAGE_SIZE);
 }
+
+#define CURRENT_EL_SP_EL0_VECTOR	0x0
+#define CURRENT_EL_SP_ELx_VECTOR	0x200
+#define LOWER_EL_AArch64_VECTOR		0x400
+#define LOWER_EL_AArch32_VECTOR		0x600
+
+enum exception_type {
+	except_type_sync	= 0,
+	except_type_irq		= 0x80,
+	except_type_fiq		= 0x100,
+	except_type_serror	= 0x180,
+};
+
+static u64 __hyp_text stage2_get_exception_vector(u64 pstate)
+{
+	u64 exc_offset;
+
+	switch (pstate & (PSR_MODE_MASK | PSR_MODE32_BIT)) {
+	case PSR_MODE_EL1t:
+		exc_offset = CURRENT_EL_SP_EL0_VECTOR;
+		break;
+	case PSR_MODE_EL1h:
+		exc_offset = CURRENT_EL_SP_ELx_VECTOR;
+		break;
+	case PSR_MODE_EL0t:
+		exc_offset = LOWER_EL_AArch64_VECTOR;
+		break;
+	default:
+		exc_offset = LOWER_EL_AArch32_VECTOR;
+	}
+
+	return read_sysreg(vbar_el1) + exc_offset;
+}
+
+/* Currently, we do not handle lower level fault from 32bit host */
+void __hyp_text stage2_inject_el1_fault(unsigned long addr)
+{
+	u64 pstate = read_sysreg(spsr_el2);
+	u32 esr = 0, esr_el2;
+	bool is_iabt = false;
+
+	write_sysreg(read_sysreg(elr_el2), elr_el1);
+	write_sysreg(stage2_get_exception_vector(pstate), elr_el2);
+
+	write_sysreg(addr, far_el1);
+	write_sysreg(PSTATE_FAULT_BITS_64, spsr_el2);
+	write_sysreg(pstate, spsr_el1);
+
+	esr_el2 = read_sysreg(esr_el2);
+	if ((esr_el2 << ESR_ELx_EC_SHIFT) == ESR_ELx_EC_IABT_LOW)
+		is_iabt = true;
+
+	/* To get fancier debug info that includes LR from the guest Linux,
+	 * we can intentionally comment out the EC_LOW_ABT case and always
+	 * inject the CUR mode exception.
+	 */
+	if ((pstate & PSR_MODE_MASK) == PSR_MODE_EL0t)
+		esr |= (ESR_ELx_EC_IABT_LOW << ESR_ELx_EC_SHIFT);
+	else
+		esr |= (ESR_ELx_EC_IABT_CUR << ESR_ELx_EC_SHIFT);
+
+	if (!is_iabt)
+		esr |= ESR_ELx_EC_DABT_LOW << ESR_ELx_EC_SHIFT;
+
+	esr |= ESR_ELx_FSC_EXTABT;
+	write_sysreg(esr, esr_el1);
+}
+
+void __hyp_text reject_invalid_mem_access(phys_addr_t addr)
+{
+	print_string("\rinvalid access of guest memory\n\r");
+	print_string("\rpc: \n");
+	printhex_ul(read_sysreg(elr_el2));
+	print_string("\rpa: \n");
+	printhex_ul(addr);
+	stage2_inject_el1_fault(addr);
+}

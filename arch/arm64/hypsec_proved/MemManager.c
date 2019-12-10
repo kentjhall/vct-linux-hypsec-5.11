@@ -6,6 +6,8 @@
 
 extern void __hyp_text t_mmap_s2pt(phys_addr_t addr, u64 desc, int level, u32 vmid);
 
+extern void reject_invalid_mem_access(phys_addr_t addr);
+
 void __hyp_text map_page_host(u64 addr)
 {
 	u64 pfn = addr / PAGE_SIZE;
@@ -31,7 +33,8 @@ void __hyp_text map_page_host(u64 addr)
 		//printhex_ul(addr);
 			mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
 		} else {
-			v_panic();
+			reject_invalid_mem_access(addr);
+			//v_panic();
 		}
 	}
 	release_lock_s2page();
