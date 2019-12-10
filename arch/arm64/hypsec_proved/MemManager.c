@@ -45,7 +45,6 @@ void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
         perm = pgprot_val(PAGE_NONE);
         level = get_npt_level(vmid, pfn * PAGE_SIZE);
         mmap_s2pt(vmid, pfn * PAGE_SIZE, level, perm);
-        //set_pfn_host(pfn, 1UL, 0UL, perm);
     }
     release_lock_s2page();
 }
