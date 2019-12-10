@@ -34,7 +34,7 @@ u64 __hyp_text get_shared_vcpu(u32 vmid, u32 vcpuid) {
 u32 __hyp_text verify_image(u32 vmid, u64 addr) {
     // TODO:
     //return ed25519_verify(load_info.signature, kern_img, load_info.size, vm_info->public_key);
-    return 0;
+    return 1;
 }
 
 u64 __hyp_text get_sys_reg_desc_val(u32 index) {

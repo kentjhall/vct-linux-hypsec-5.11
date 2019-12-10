@@ -122,11 +122,6 @@ u32 __hyp_text register_kvm()
     return vmid;
 }
 
-static unsigned long __hyp_text size_to_page_count(unsigned long size)
-{
-	return ((size >> PAGE_SHIFT) + ((size & (PAGE_SIZE - 1)) ? 1 : 0));
-}
-
 u32 __hyp_text set_boot_info(u32 vmid, u64 load_addr, u64 size)
 {
     u32 state, load_idx;
@@ -139,8 +134,7 @@ u32 __hyp_text set_boot_info(u32 vmid, u64 load_addr, u64 size)
         if (load_idx < MAX_LOAD_INFO_NUM)
         {
             set_vm_next_load_idx(vmid, load_idx + 1U);
-            //page_count = (size + PAGE_SIZE - 1UL) / PAGE_SIZE;
-            page_count = size_to_page_count(size);
+            page_count = (size + PAGE_SIZE - 1UL) / PAGE_SIZE;
             remap_addr = alloc_remap_addr(page_count);
             set_vm_load_addr(vmid, load_idx, load_addr);
             set_vm_load_size(vmid, load_idx, size);
@@ -164,8 +158,7 @@ void __hyp_text remap_vm_image(u32 vmid, u64 pfn, u32 load_idx)
         if (load_idx < load_info_cnt)
         {
             size = get_vm_load_size(vmid, load_idx);
-            //page_count = (size + PAGE_SIZE - 1UL) / PAGE_SIZE;
-            page_count = size_to_page_count(size);
+            page_count = (size + PAGE_SIZE - 1UL) / PAGE_SIZE;
             mapped = get_vm_mapped_pages(vmid, load_idx);
             remap_addr = get_vm_remap_addr(vmid, load_idx);
             target = remap_addr + mapped * PAGE_SIZE;
@@ -195,10 +188,10 @@ void __hyp_text verify_and_load_images(u32 vmid)
             remap_addr = get_vm_remap_addr(vmid, load_idx);
             mapped = get_vm_mapped_pages(vmid, load_idx);
             v_unmap_image_from_host_s2pt(vmid, remap_addr, mapped);
-            //valid = verify_image(vmid, remap_addr);
-            //if (valid == 1U) {
+            valid = verify_image(vmid, remap_addr);
+            if (valid == 1U) {
                 v_load_image_to_shadow_s2pt(vmid, load_addr, remap_addr, mapped);
-            //}*/
+            }
             load_idx += 1U;
         }
         set_vm_state(vmid, VERIFIED);
