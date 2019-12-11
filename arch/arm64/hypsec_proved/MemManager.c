@@ -60,11 +60,11 @@ void __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn)
      * There could be some other VCPU that has the faulted pfn
      * mapped and changed the owner before we come here.
      */
-    if ((owner == HOSTVISOR && count == 0U) || owner == vmid) {
+    if (owner == HOSTVISOR && count == 0U) {
         set_pfn_owner(pfn, 1UL, vmid);
         perm = pgprot_val(PAGE_GUEST);
         set_pfn_host(pfn, 1UL, 0UL, perm);
-    } else
+    } else if (owner != vmid)
         v_panic();
 
     release_lock_s2page();
