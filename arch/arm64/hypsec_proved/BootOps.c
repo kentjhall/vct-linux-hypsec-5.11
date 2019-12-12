@@ -84,7 +84,6 @@ u32 __hyp_text register_vcpu(u32 vmid, u32 vcpuid)
     }
     else {
         vcpu = get_shared_vcpu(vmid, vcpuid);
-	//vcpu = kern_hyp_va(vcpu);
         set_vm_vcpu(vmid, vcpuid, vcpu);
 	set_vcpu_state(vmid, vcpuid, READY);
         set_shadow_ctxt(vmid, vcpuid, V_DIRTY, INVALID64);
@@ -111,7 +110,6 @@ u32 __hyp_text register_kvm()
         else {
             set_vm_inc_exe(vmid, 0U);
             kvm = get_shared_kvm(vmid);
-	    //kvm = kern_hyp_va(kvm);
             set_vm_kvm(vmid, kvm);
             init_s2pt(vmid);
 	    map_vgic_to_vm(vmid);

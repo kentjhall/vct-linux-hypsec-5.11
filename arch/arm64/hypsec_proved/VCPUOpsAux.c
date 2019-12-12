@@ -9,8 +9,7 @@ extern void reset_fp_regs(u32 vmid, int vcpu_id);
 void __hyp_text reset_gp_regs(u32 vmid, u32 vcpuid)
 {
     u64 pc = get_int_pc(vmid, vcpuid), pstate;
-    //if (v_search_load_info(vmid, pc))
-    if (1)
+    if (v_search_load_info(vmid, pc))
     {
         clear_shadow_gp_regs(vmid, vcpuid);
         pstate = get_int_pstate(vmid, vcpuid);
@@ -144,7 +143,7 @@ void __hyp_text prep_abort(u32 vmid, u32 vcpuid)
 
 void __hyp_text v_hypsec_inject_undef(u32 vmid, u32 vcpuid)
 {
-    //set_shadow_dirty_bit(vmid, vcpuid, PENDING_UNDEF_INJECT, 1U);
+    set_shadow_dirty_bit(vmid, vcpuid, PENDING_UNDEF_INJECT);
 }
 
 void __hyp_text v_update_exception_gp_regs(u32 vmid, u32 vcpuid)
@@ -153,7 +152,7 @@ void __hyp_text v_update_exception_gp_regs(u32 vmid, u32 vcpuid)
     u64 pstate = get_shadow_ctxt(vmid, vcpuid, V_PSTATE);
     u64 pc = get_shadow_ctxt(vmid, vcpuid, V_PC);
     u64 new_pc = get_exception_vector(pstate);
-    //set_shadow_ctxt(vmid, vcpuid, V_ELR_EL1, pc);
+    set_shadow_ctxt(vmid, vcpuid, V_ELR_EL1, pc);
     set_shadow_ctxt(vmid, vcpuid, V_PC, new_pc);
     set_shadow_ctxt(vmid, vcpuid, V_PSTATE, PSTATE_FAULT_BITS_64);
     set_shadow_ctxt(vmid, vcpuid, V_SPSR_0, pstate);
