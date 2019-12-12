@@ -73,7 +73,6 @@ void __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn)
 extern void t_mmap_s2pt(phys_addr_t addr, u64 desc, int level, u32 vmid);
 void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 new_pte, u32 level, u32 exec)
 {
-    u32 vcpuid = get_cur_vcpu_id();
     u64 paddr = new_pte;
     u64 pte = 0, perm;
 
