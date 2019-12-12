@@ -43,11 +43,10 @@ u64 __hyp_text walk_npt(u32 vmid, u64 addr)
 
     if (vmid < COREVISOR) {
         vttbr = get_pt_vttbr(vmid);
-        pgd = walk_pgd(vmid, vttbr, addr, 0U);
     } else {
         vttbr = read_sysreg(ttbr0_el2);
-        pgd = walk_hyp_pgd(vmid, vttbr, addr, 0U);
     }
+    pgd = walk_pgd(vmid, vttbr, addr, 0U);
 
     pmd = walk_pmd(vmid, pgd, addr, 0U);
     if (v_pmd_table(pmd) == 0UL) {
@@ -66,11 +65,10 @@ void __hyp_text set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 
 	if (vmid < COREVISOR) {
 		vttbr = get_pt_vttbr(vmid);
-		pgd = walk_pgd(vmid, vttbr, addr, 1U);
 	} else {
 		vttbr = read_sysreg(ttbr0_el2);
-		pgd = walk_hyp_pgd(vmid, vttbr, addr, 1U);
 	}
+	pgd = walk_pgd(vmid, vttbr, addr, 1U);
 
 	if (level == 2U)
 	{
