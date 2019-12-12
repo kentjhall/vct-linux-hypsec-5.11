@@ -139,7 +139,6 @@ void init_npt(u32 vmid);
 u32 get_npt_level(u32 vmid, u64 addr);
 u64 walk_npt(u32 vmid, u64 addr);
 void set_npt(u32 vmid, u64 addr, u32 level, u64 pte);
-void set_el2pt(u64 addr, u32 level, u64 pte);
 
 /*
  * NPTOps
@@ -150,7 +149,6 @@ u64 get_vm_vttbr(u32 vmid);
 u32 get_level_s2pt(u32 vmid, u64 addr);
 u64 walk_s2pt(u32 vmid, u64 addr);
 void mmap_s2pt(u32 vmid, u64 addr, u32 level, u64 pte);
-void mmap_el2pt(u64 addr, u64 pte);
 void set_pfn_host(u64 gfn, u64 num, u64 pfn, u64 prot);
 
 /*
