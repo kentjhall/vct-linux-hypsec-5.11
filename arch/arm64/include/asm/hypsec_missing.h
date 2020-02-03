@@ -17,4 +17,3 @@ void el2_memset(void *b, int c, int len);
 void el2_memcpy(void *dest, void *src, size_t len);
 
 void reset_fp_regs(u32 vmid, int vcpu_id);
-void __hyp_text protect_el2_mem(void) {};

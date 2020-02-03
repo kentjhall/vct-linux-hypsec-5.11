@@ -41,11 +41,31 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 	return;
 }
 
+/*
+ * Since EL2 page tables were allocated in EL2, here we need to protect
+ * them by setting the ownership of the pages to HYPSEC_VMID. This allows
+ * the core to reject any following accesses from the host.
+ */
+static void __hyp_text protect_el2_mem(void)
+{
+	unsigned long addr, end, index;
+
+	/* Protect stage2 data and page pool. */
+	addr = __pa(kvm_ksym_ref(stage2_pgs_start));
+	end = __pa(kvm_ksym_ref(el2_data_end));
+	do {
+		index = get_s2_page_index(addr);
+		set_s2_page_vmid(index, COREVISOR);
+		addr += PAGE_SIZE;
+	} while (addr < end);
+}
+
 //TODO: Did we prove the following?
 static void __hyp_text hvc_enable_s2_trans(void)
 {
 	struct el2_data *el2_data;
 
+	acquire_lock_core();
 	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	if (!el2_data->installed) {
@@ -59,6 +79,7 @@ static void __hyp_text hvc_enable_s2_trans(void)
 	write_sysreg(HCR_HOST_NVHE_FLAGS, hcr_el2);
 	__kvm_flush_vm_context();
 
+	release_lock_core();
 	//self_test();
 }
 

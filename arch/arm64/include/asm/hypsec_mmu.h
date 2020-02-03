@@ -121,7 +121,6 @@ extern void el2_decrypt_buf(u32 vmid, void *buf, uint32_t len);
 extern void map_mem_el2(void);
 extern void __kvm_tlb_flush_vmid_ipa_shadow(phys_addr_t ipa);
 extern void hypsec_tlb_flush_local_vmid(void);
-extern void protect_el2_mem(void);
 
 int map_el2_mem(unsigned long start, unsigned long end,
 			    unsigned long pfn, pgprot_t prot);
