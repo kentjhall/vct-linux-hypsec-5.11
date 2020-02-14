@@ -203,6 +203,9 @@ void init_el2_data_page(void)
 		el2_data->per_cpu_data[i].vcpu_id = i;
 	}
 
+	el2_data->core_start = __pa(kvm_ksym_ref(stage2_pgs_start));
+	el2_data->core_end = __pa(kvm_ksym_ref(el2_data_end));
+
 	printk("%s reg size %lu 42\n", __func__, KVM_REGS_SIZE);
 	return;
 }

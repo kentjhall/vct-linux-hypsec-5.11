@@ -115,6 +115,8 @@ struct el2_data {
 	bool installed;
 
 	struct el2_per_cpu_data per_cpu_data[HYPSEC_MAX_CPUS];
+
+	unsigned long core_start, core_end;
 };
 
 void init_el2_data_page(void);

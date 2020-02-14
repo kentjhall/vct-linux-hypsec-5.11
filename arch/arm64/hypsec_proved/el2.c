@@ -49,10 +49,11 @@ void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
 static void __hyp_text protect_el2_mem(void)
 {
 	unsigned long addr, end, index;
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 
 	/* Protect stage2 data and page pool. */
-	addr = __pa(kvm_ksym_ref(stage2_pgs_start));
-	end = __pa(kvm_ksym_ref(el2_data_end));
+	addr = el2_data->core_start;
+	end =  el2_data->core_end;
 	do {
 		index = get_s2_page_index(addr);
 		set_s2_page_vmid(index, COREVISOR);
