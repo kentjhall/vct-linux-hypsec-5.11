@@ -7,7 +7,7 @@
 
 #define PT_POOL_START 0x10000
 #define PT_POOL_PER_VM STAGE2_VM_POOL_SIZE
-#define MAX_VM_NUM 256
+#define MAX_VM_NUM 33 
 #define MAX_CTXT_NUM 1024
 #define MAX_LOAD_INFO_NUM 1024
 /*
@@ -44,7 +44,7 @@
 #define S2_PTE_SHIFT PAGE_SHIFT
 #define PMD_TABLE_SHIFT PMD_SHIFT 
 
-#define COREVISOR 16
+#define COREVISOR EL2_MAX_VMID
 #define HOSTVISOR 0
 #define MAX_SHARE_COUNT 100
 #define UNUSED 0
@@ -102,7 +102,7 @@
 
 // Micros
 
-#define PT_POOL_SIZE (MAX_VM_NUM * PT_POOL_PER_VM)
+#define PT_POOL_SIZE (STAGE2_PAGES_SIZE)
 #define phys_page(addr) ((addr) & PHYS_MASK & PAGE_MASK)
 #define pgd_idx(addr)	stage2_pgd_index(addr)
 #define pmd_idx(addr)	pmd_index(addr)

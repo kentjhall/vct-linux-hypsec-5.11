@@ -117,7 +117,7 @@ void el2_shared_data_init(void)
 	shared_data = (void *)kvm_ksym_ref(shared_data_start);
 	memset(shared_data, 0, sizeof(struct shared_data));
 	printk("EL2: cleared %lx byte data size %lx\n",
-		sizeof(struct shared_data), PAGE_SIZE * (PAGE_SIZE * 64));
+		sizeof(struct shared_data), PAGE_SIZE * PAGE_SIZE * 16);
 }
 
 void init_el2_data_page(void)
@@ -165,26 +165,28 @@ void init_el2_data_page(void)
 
 	/* This guarantees all locks are initially zero. */
 	memset(el2_data->vm_info, 0,
-	       sizeof(struct el2_vm_info) * EL2_VM_INFO_SIZE);
-	el2_data->used_vm_info = 0;
+		sizeof(struct el2_vm_info) * EL2_VM_INFO_SIZE);
 	el2_data->last_remap_ptr = 0;
 
 	el2_data->vm_info[0].shadow_pt_lock.lock = 0;
 
-	//pool_start = el2_data->page_pool_start + STAGE2_CORE_PAGES_SIZE;
-	pool_start = el2_data->page_pool_start;
-	for (i = 0; i < EL2_VM_INFO_SIZE; i++) {
+	pool_start = el2_data->page_pool_start + STAGE2_CORE_PAGES_SIZE;
+	for (i = 0; i < EL2_VM_INFO_SIZE - 1; i++) {
 		el2_data->vm_info[i].page_pool_start =
 			pool_start + (STAGE2_VM_POOL_SIZE * i);
+		el2_data->vm_info[i].used_pages = 0;
 		memset(__va(el2_data->vm_info[i].page_pool_start), 0, STAGE2_VM_POOL_SIZE);
 	}
+
+	/* CORE POOL -> HOSTVISOR POOL -> VM POOL */
 	el2_data->vm_info[COREVISOR].page_pool_start =
-		pool_start + STAGE2_VM_POOL_SIZE * EL2_MAX_VMID;
+		el2_data->page_pool_start;
+	el2_data->vm_info[COREVISOR].used_pages = 0;
+
 
 	el2_data->host_vttbr = el2_data->vm_info[0].page_pool_start;
 	el2_data->vm_info[0].used_pages = 2;
 	el2_data->vm_info[0].vttbr = el2_data->host_vttbr;
-	printk("%s %llx\n", __func__, el2_data->host_vttbr);
 
 	memset(el2_data->smmu_cfg, 0,
 		sizeof(struct el2_smmu_cfg) * EL2_SMMU_CFG_SIZE);
@@ -206,7 +208,6 @@ void init_el2_data_page(void)
 	el2_data->core_start = __pa(kvm_ksym_ref(stage2_pgs_start));
 	el2_data->core_end = __pa(kvm_ksym_ref(el2_data_end));
 
-	printk("%s reg size %lu 42\n", __func__, KVM_REGS_SIZE);
 	return;
 }
 
@@ -264,7 +265,7 @@ phys_addr_t host_alloc_stage2_page(unsigned int num)
 	stage2_spin_lock(&el2_data->abs_lock);
 
 	/* Check if we're out of memory in the reserved area */
-	BUG_ON(el2_data->used_pages >= STAGE2_NUM_CORE_PAGES);
+	BUG_ON(el2_data->vm_info[COREVISOR].used_pages >= STAGE2_NUM_CORE_PAGES);
 
 	/* Start allocating memory from the normal page pool */
 	start = el2_data->vm_info[COREVISOR].page_pool_start;

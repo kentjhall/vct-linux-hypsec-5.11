@@ -248,7 +248,7 @@ SECTIONS
 
 	. = ALIGN(PAGE_SIZE);
 	el2_data_start = .;
-	. += PAGE_SIZE * (PAGE_SIZE * 12);
+	. += PAGE_SIZE * (PAGE_SIZE * 16);
 	el2_data_end = .;
 
 	shared_data_start = .;
