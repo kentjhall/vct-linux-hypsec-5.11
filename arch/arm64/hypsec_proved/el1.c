@@ -170,13 +170,17 @@ void init_el2_data_page(void)
 
 	el2_data->vm_info[0].shadow_pt_lock.lock = 0;
 
-	pool_start = el2_data->page_pool_start + STAGE2_CORE_PAGES_SIZE;
-	for (i = 0; i < EL2_VM_INFO_SIZE - 1; i++) {
+	pool_start = el2_data->page_pool_start + STAGE2_CORE_PAGES_SIZE + STAGE2_HOST_POOL_SIZE;
+	for (i = 1; i < EL2_VM_INFO_SIZE - 1; i++) {
 		el2_data->vm_info[i].page_pool_start =
-			pool_start + (STAGE2_VM_POOL_SIZE * i);
+			pool_start + (STAGE2_VM_POOL_SIZE * (i - 1));
 		el2_data->vm_info[i].used_pages = 0;
 		memset(__va(el2_data->vm_info[i].page_pool_start), 0, STAGE2_VM_POOL_SIZE);
 	}
+
+	el2_data->vm_info[HOSTVISOR].page_pool_start =
+		el2_data->page_pool_start + STAGE2_CORE_PAGES_SIZE;
+	el2_data->vm_info[HOSTVISOR].used_pages = 0;
 
 	/* CORE POOL -> HOSTVISOR POOL -> VM POOL */
 	el2_data->vm_info[COREVISOR].page_pool_start =

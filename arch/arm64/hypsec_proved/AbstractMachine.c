@@ -68,6 +68,8 @@ u64 __hyp_text pool_end(u32 vmid) {
 	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
 	if (vmid == COREVISOR)
 		return pool_start + STAGE2_CORE_PAGES_SIZE;
+	else if (vmid == HOSTVISOR)
+		return pool_start + STAGE2_CORE_PAGES_SIZE + STAGE2_HOST_POOL_SIZE;
 	return pool_start + PT_POOL_PER_VM;
 }
 
