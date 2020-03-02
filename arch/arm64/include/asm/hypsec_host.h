@@ -117,6 +117,9 @@ struct el2_data {
 	struct el2_per_cpu_data per_cpu_data[HYPSEC_MAX_CPUS];
 
 	unsigned long core_start, core_end;
+
+	uint64_t hacl_hash[80U];
+        uint32_t hacl_hash0[64U];
 };
 
 void init_el2_data_page(void);
@@ -245,4 +248,8 @@ void __vm_sysreg_save_state_nvhe(u32 vmid, u32 vcpuid);
 
 void v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
 void v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
+
+void init_hacl_hash(struct el2_data *el2_data);
+uint64_t get_hacl_hash_sha2_constant_k384_512(int i);
+uint32_t get_hacl_hash_sha2_constant_k224_256(int i);
 #endif /* __ARM_STAGE2_H__ */

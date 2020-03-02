@@ -22,3 +22,4 @@ obj-y += el1.o
 obj-y += el2.o
 #obj-y += mmap.o
 obj-y += sysreg-sr.o
+obj-y += hacl-20/
