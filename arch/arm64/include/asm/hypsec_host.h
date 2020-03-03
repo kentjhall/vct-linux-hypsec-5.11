@@ -120,6 +120,8 @@ struct el2_data {
 
 	uint64_t hacl_hash[80U];
         uint32_t hacl_hash0[64U];
+
+	uint8_t key[16];
 };
 
 void init_el2_data_page(void);

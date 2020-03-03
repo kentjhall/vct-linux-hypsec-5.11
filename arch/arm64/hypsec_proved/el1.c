@@ -109,7 +109,7 @@ static struct s2_sys_reg_desc host_sys_reg_descs[] = {
 };
 
 
-
+extern void test_aes(struct el2_data *el2_data);
 void el2_shared_data_init(void)
 {
 	struct el2_shared_data *shared_data;
@@ -213,6 +213,7 @@ void init_el2_data_page(void)
 	el2_data->core_end = __pa(kvm_ksym_ref(el2_data_end));
 
 	init_hacl_hash(el2_data);
+	//test_aes(el2_data);
 
 	return;
 }

@@ -3200,3 +3200,27 @@ Crypto_Symmetric_AES128_inv_cipher(uint8_t *out, uint8_t *input, uint8_t *w, uin
   el2_memcpy(out, state, (uint32_t)16U * sizeof (state[0U]));
 }
 
+#define AES_BLOCKLEN 16
+void __hyp_text AES_encrypt_buffer(uint8_t *out, uint8_t *in, uint8_t *key, uint32_t length)
+{
+        uint8_t sbox[256];
+        int i;
+        Crypto_Symmetric_AES_mk_sbox(sbox);
+        for (i = 0; i < length; i += AES_BLOCKLEN) {
+                Crypto_Symmetric_AES_cipher(out, in, key, sbox);
+                out += AES_BLOCKLEN;
+                in += AES_BLOCKLEN;
+        }
+}
+
+void __hyp_text AES_decrypt_buffer(uint8_t *out, uint8_t *in, uint8_t *key, uint32_t length)
+{
+        uint8_t sbox[256];
+        int i;
+        Crypto_Symmetric_AES_mk_inv_sbox(sbox);
+        for (i = 0; i < length; i += AES_BLOCKLEN) {
+                Crypto_Symmetric_AES_inv_cipher(out, in, key, sbox);
+                out += AES_BLOCKLEN;
+                in += AES_BLOCKLEN;
+        }
+}

@@ -70,8 +70,10 @@ Hacl_Hash_Core_SHA2_Constants_k384_512[80U] =
 
 void init_hacl_hash(struct el2_data *el2_data)
 {
+	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
 	memcpy(el2_data->hacl_hash0, Hacl_Hash_Core_SHA2_Constants_k224_256, sizeof(uint32_t)*64);
 	memcpy(el2_data->hacl_hash, Hacl_Hash_Core_SHA2_Constants_k384_512, sizeof(uint64_t)*80);
+	el2_memcpy(el2_data->key, key, 16);
 }
 
 uint32_t __hyp_text get_hacl_hash_sha2_constant_k224_256(int i)

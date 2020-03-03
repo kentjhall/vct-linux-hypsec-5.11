@@ -1,5 +1,6 @@
 #include "hypsec.h"
 #include "hacl-20/Hacl_Ed25519.h"
+#include "hacl-20/Hacl_AES.h"
 
 void __hyp_text v_panic(void) {
 	//__hyp_panic();
@@ -541,6 +542,50 @@ u32 __hyp_text verify_image(u32 vmid, u32 load_idx, u64 addr) {
     printhex_ul(result);
     return 1;
 }
+
+void dump_output(char *str, uint8_t *out, int len)
+{
+	int i;
+	unsigned s = 0;
+	printk("%s\n", str);
+	for (i = 0; i < len; i++) {
+		s = out[i];
+		printk("%x", s);
+	}
+	printk("\n");
+}
+
+void __hyp_text dump_output_el2(uint8_t *out, int len)
+{
+	int i;
+	unsigned long s = 0;
+	for (i = 0; i < len; i++) {
+		s = out[i];
+		printhex_ul(s);
+	}
+}
+
+void __hyp_text test_aes(struct el2_data *el2_data)
+{
+	uint8_t sbox[256];
+	uint8_t input[32] = { 0x10, 0x21, 0x32, 0x43, 0x54, 0x65, 0x76, 0x87, 0x98, 0xa9, 0xba, 0xcb, 0xdc, 0xed, 0xfe, 0x0f,
+		0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00};
+	uint8_t out[32], out1[32];
+
+	el2_memset(out, 0, sizeof(uint8_t) * 32);
+	el2_memset(out1, 0, sizeof(uint8_t) * 32);
+	//dump_output_el2(input, 16);
+	dump_output("plain", input, 32);
+	AES_encrypt_buffer(out, input, el2_data->key, 32);
+	//dump_output_el2(out, 16);
+	dump_output("crypt", out, 32);
+
+	el2_memset(sbox, 0, sizeof(uint8_t) * 32);
+	AES_decrypt_buffer(out1, out, el2_data->key, 32);
+	//dump_output_el2(out1, 16);
+	dump_output("decrypt", out1, 32);
+}
+
 #if 0
 void    int_to_shadow_decrypt(u32 vmid, u32 vcpuid);
 void    shadow_to_int_encrypt(u32 vmid, u32 vcpuid);

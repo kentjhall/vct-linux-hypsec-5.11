@@ -79,5 +79,8 @@ void Crypto_Symmetric_AES128_keyExpansion(uint8_t *key, uint8_t *w, uint8_t *sbo
 void
 Crypto_Symmetric_AES128_inv_cipher(uint8_t *out, uint8_t *input, uint8_t *w, uint8_t *sbox);
 
+void AES_encrypt_buffer(uint8_t *out, uint8_t *in, uint8_t *key, uint32_t length);
+void AES_decrypt_buffer(uint8_t *out, uint8_t *in, uint8_t *key, uint32_t length);
+
 #define __Hacl_AES_H_DEFINED
 #endif
