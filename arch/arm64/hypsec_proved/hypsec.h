@@ -34,7 +34,7 @@ void    v_panic(void);
 void    clear_phys_mem(u64 pfn);
 u64     get_shared_kvm(u32 vmid);
 u64     get_shared_vcpu(u32 vmid, u32 vcpuid);
-u32     verify_image(u32 vmid, u64 addr);
+u32     verify_image(u32 vmid, u32 load_idx, u64 addr);
 u64     get_sys_reg_desc_val(u32 index);
 u64     get_exception_vector(u64 pstate);
 
@@ -113,7 +113,11 @@ bool	get_int_writable(u32 vmid, u32 vcpuid);
 u32     get_shadow_esr(u32 vmid, u32 vcpuid);
 u32     get_int_esr(u32 vmid, u32 vcpuid);
 
-
+//for image verification
+uint8_t* get_vm_public_key(u32 vmid);
+void set_vm_public_key(u32 vmid);
+uint8_t* get_vm_load_signature(u32 vmid, u32 load_idx);
+void set_vm_load_signature(u32 vmid, u32 load_idx);
 /*
  * PTAlloc
  */
@@ -125,6 +129,7 @@ u64 alloc_s2pt_page(u32 vmid);
  */
 
 u64 walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc);
+u64 walk_pud(u32 vmid, u64 pgd, u64 addr, u32 alloc);
 u64 walk_pmd(u32 vmid, u64 pgd, u64 addr, u32 alloc);
 u64 walk_pte(u32 vmid, u64 pmd, u64 addr);
 void v_set_pmd(u32 vmid, u64 pgd, u64 addr, u64 pmd);

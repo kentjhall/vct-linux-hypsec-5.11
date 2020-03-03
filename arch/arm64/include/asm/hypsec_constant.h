@@ -105,6 +105,7 @@
 #define PT_POOL_SIZE (STAGE2_PAGES_SIZE)
 #define phys_page(addr) ((addr) & PHYS_MASK & PAGE_MASK)
 #define pgd_idx(addr)	stage2_pgd_index(addr)
+#define pud_idx(addr)	pud_index(addr)
 #define pmd_idx(addr)	pmd_index(addr)
 #define pte_idx(addr)	pte_index(addr)
 #define v_pmd_table(pmd)	((pmd & PMD_TYPE_MASK) == \

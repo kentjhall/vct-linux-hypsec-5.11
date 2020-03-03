@@ -25,6 +25,8 @@ u32 __hyp_text get_npt_level(u32 vmid, u64 addr)
     u64 pgd = walk_pgd(vmid, vttbr, addr, 0U);
     u64 pmd = walk_pmd(vmid, pgd, addr, 0U);
     u32 ret;
+    if (vmid == COREVISOR)
+        v_panic();
     if (v_pmd_table(pmd) == 0UL) {
         if (phys_page(pmd) == 0UL) ret = 0U;
         else ret = 2U;
@@ -39,7 +41,7 @@ u32 __hyp_text get_npt_level(u32 vmid, u64 addr)
 
 u64 __hyp_text walk_npt(u32 vmid, u64 addr)
 {
-    u64 vttbr, pgd, pmd, ret;
+    u64 vttbr, pgd, pud, pmd, ret;
 
     if (vmid < COREVISOR) {
         vttbr = get_pt_vttbr(vmid);
@@ -47,6 +49,11 @@ u64 __hyp_text walk_npt(u32 vmid, u64 addr)
         vttbr = read_sysreg(ttbr0_el2);
     }
     pgd = walk_pgd(vmid, vttbr, addr, 0U);
+
+    if (vmid == COREVISOR) {
+	pud = walk_pud(vmid, pgd, addr, 0U);
+	pgd = pud;
+    }
 
     pmd = walk_pmd(vmid, pgd, addr, 0U);
     if (v_pmd_table(pmd) == 0UL) {
@@ -61,7 +68,7 @@ u64 __hyp_text walk_npt(u32 vmid, u64 addr)
 
 void __hyp_text set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 {
-	u64 vttbr, pgd;
+	u64 vttbr, pgd, pud, pmd;
 
 	if (vmid < COREVISOR) {
 		vttbr = get_pt_vttbr(vmid);
@@ -76,12 +83,13 @@ void __hyp_text set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 	}
 	else
 	{
-		u64 pmd = walk_pmd(vmid, pgd, addr, 1U);
-		//if (v_pmd_table(pmd) == 0UL) {
+		if (vmid == COREVISOR) {
+			pud = walk_pud(vmid, pgd, addr, 1U);
+			pmd = walk_pmd(vmid, pud, addr, 1U);
 			v_set_pte(vmid, pmd, addr, pte);
-		//}
-		//else {
-		//	v_panic();
-		//}
+		} else {
+			pmd = walk_pmd(vmid, pgd, addr, 1U);
+			v_set_pte(vmid, pmd, addr, pte);
+		}
 	}
 }

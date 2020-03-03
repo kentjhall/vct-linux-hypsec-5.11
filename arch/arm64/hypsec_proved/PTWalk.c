@@ -26,6 +26,25 @@ u64 __hyp_text walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc)
     return ret;
 }
 
+u64 __hyp_text walk_pud(u32 vmid, u64 pgd, u64 addr, u32 alloc)
+{
+    u64 pgd_pa = phys_page(pgd);
+    u64 ret = 0UL;
+    if (pgd_pa != 0UL) {
+        u64 pud_idx = pud_idx(addr);
+        u64 pud = pt_load(vmid, pgd_pa + pud_idx * 8);
+        u64 pud_pa = phys_page(pud);
+        if (pud_pa == 0UL && alloc == 1U)
+        {
+            pud_pa = alloc_s2pt_page(vmid);
+            pud = pud_pa | PUD_TYPE_TABLE;
+            pt_store(vmid, pgd_pa + pud_idx * 8UL, pud);
+        }
+	ret = pud;
+    }
+    return ret;
+}
+
 u64 __hyp_text walk_pmd(u32 vmid, u64 pgd, u64 addr, u32 alloc)
 {
     u64 pgd_pa = phys_page(pgd);

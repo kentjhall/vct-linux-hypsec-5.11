@@ -113,6 +113,7 @@ u32 __hyp_text register_kvm()
             set_vm_kvm(vmid, kvm);
             init_s2pt(vmid);
 	    map_vgic_to_vm(vmid);
+	    set_vm_public_key(vmid);
             set_vm_state(vmid, READY);
         }
         release_lock_vm(vmid);
@@ -138,6 +139,7 @@ u32 __hyp_text set_boot_info(u32 vmid, u64 load_addr, u64 size)
             set_vm_load_size(vmid, load_idx, size);
             set_vm_remap_addr(vmid, load_idx, remap_addr);
             set_vm_mapped_pages(vmid, load_idx, 0U);
+	    set_vm_load_signature(vmid, load_idx);
         }
     }
     release_lock_vm(vmid);
@@ -186,7 +188,7 @@ void __hyp_text verify_and_load_images(u32 vmid)
             remap_addr = get_vm_remap_addr(vmid, load_idx);
             mapped = get_vm_mapped_pages(vmid, load_idx);
             v_unmap_image_from_host_s2pt(vmid, remap_addr, mapped);
-            valid = verify_image(vmid, remap_addr);
+            valid = verify_image(vmid, load_idx, remap_addr);
             if (valid == 1U) {
                 v_load_image_to_shadow_s2pt(vmid, load_addr, remap_addr, mapped);
             }

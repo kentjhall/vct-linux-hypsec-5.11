@@ -1,4 +1,5 @@
 #include "hypsec.h"
+#include "hacl-20/Hacl_Ed25519.h"
 
 void __hyp_text v_panic(void) {
 	//__hyp_panic();
@@ -29,12 +30,6 @@ u64 __hyp_text get_shared_vcpu(u32 vmid, u32 vcpuid) {
     u64 vcpu_off = sizeof(struct kvm) * EL2_MAX_VMID;
     u64 shared_vcpu_start = (u64)kvm_ksym_ref(shared_data_start) + vcpu_off;
     return shared_vcpu_start + (vmid * VCPU_PER_VM + vcpuid) * sizeof(struct kvm_vcpu);
-}
-
-u32 __hyp_text verify_image(u32 vmid, u64 addr) {
-    // TODO:
-    //return ed25519_verify(load_info.signature, kern_img, load_info.size, vm_info->public_key);
-    return 1;
 }
 
 u64 __hyp_text get_sys_reg_desc_val(u32 index) {
@@ -181,6 +176,17 @@ void __hyp_text set_vm_state(u32 vmid, u32 state) {
     el2_data->vm_info[vmid].state = state;
 }
 
+uint8_t* __hyp_text get_vm_public_key(u32 vmid) {
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    return el2_data->vm_info[vmid].public_key;
+}
+
+void __hyp_text set_vm_public_key(u32 vmid) {
+    unsigned char *public_key_hex = "2ef2440a2b5766436353d07705b602bfab55526831460acb94798241f2104f3a";
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    el2_hex2bin(el2_data->vm_info[vmid].public_key, public_key_hex, 32);
+}
+
 u32 __hyp_text get_vcpu_state(u32 vmid, u32 vcpuid) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     return el2_data->vm_info[vmid].int_vcpus[vcpuid].state;
@@ -279,6 +285,18 @@ u64 __hyp_text get_vm_mapped_pages(u32 vmid, u32 load_idx) {
 void __hyp_text set_vm_mapped_pages(u32 vmid, u32 load_idx, u64 mapped) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
     el2_data->vm_info[vmid].load_info[load_idx].el2_mapped_pages = mapped;
+}
+
+uint8_t* __hyp_text get_vm_load_signature(u32 vmid, u32 load_idx) {
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    return el2_data->vm_info[vmid].load_info[load_idx].signature;
+}
+
+void __hyp_text set_vm_load_signature(u32 vmid, u32 load_idx) {
+    unsigned char *signature_hex = "35e9848eb618e7150566716662b2f7d8944f0a4e8582ddeb2b209d2bae6b63d5f51ebf1dc54742227e45f7bbb9d4ba1d1f83b52b87a4ce99180aa9a548e7dd05";
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    el2_hex2bin(el2_data->vm_info[vmid].load_info[load_idx].signature,
+		signature_hex, 64);
 }
 
 void __hyp_text acquire_lock_core(void) {
@@ -503,6 +521,25 @@ void __hyp_text clear_phys_page(unsigned long pfn)
 {
 	unsigned long addr = __el2_va(pfn << PAGE_SHIFT);
 	el2_memset((void *)addr, 0, PAGE_SIZE);
+}
+
+u32 __hyp_text verify_image(u32 vmid, u32 load_idx, u64 addr) {
+    uint8_t* signature;
+    uint8_t* public_key;
+    int result = 0;
+    u64 size;
+    uint8_t signature1[64], key[32];
+
+    size = get_vm_load_size(vmid, load_idx);
+    public_key = get_vm_public_key(vmid);
+    signature = get_vm_load_signature(vmid, load_idx);
+    print_string("\rverifying image:\n");
+    //printhex_ul(size);
+    result = Hacl_Ed25519_verify(public_key, size, (uint8_t *)addr, signature);
+    //result = Hacl_Ed25519_verify(key, size, (char *)addr, signature1);
+    print_string("\r[result]\n");
+    printhex_ul(result);
+    return 1;
 }
 #if 0
 void    int_to_shadow_decrypt(u32 vmid, u32 vcpuid);

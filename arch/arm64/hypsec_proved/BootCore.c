@@ -25,6 +25,7 @@ u64 __hyp_text alloc_remap_addr(u64 pgnum)
     acquire_lock_core();
     remap = get_next_remap_ptr();
     set_next_remap_ptr(remap + pgnum * PAGE_SIZE);
+    remap += EL2_REMAP_START;
     release_lock_core();
     return remap;
 }
