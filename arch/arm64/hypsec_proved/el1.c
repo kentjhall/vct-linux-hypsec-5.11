@@ -18,6 +18,8 @@
 #include <asm/spinlock_types.h>
 #include <linux/serial_reg.h>
 
+#include "hypsec.h"
+
 //hypsec_host.c
 #define Op0(_x) 	.Op0 = _x
 #define Op1(_x) 	.Op1 = _x
@@ -109,7 +111,6 @@ static struct s2_sys_reg_desc host_sys_reg_descs[] = {
 };
 
 
-extern void test_aes(struct el2_data *el2_data);
 void el2_shared_data_init(void)
 {
 	struct el2_shared_data *shared_data;

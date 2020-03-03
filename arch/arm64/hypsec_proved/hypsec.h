@@ -113,6 +113,8 @@ bool	get_int_writable(u32 vmid, u32 vcpuid);
 u32     get_shadow_esr(u32 vmid, u32 vcpuid);
 u32     get_int_esr(u32 vmid, u32 vcpuid);
 
+extern void test_aes(struct el2_data *el2_data);
+
 //for image verification
 uint8_t* get_vm_public_key(u32 vmid);
 void set_vm_public_key(u32 vmid);
