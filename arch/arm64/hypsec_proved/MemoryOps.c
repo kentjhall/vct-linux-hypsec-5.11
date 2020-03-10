@@ -57,8 +57,13 @@ void __hyp_text v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
     while (len > 0UL)
     {
         u64 pte = walk_s2pt(vmid, addr);
-        u32 level = get_level_s2pt(vmid, addr);
+	u32 level = 0;
         u64 pte_pa = phys_page(pte);
+	if (pte & PMD_MARK)
+		level = 2;
+	else if (pte & PTE_MARK)
+		level = 3;
+
         if (pte_pa != 0UL)
         {
             u64 pfn = pte_pa / PAGE_SIZE;
@@ -81,8 +86,12 @@ void __hyp_text v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
     while (len > 0UL)
     {
         u64 pte = walk_s2pt(vmid, addr);
-        u32 level = get_level_s2pt(vmid, addr);
+	u32 level = 0;
         u64 pte_pa = phys_page(pte);
+	if (pte & PMD_MARK)
+		level = 2;
+	else if (pte & PTE_MARK)
+		level = 3;
         if (pte_pa != 0UL)
         {
             u64 pfn = pte_pa / PAGE_SIZE;

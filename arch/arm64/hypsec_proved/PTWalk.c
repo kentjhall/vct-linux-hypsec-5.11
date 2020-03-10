@@ -79,6 +79,7 @@ void __hyp_text v_set_pmd(u32 vmid, u64 pgd, u64 addr, u64 pmd)
 {
     u64 pgd_pa = phys_page(pgd);
     u64 pmd_idx = pmd_idx(addr);
+    pmd |= PMD_MARK;
     pt_store(vmid, pgd_pa + pmd_idx * 8UL, pmd);
 }
 
@@ -86,5 +87,6 @@ void __hyp_text v_set_pte(u32 vmid, u64 pmd, u64 addr, u64 pte)
 {
     	u64 pmd_pa = phys_page(pmd);
     	u64 pte_idx = pte_idx(addr);
+	pte |= PTE_MARK;
     	pt_store(vmid, pmd_pa + pte_idx * 8UL, pte);
 }
