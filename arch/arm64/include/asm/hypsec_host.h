@@ -7,6 +7,7 @@
 #include <asm/hypsec_mmu.h>
 #include <asm/hypsec_vcpu.h>
 #include <asm/hypsec_mmio.h>
+#include <asm/kvm_mmu.h>
 
 /* Handler for ACTLR_EL1 is not defined */
 #define SHADOW_SYS_REGS_SIZE		(DISR_EL1)
@@ -243,7 +244,16 @@ void    set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value);
 
 void save_shadow_kvm_regs(void);
 void restore_shadow_kvm_regs(void);
-u64 get_pt_vttbr(u32 vmid);
+
+static u64 inline get_pt_vttbr(u32 vmid) {
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    return el2_data->vm_info[vmid].vttbr;
+};
+
+static void inline set_pt_vttbr(u32 vmid, u64 vttbr) {
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    el2_data->vm_info[vmid].vttbr = vttbr;
+};
 
 void __vm_sysreg_restore_state_nvhe(u32 vmid, u32 vcpuid);
 void __vm_sysreg_save_state_nvhe(u32 vmid, u32 vcpuid);
