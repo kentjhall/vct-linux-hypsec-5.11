@@ -209,6 +209,10 @@ void save_encrypted_vcpu(struct kvm_vcpu *vcpu);
 //				unsigned long pgnum, u32 vmid);
 
 extern phys_addr_t host_alloc_stage2_page(unsigned int num);
+extern phys_addr_t host_alloc_pgd(unsigned int num);
+extern phys_addr_t host_alloc_pud(unsigned int num);
+extern phys_addr_t host_alloc_pmd(unsigned int num);
+extern phys_addr_t host_alloc_pte(unsigned int num);
 extern void init_hypsec_io(void);
 
 /* VM Bootstrap */

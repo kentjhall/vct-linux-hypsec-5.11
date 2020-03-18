@@ -121,6 +121,10 @@ void el2_shared_data_init(void)
 		sizeof(struct shared_data), PAGE_SIZE * PAGE_SIZE * 16);
 }
 
+#define CORE_PUD_BASE PAGE_SIZE
+#define CORE_PMD_BASE (CORE_PUD_BASE + (PAGE_SIZE * 16))
+#define CORE_PTE_BASE SZ_2M
+#define CORE_PGD_START	(8 * PAGE_SIZE * PAGE_SIZE) 
 void init_el2_data_page(void)
 {
 	int i = 0, index = 0;
@@ -185,7 +189,7 @@ void init_el2_data_page(void)
 
 	/* CORE POOL -> HOSTVISOR POOL -> VM POOL */
 	el2_data->vm_info[COREVISOR].page_pool_start =
-		el2_data->page_pool_start;
+		el2_data->page_pool_start + CORE_PGD_START;
 	el2_data->vm_info[COREVISOR].used_pages = 0;
 
 
@@ -273,10 +277,11 @@ phys_addr_t host_alloc_stage2_page(unsigned int num)
 	stage2_spin_lock(&el2_data->abs_lock);
 
 	/* Check if we're out of memory in the reserved area */
-	BUG_ON(el2_data->vm_info[COREVISOR].used_pages >= STAGE2_NUM_CORE_PAGES);
+	BUG_ON(el2_data->vm_info[COREVISOR].used_pages >= (CORE_PGD_START >> PAGE_SHIFT));
 
 	/* Start allocating memory from the normal page pool */
-	start = el2_data->vm_info[COREVISOR].page_pool_start;
+	//start = el2_data->vm_info[COREVISOR].page_pool_start;
+	start = el2_data->page_pool_start;
 	used_pages = el2_data->vm_info[COREVISOR].used_pages;
 	p_addr = (u64)start + (PAGE_SIZE * used_pages);
 
@@ -289,6 +294,80 @@ phys_addr_t host_alloc_stage2_page(unsigned int num)
 	}
 
 	el2_data->vm_info[COREVISOR].used_pages += num;
+
+	stage2_spin_unlock(&el2_data->abs_lock);
+	return (phys_addr_t)p_addr;
+}
+
+phys_addr_t host_alloc_pgd(unsigned int num)
+{
+	u64 p_addr, start;
+	struct el2_data *el2_data;
+
+	el2_data = kvm_ksym_ref(el2_data_start);
+	stage2_spin_lock(&el2_data->abs_lock);
+
+	/* Start allocating memory from the normal page pool */
+	start = el2_data->vm_info[COREVISOR].page_pool_start;
+	p_addr = (u64)start;
+
+	stage2_spin_unlock(&el2_data->abs_lock);
+	return (phys_addr_t)p_addr;
+}
+
+phys_addr_t host_alloc_pud(unsigned int num)
+{
+	u64 p_addr, start, used_pages;
+	struct el2_data *el2_data;
+
+	el2_data = kvm_ksym_ref(el2_data_start);
+	stage2_spin_lock(&el2_data->abs_lock);
+
+	/* Start allocating memory from the normal page pool */
+	start = el2_data->vm_info[COREVISOR].page_pool_start;
+	used_pages = el2_data->vm_info[COREVISOR].pud_used_pages;
+	p_addr = (u64)start + (PAGE_SIZE * used_pages) + CORE_PUD_BASE;
+
+	el2_data->vm_info[COREVISOR].pud_used_pages += num;
+
+	stage2_spin_unlock(&el2_data->abs_lock);
+	return (phys_addr_t)p_addr;
+}
+
+
+phys_addr_t host_alloc_pmd(unsigned int num)
+{
+	u64 p_addr, start, used_pages;
+	struct el2_data *el2_data;
+
+	el2_data = kvm_ksym_ref(el2_data_start);
+	stage2_spin_lock(&el2_data->abs_lock);
+
+	/* Start allocating memory from the normal page pool */
+	start = el2_data->vm_info[COREVISOR].page_pool_start;
+	used_pages = el2_data->vm_info[COREVISOR].pmd_used_pages;
+	p_addr = (u64)start + (PAGE_SIZE * used_pages) + CORE_PMD_BASE;
+
+	el2_data->vm_info[COREVISOR].pmd_used_pages += num;
+
+	stage2_spin_unlock(&el2_data->abs_lock);
+	return (phys_addr_t)p_addr;
+}
+
+phys_addr_t host_alloc_pte(unsigned int num)
+{
+	u64 p_addr, start, used_pages;
+	struct el2_data *el2_data;
+
+	el2_data = kvm_ksym_ref(el2_data_start);
+	stage2_spin_lock(&el2_data->abs_lock);
+
+	/* Start allocating memory from the normal page pool */
+	start = el2_data->vm_info[COREVISOR].page_pool_start;
+	used_pages = el2_data->vm_info[COREVISOR].pte_used_pages;
+	p_addr = (u64)start + (PAGE_SIZE * used_pages) + CORE_PTE_BASE;
+
+	el2_data->vm_info[COREVISOR].pte_used_pages += num;
 
 	stage2_spin_unlock(&el2_data->abs_lock);
 	return (phys_addr_t)p_addr;

@@ -642,7 +642,7 @@ static int create_hyp_pmd_mappings(pud_t *pud, unsigned long start,
 #ifndef CONFIG_VERIFIED_KVM
 			pte = pte_alloc_one_kernel(NULL, addr);
 #else
-			pte = phys_to_virt(host_alloc_stage2_page(1));
+			pte = phys_to_virt(host_alloc_pte(1));
 #endif
 			if (!pte) {
 				kvm_err("Cannot allocate Hyp pte\n");
@@ -679,7 +679,7 @@ static int create_hyp_pud_mappings(pgd_t *pgd, unsigned long start,
 #ifndef CONFIG_VERIFIED_KVM
 			pmd = pmd_alloc_one(NULL, addr);
 #else
-			pmd = phys_to_virt(host_alloc_stage2_page(1));
+			pmd = phys_to_virt(host_alloc_pmd(1));
 #endif
 			if (!pmd) {
 				kvm_err("Cannot allocate Hyp pmd\n");
@@ -719,7 +719,7 @@ static int __create_hyp_mappings(pgd_t *pgdp, unsigned long ptrs_per_pgd,
 #ifndef CONFIG_VERIFIED_KVM
 			pud = pud_alloc_one(NULL, addr);
 #else
-			pud = phys_to_virt(host_alloc_stage2_page(1));
+			pud = phys_to_virt(host_alloc_pud(1));
 #endif
 			if (!pud) {
 				kvm_err("Cannot allocate Hyp pud\n");
@@ -2070,7 +2070,7 @@ int kvm_mmu_init(void)
 	hyp_pgd = (pgd_t *)__get_free_pages(GFP_KERNEL | __GFP_ZERO, hyp_pgd_order);
 #else
 	pgnum = (PTRS_PER_PGD * sizeof(pgd_t)) / PAGE_SIZE;
-	hyp_pgd = phys_to_virt(host_alloc_stage2_page(pgnum));
+	hyp_pgd = phys_to_virt(host_alloc_pgd(pgnum));
 #endif
 	if (!hyp_pgd) {
 		kvm_err("Hyp mode PGD not allocated\n");
