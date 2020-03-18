@@ -71,22 +71,22 @@ void    set_pt_vttbr(u32 vmid, u64 vttbr);
 */
 
 static void inline acquire_lock_pt(u32 vmid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     stage2_spin_lock(&el2_data->vm_info[vmid].shadow_pt_lock);
 };
 
 static void inline release_lock_pt(u32 vmid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     stage2_spin_unlock(&el2_data->vm_info[vmid].shadow_pt_lock);
 };
 
 static u64 inline pool_start(u32 vmid) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+        struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	return el2_data->vm_info[vmid].page_pool_start;
 }
 
 static u64 inline pool_end(u32 vmid) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
 	if (vmid == COREVISOR)
 		return pool_start + STAGE2_CORE_PAGES_SIZE;
@@ -96,14 +96,14 @@ static u64 inline pool_end(u32 vmid) {
 }
 
 static u64 inline get_pt_next(u32 vmid) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
 	u64 used_pages = el2_data->vm_info[vmid].used_pages;
 	return pool_start + used_pages * PAGE_SIZE;
 };
 
 static void inline set_pt_next(u32 vmid, u64 next) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	el2_data->vm_info[vmid].used_pages += next;
 };
 
@@ -127,26 +127,26 @@ u64     get_mem_region_index(u32 index);
 u64     get_mem_region_flag(u32 index);
 */
 static u32 inline get_mem_region_cnt(void) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	return el2_data->regions_cnt;
 }
 
 static u64 inline get_mem_region_base(u32 index) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	return el2_data->regions[index].base;
 }
 static u64 inline get_mem_region_size(u32 index) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	return el2_data->regions[index].size;
 }
 
 static u64 inline get_mem_region_index(u32 index) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	return el2_data->s2_memblock_info[index].index;
 }
 
 static u64 inline get_mem_region_flag(u32 index) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	return el2_data->regions[index].flags;
 }
 
@@ -160,32 +160,32 @@ void    set_s2_page_count(u64 index, u32 count);
 */
 
 static void inline acquire_lock_s2page(void) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     stage2_spin_lock(&el2_data->s2pages_lock);
 }
 
 static void inline release_lock_s2page(void) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     stage2_spin_unlock(&el2_data->s2pages_lock);
 }
 
 static u32 inline get_s2_page_vmid(u64 index) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     return el2_data->s2_pages[index].vmid;
 }
 
 static void inline set_s2_page_vmid(u64 index, u32 vmid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     el2_data->s2_pages[index].vmid = vmid;
 }
 
 static u32 inline get_s2_page_count(u64 index) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     return el2_data->s2_pages[index].count;
 }
 
 static void inline set_s2_page_count(u64 index, u32 count) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     el2_data->s2_pages[index].count = count;
 }
 
@@ -216,77 +216,77 @@ u64     get_vm_mapped_pages(u32 vmid, u32 load_idx);
 void    set_vm_mapped_pages(u32 vmid, u32 load_idx, u64 mapped);
 */
 static void inline acquire_lock_vm(u32 vmid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     stage2_spin_lock(&el2_data->vm_info[vmid].vm_lock);
 }
 
 static void inline release_lock_vm(u32 vmid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     stage2_spin_unlock(&el2_data->vm_info[vmid].vm_lock);
 }
 
 static u32 inline get_vm_state(u32 vmid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     return el2_data->vm_info[vmid].state;
 }
 
 static void inline set_vm_state(u32 vmid, u32 state) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     el2_data->vm_info[vmid].state = state;
 }
 
 static u32 inline get_vcpu_state(u32 vmid, u32 vcpuid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     return el2_data->vm_info[vmid].int_vcpus[vcpuid].state;
 }
 
 static void inline set_vcpu_state(u32 vmid, u32 vcpuid, u32 state) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     el2_data->vm_info[vmid].int_vcpus[vcpuid].state = state;
 }
 
 static void inline set_vm_power(u32 vmid, u32 power) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     el2_data->vm_info[vmid].powered_on = power;
 }
 
 static u32 inline get_vm_power(u32 vmid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     return el2_data->vm_info[vmid].powered_on;
 }
 
 static u32 inline get_vm_inc_exe(u32 vmid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     return el2_data->vm_info[vmid].inc_exe;
 }
 
 static void inline set_vm_inc_exe(u32 vmid, u32 inc_exe) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     el2_data->vm_info[vmid].inc_exe = inc_exe;
 }
 
 static u64 inline get_vm_kvm(u32 vmid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     return (u64)el2_data->vm_info[vmid].kvm;
 }
 
 static void inline set_vm_kvm(u32 vmid, u64 kvm) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     el2_data->vm_info[vmid].kvm = (struct kvm*)kvm;
 }
 
 static u64 inline get_vm_vcpu(u32 vmid, u32 vcpuid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     return (u64)el2_data->vm_info[vmid].int_vcpus[vcpuid].vcpu;
 }
 
 static void inline set_vm_vcpu(u32 vmid, u32 vcpuid, u64 vcpu) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     el2_data->vm_info[vmid].int_vcpus[vcpuid].vcpu = (struct kvm_vcpu*)vcpu;
 }
 
 static u32 inline get_vm_next_load_idx(u32 vmid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     return el2_data->vm_info[vmid].load_info_cnt;
 }
 
@@ -344,12 +344,12 @@ u64     get_next_remap_ptr(void);
 void    set_next_remap_ptr(u64 remap);
 */
 static void inline acquire_lock_core(void) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     stage2_spin_lock(&el2_data->abs_lock);
 }
 
 static void inline release_lock_core(void) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     stage2_spin_unlock(&el2_data->abs_lock);
 }
 
@@ -427,13 +427,13 @@ void    shadow_to_int_encrypt(u32 vmid, u32 vcpuid);
 //u32     get_shadow_dirty_bit(u32 vmid, u32 vcpuid);
 //void    set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value);
 static u32 inline get_shadow_dirty_bit(u32 vmid, u32 vcpuid) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	return el2_data->shadow_vcpu_ctxt[offset].dirty;
 }
 
 static void inline set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	if (value)
 		el2_data->shadow_vcpu_ctxt[offset].dirty |= value;
@@ -474,7 +474,7 @@ static u32 inline get_int_new_level(u32 vmid, u32 vcpuid) {
 //u32     get_int_esr(u32 vmid, u32 vcpuid);
 
 static u32 inline get_shadow_esr(u32 vmid, u32 vcpuid) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	return el2_data->shadow_vcpu_ctxt[offset].esr;
 }

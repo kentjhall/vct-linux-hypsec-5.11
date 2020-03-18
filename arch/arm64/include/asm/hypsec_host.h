@@ -244,14 +244,14 @@ void set_per_cpu(int vmid, int vcpu_id);
 //int get_cur_vcpu_id(void);
 static int inline get_cur_vmid(void)
 {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+        struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
 	return el2_data->per_cpu_data[pcpuid].vmid;
 };
 
 static int inline get_cur_vcpu_id(void)
 {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+        struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
 	return el2_data->per_cpu_data[pcpuid].vcpu_id;
 };
@@ -259,7 +259,7 @@ static int inline get_cur_vcpu_id(void)
 
 static u64 inline get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index)
 {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+        struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	u64 val;
 	if (index < V_FAR_EL2)
@@ -289,7 +289,7 @@ static u64 inline get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index)
 
 //TODO: Define the following
 static void inline set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+        struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	//el2_data->shadow_vcpu_ctxt[offset].regs[index] = value;
 	if (index < V_FAR_EL2)
@@ -317,12 +317,12 @@ void save_shadow_kvm_regs(void);
 void restore_shadow_kvm_regs(void);
 
 static u64 inline get_pt_vttbr(u32 vmid) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     return el2_data->vm_info[vmid].vttbr;
 };
 
 static void inline set_pt_vttbr(u32 vmid, u64 vttbr) {
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     el2_data->vm_info[vmid].vttbr = vttbr;
 };
 
