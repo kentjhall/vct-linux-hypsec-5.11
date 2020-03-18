@@ -119,6 +119,68 @@ static void inline pt_store(u32 vmid, u64 addr, u64 value) {
 	*ptr = value;
 };
 
+/* for split PT pool */
+#define PUD_BASE PAGE_SIZE
+#define PMD_BASE (PUD_BASE + (PAGE_SIZE * 16))
+#define PTE_BASE SZ_2M
+static u64 inline get_pud_next(u32 vmid) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
+	u64 used_pages = el2_data->vm_info[vmid].pud_used_pages;
+	return pool_start + (used_pages * PAGE_SIZE) + PUD_BASE;
+};
+
+static void inline set_pud_next(u32 vmid, u64 next) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	el2_data->vm_info[vmid].pud_used_pages += next;
+};
+
+static u64 inline get_pmd_next(u32 vmid) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
+	u64 used_pages = el2_data->vm_info[vmid].pmd_used_pages;
+	return pool_start + (used_pages * PAGE_SIZE) + PMD_BASE;
+};
+
+static void inline set_pmd_next(u32 vmid, u64 next) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	el2_data->vm_info[vmid].pmd_used_pages += next;
+};
+
+static u64 inline get_pte_next(u32 vmid) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
+	u64 used_pages = el2_data->vm_info[vmid].pte_used_pages;
+	return pool_start + (used_pages * PAGE_SIZE) + PTE_BASE;
+};
+
+static void inline set_pte_next(u32 vmid, u64 next) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	el2_data->vm_info[vmid].pte_used_pages += next;
+};
+
+static u64 inline pud_pool_end(u32 vmid) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
+	return pool_start + PMD_BASE;
+}
+
+static u64 inline pmd_pool_end(u32 vmid) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
+	return pool_start + PTE_BASE;
+}
+
+static u64 inline pte_pool_end(u32 vmid) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
+	if (vmid == COREVISOR)
+		return pool_start + STAGE2_CORE_PAGES_SIZE;
+	else if (vmid == HOSTVISOR)
+		return pool_start + STAGE2_CORE_PAGES_SIZE + STAGE2_HOST_POOL_SIZE;
+	return pool_start + PT_POOL_PER_VM;
+}
+
 /*
 u32     get_mem_region_cnt(void);
 u64     get_mem_region_base(u32 index);
@@ -501,6 +563,9 @@ void set_vm_load_signature(u32 vmid, u32 load_idx);
  */
 
 u64 alloc_s2pt_page(u32 vmid);
+u64 alloc_s2pt_pud(u32 vmid);
+u64 alloc_s2pt_pmd(u32 vmid);
+u64 alloc_s2pt_pte(u32 vmid);
 
 /*
  * PTWalk
