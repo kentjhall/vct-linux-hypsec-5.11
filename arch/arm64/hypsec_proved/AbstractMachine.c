@@ -20,71 +20,9 @@ void __hyp_text clear_phys_mem(u64 pfn) {
     el2_memset((void *)kern_hyp_va(pfn << PAGE_SHIFT), 0, PAGE_SIZE);
 }
 
-u64 __hyp_text get_shared_kvm(u32 vmid) {
-    //return SHARED_KVM_START + vmid * sizeof(struct kvm);
-    u64 shared_kvm_start = (u64)kvm_ksym_ref(shared_data_start);
-    return shared_kvm_start + vmid * sizeof(struct kvm);
-}
-
-u64 __hyp_text get_shared_vcpu(u32 vmid, u32 vcpuid) {
-    //return SHARED_VCPU_START + (vmid * VCPU_PER_VM + vcpuid) * sizeof(struct kvm_vcpu);
-    u64 vcpu_off = sizeof(struct kvm) * EL2_MAX_VMID;
-    u64 shared_vcpu_start = (u64)kvm_ksym_ref(shared_data_start) + vcpu_off;
-    return shared_vcpu_start + (vmid * VCPU_PER_VM + vcpuid) * sizeof(struct kvm_vcpu);
-}
-
-u64 __hyp_text get_sys_reg_desc_val(u32 index) {
-    // TODO
-    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    return el2_data->s2_sys_reg_descs[index].val;
-}
-
 u64 __hyp_text get_exception_vector(u64 pstate) {
     // TODO
 	return 0;
-}
-
-int __hyp_text __hyp_text get_cur_vmid(void)
-{
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
-	return el2_data->per_cpu_data[pcpuid].vmid;
-};
-
-int __hyp_text get_cur_vcpu_id(void)
-{
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
-	return el2_data->per_cpu_data[pcpuid].vcpu_id;
-};
-
-u64 __hyp_text get_int_gpr(u32 vmid, u32 vcpuid, u32 index) {
-	struct shared_data *shared_data;
-	int offset = VCPU_IDX(vmid, vcpuid);
-	struct kvm_vcpu *vcpu;
-	if (index >= 32)
-		__hyp_panic();
-	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
-	vcpu = &shared_data->vcpu_pool[offset];
-	return vcpu->arch.ctxt.gp_regs.regs.regs[index];
-}
-
-u64 __hyp_text get_int_pc(u32 vmid, u32 vcpuid) {
-	struct shared_data *shared_data;
-	int offset = VCPU_IDX(vmid, vcpuid);
-	struct kvm_vcpu *vcpu;
-	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
-	vcpu = &shared_data->vcpu_pool[offset];
-	return vcpu->arch.ctxt.gp_regs.regs.pc;
-}
-
-u64 __hyp_text get_int_pstate(u32 vmid, u32 vcpuid) {
-	struct shared_data *shared_data;
-	int offset = VCPU_IDX(vmid, vcpuid);
-	struct kvm_vcpu *vcpu;
-	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
-	vcpu = &shared_data->vcpu_pool[offset];
-	return vcpu->arch.ctxt.gp_regs.regs.pstate;
 }
 
 uint8_t* __hyp_text get_vm_public_key(u32 vmid) {
@@ -110,88 +48,6 @@ void __hyp_text set_vm_load_signature(u32 vmid, u32 load_idx) {
 		signature_hex, 64);
 }
 
-void __hyp_text set_int_gpr(u32 vmid, u32 vcpuid, u32 index, u64 value) {
-       struct shared_data *shared_data;
-       int offset = VCPU_IDX(vmid, vcpuid);
-       struct kvm_vcpu *vcpu;
-       if (index >= 32)
-               __hyp_panic();
-       shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
-       vcpu = &shared_data->vcpu_pool[offset];
-       vcpu->arch.ctxt.gp_regs.regs.regs[index] = value;
-}
-
-u64 __hyp_text get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index)
-{
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	int offset = VCPU_IDX(vmid, vcpuid);
-	u64 val;
-	if (index < V_FAR_EL2)
-		val = el2_data->shadow_vcpu_ctxt[offset].regs[index]; 
-	else if (index == V_FAR_EL2)
-		val = el2_data->shadow_vcpu_ctxt[offset].far_el2;
-	else if (index == V_HPFAR_EL2)
-		val = el2_data->shadow_vcpu_ctxt[offset].hpfar;
-	else if (index == V_HCR_EL2)
-		val = el2_data->shadow_vcpu_ctxt[offset].hcr_el2;
-	else if (index == V_EC)
-		val = el2_data->shadow_vcpu_ctxt[offset].ec;
-	else if (index == V_DIRTY)
-		val = el2_data->shadow_vcpu_ctxt[offset].dirty;
-	else if (index == V_FLAGS)
-		val = el2_data->shadow_vcpu_ctxt[offset].flags;
-	else if (index >= SYSREGS_START) {
-		index -= SYSREGS_START;
-		val = el2_data->shadow_vcpu_ctxt[offset].sys_regs[index];
-	} else {
-		print_string("\rinvalid get shadow ctxt\n");
-		val = INVALID64;
-	}
-
-	return val;
-};
-
-//TODO: Define the following
-void __hyp_text set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	int offset = VCPU_IDX(vmid, vcpuid);
-	//el2_data->shadow_vcpu_ctxt[offset].regs[index] = value;
-	if (index < V_FAR_EL2)
-		el2_data->shadow_vcpu_ctxt[offset].regs[index] = value; 
-	else if (index == V_FAR_EL2)
-		el2_data->shadow_vcpu_ctxt[offset].far_el2 = value;
-	else if (index == V_HPFAR_EL2)
-		el2_data->shadow_vcpu_ctxt[offset].hpfar = value;
-	else if (index == V_HCR_EL2)
-		el2_data->shadow_vcpu_ctxt[offset].hcr_el2 = value;
-	else if (index == V_EC)
-		el2_data->shadow_vcpu_ctxt[offset].ec = value;
-	else if (index == V_DIRTY)
-		el2_data->shadow_vcpu_ctxt[offset].dirty = value;
-	else if (index == V_FLAGS)
-		el2_data->shadow_vcpu_ctxt[offset].flags = value;
-	else if (index >= SYSREGS_START) {
-		index -= SYSREGS_START;
-		el2_data->shadow_vcpu_ctxt[offset].sys_regs[index] = value;
-	} else
-		print_string("\rinvalid set shadow ctxt\n");
-}
-
-u32 __hyp_text get_shadow_esr(u32 vmid, u32 vcpuid) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	int offset = VCPU_IDX(vmid, vcpuid);
-	return el2_data->shadow_vcpu_ctxt[offset].esr;
-}
-
-u32 __hyp_text get_int_esr(u32 vmid, u32 vcpuid) {
-	struct shared_data *shared_data;
-	int offset = VCPU_IDX(vmid, vcpuid);
-	struct kvm_vcpu *vcpu;
-	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
-	vcpu = &shared_data->vcpu_pool[offset];
-	return vcpu->arch.fault.esr_el2;
-}
-
 //make sure we only use get_int_ctxt to access general purposes regs
 void __hyp_text clear_shadow_gp_regs(u32 vmid, u32 vcpuid) {
 	struct el2_data *el2_data;
@@ -203,48 +59,6 @@ void __hyp_text clear_shadow_gp_regs(u32 vmid, u32 vcpuid) {
 
 void __hyp_text int_to_shadow_fp_regs(u32 vmid, u32 vcpuid) {
 
-}
-
-u32 __hyp_text get_shadow_dirty_bit(u32 vmid, u32 vcpuid) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	int offset = VCPU_IDX(vmid, vcpuid);
-	return el2_data->shadow_vcpu_ctxt[offset].dirty;
-}
-
-void __hyp_text set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value) {
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	int offset = VCPU_IDX(vmid, vcpuid);
-	if (value)
-		el2_data->shadow_vcpu_ctxt[offset].dirty |= value;
-	else
-		el2_data->shadow_vcpu_ctxt[offset].dirty = 0;
-}
-
-bool __hyp_text get_int_writable(u32 vmid, u32 vcpuid) {
-	struct shared_data *shared_data;
-	int offset = VCPU_IDX(vmid, vcpuid);
-	struct kvm_vcpu *vcpu;
-	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
-	vcpu = &shared_data->vcpu_pool[offset];
-	return vcpu->arch.walk_result.writable;
-}
-
-u64 __hyp_text get_int_new_pte(u32 vmid, u32 vcpuid) {
-	struct shared_data *shared_data;
-	int offset = VCPU_IDX(vmid, vcpuid);
-	struct kvm_vcpu *vcpu;
-	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
-	vcpu = &shared_data->vcpu_pool[offset];
-	return vcpu->arch.walk_result.output;
-}
-
-u32 __hyp_text get_int_new_level(u32 vmid, u32 vcpuid) {
-	struct shared_data *shared_data;
-	int offset = VCPU_IDX(vmid, vcpuid);
-	struct kvm_vcpu *vcpu;
-	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
-	vcpu = &shared_data->vcpu_pool[offset];
-	return vcpu->arch.walk_result.level;
 }
 
 void __hyp_text set_per_cpu(int vmid, int vcpu_id)

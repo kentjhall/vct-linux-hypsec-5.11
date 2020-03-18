@@ -32,11 +32,30 @@ typedef u64 phys_addr_t;
 
 void    v_panic(void);
 void    clear_phys_mem(u64 pfn);
-u64     get_shared_kvm(u32 vmid);
-u64     get_shared_vcpu(u32 vmid, u32 vcpuid);
+//u64     get_shared_kvm(u32 vmid);
+//u64     get_shared_vcpu(u32 vmid, u32 vcpuid);
 u32     verify_image(u32 vmid, u32 load_idx, u64 addr);
-u64     get_sys_reg_desc_val(u32 index);
+///u64     get_sys_reg_desc_val(u32 index);
 u64     get_exception_vector(u64 pstate);
+
+static u64 inline get_shared_kvm(u32 vmid) {
+    //return SHARED_KVM_START + vmid * sizeof(struct kvm);
+    u64 shared_kvm_start = (u64)kvm_ksym_ref(shared_data_start);
+    return shared_kvm_start + vmid * sizeof(struct kvm);
+}
+
+static u64 inline get_shared_vcpu(u32 vmid, u32 vcpuid) {
+    //return SHARED_VCPU_START + (vmid * VCPU_PER_VM + vcpuid) * sizeof(struct kvm_vcpu);
+    u64 vcpu_off = sizeof(struct kvm) * EL2_MAX_VMID;
+    u64 shared_vcpu_start = (u64)kvm_ksym_ref(shared_data_start) + vcpu_off;
+    return shared_vcpu_start + (vmid * VCPU_PER_VM + vcpuid) * sizeof(struct kvm_vcpu);
+}
+
+static u64 inline get_sys_reg_desc_val(u32 index) {
+    // TODO
+    struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+    return el2_data->s2_sys_reg_descs[index].val;
+}
 
 /*
 void    acquire_lock_pt(u32 vmid);
@@ -354,24 +373,120 @@ static void inline set_next_remap_ptr(u64 remap) {
     el2_data->last_remap_ptr = remap;
 }
 
-int     get_cur_vmid(void);
-int     get_cur_vcpuid(void);
-u64     get_int_gpr(u32 vmid, u32 vcpuid, u32 index);
-u64     get_int_pc(u32 vmid, u32 vcpuid);
-u64     get_int_pstate(u32 vmid, u32 vcpuid);
-void	set_int_gpr(u32 vmid, u32 vcpuid, u32 index, u64 value);
+//int     get_cur_vmid(void);
+//int     get_cur_vcpuid(void);
+//u64     get_int_gpr(u32 vmid, u32 vcpuid, u32 index);
+//u64     get_int_pc(u32 vmid, u32 vcpuid);
+//u64     get_int_pstate(u32 vmid, u32 vcpuid);
+static u64 inline get_int_gpr(u32 vmid, u32 vcpuid, u32 index) {
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	if (index >= 32)
+		__hyp_panic();
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	return vcpu->arch.ctxt.gp_regs.regs.regs[index];
+}
+
+static u64 inline get_int_pc(u32 vmid, u32 vcpuid) {
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	return vcpu->arch.ctxt.gp_regs.regs.pc;
+}
+
+static u64 inline get_int_pstate(u32 vmid, u32 vcpuid) {
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	return vcpu->arch.ctxt.gp_regs.regs.pstate;
+}
+
+//void	set_int_gpr(u32 vmid, u32 vcpuid, u32 index, u64 value);
+static void inline set_int_gpr(u32 vmid, u32 vcpuid, u32 index, u64 value) {
+       struct shared_data *shared_data;
+       int offset = VCPU_IDX(vmid, vcpuid);
+       struct kvm_vcpu *vcpu;
+       if (index >= 32)
+               __hyp_panic();
+       shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+       vcpu = &shared_data->vcpu_pool[offset];
+       vcpu->arch.ctxt.gp_regs.regs.regs[index] = value;
+}
+
 void	set_int_pstate(u32 vmid, u32 vcpuid, u64 value);
 void    clear_shadow_gp_regs(u32 vmid, u32 vcpuid);
 void    int_to_shadow_fp_regs(u32 vmid, u32 vcpuid);
 void    int_to_shadow_decrypt(u32 vmid, u32 vcpuid);
 void    shadow_to_int_encrypt(u32 vmid, u32 vcpuid);
-u32     get_shadow_dirty_bit(u32 vmid, u32 vcpuid);
-void    set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value);
-u64     get_int_new_pte(u32 vmid, u32 vcpuid);
-u32     get_int_new_level(u32 vmid, u32 vcpuid);
-bool	get_int_writable(u32 vmid, u32 vcpuid);
-u32     get_shadow_esr(u32 vmid, u32 vcpuid);
-u32     get_int_esr(u32 vmid, u32 vcpuid);
+//u32     get_shadow_dirty_bit(u32 vmid, u32 vcpuid);
+//void    set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value);
+static u32 inline get_shadow_dirty_bit(u32 vmid, u32 vcpuid) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int offset = VCPU_IDX(vmid, vcpuid);
+	return el2_data->shadow_vcpu_ctxt[offset].dirty;
+}
+
+static void inline set_shadow_dirty_bit(u32 vmid, u32 vcpuid, u64 value) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int offset = VCPU_IDX(vmid, vcpuid);
+	if (value)
+		el2_data->shadow_vcpu_ctxt[offset].dirty |= value;
+	else
+		el2_data->shadow_vcpu_ctxt[offset].dirty = 0;
+}
+//u64     get_int_new_pte(u32 vmid, u32 vcpuid);
+//u32     get_int_new_level(u32 vmid, u32 vcpuid);
+//bool	get_int_writable(u32 vmid, u32 vcpuid);
+static bool inline get_int_writable(u32 vmid, u32 vcpuid) {
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	return vcpu->arch.walk_result.writable;
+}
+
+static u64 inline get_int_new_pte(u32 vmid, u32 vcpuid) {
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	return vcpu->arch.walk_result.output;
+}
+
+static u32 inline get_int_new_level(u32 vmid, u32 vcpuid) {
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	return vcpu->arch.walk_result.level;
+}
+
+//u32     get_shadow_esr(u32 vmid, u32 vcpuid);
+//u32     get_int_esr(u32 vmid, u32 vcpuid);
+
+static u32 inline get_shadow_esr(u32 vmid, u32 vcpuid) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int offset = VCPU_IDX(vmid, vcpuid);
+	return el2_data->shadow_vcpu_ctxt[offset].esr;
+}
+
+static u32 inline get_int_esr(u32 vmid, u32 vcpuid) {
+	struct shared_data *shared_data;
+	int offset = VCPU_IDX(vmid, vcpuid);
+	struct kvm_vcpu *vcpu;
+	shared_data = kern_hyp_va(kvm_ksym_ref(shared_data_start));
+	vcpu = &shared_data->vcpu_pool[offset];
+	return vcpu->arch.fault.esr_el2;
+}
 
 extern void test_aes(struct el2_data *el2_data);
 
@@ -518,9 +633,6 @@ void v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid);
 void save_shadow_kvm_regs(void);
 void restore_shadow_kvm_regs(void);
 //void save_encrypted_vcpu(u32 vmid, u32 vcpuid);
-
-#define VCPU_IDX(vmid, vcpu_id) \
-	(vmid * HYPSEC_MAX_VCPUS) + vcpu_id
 
 #endif //HYPSEC_HYPSEC_H
 

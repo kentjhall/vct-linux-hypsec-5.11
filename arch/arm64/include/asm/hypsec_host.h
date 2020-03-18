@@ -8,12 +8,16 @@
 #include <asm/hypsec_vcpu.h>
 #include <asm/hypsec_mmio.h>
 #include <asm/kvm_mmu.h>
+#include <asm/hypsec_constant.h>
 
 /* Handler for ACTLR_EL1 is not defined */
 #define SHADOW_SYS_REGS_SIZE		(DISR_EL1)
 #define SHADOW_32BIT_REGS_SIZE		3
 #define SHADOW_SYS_REGS_DESC_SIZE	(SHADOW_SYS_REGS_SIZE + SHADOW_32BIT_REGS_SIZE)
 #define NUM_SHADOW_VCPU_CTXT		(EL2_MAX_VMID * HYPSEC_MAX_VCPUS)
+
+#define VCPU_IDX(vmid, vcpu_id) \
+	(vmid * HYPSEC_MAX_VCPUS) + vcpu_id
 
 struct shared_data {
 	struct kvm kvm_pool[EL2_MAX_VMID];
@@ -236,11 +240,78 @@ static inline int is_smmu_range(struct el2_data *el2_data, phys_addr_t addr)
 }
 
 void set_per_cpu(int vmid, int vcpu_id);
-int get_cur_vmid(void);
-int get_cur_vcpu_id(void);
+//int get_cur_vmid(void);
+//int get_cur_vcpu_id(void);
+static int inline get_cur_vmid(void)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
+	return el2_data->per_cpu_data[pcpuid].vmid;
+};
 
-u64     get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index);
-void    set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value);
+static int inline get_cur_vcpu_id(void)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
+	return el2_data->per_cpu_data[pcpuid].vcpu_id;
+};
+
+
+static u64 inline get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int offset = VCPU_IDX(vmid, vcpuid);
+	u64 val;
+	if (index < V_FAR_EL2)
+		val = el2_data->shadow_vcpu_ctxt[offset].regs[index]; 
+	else if (index == V_FAR_EL2)
+		val = el2_data->shadow_vcpu_ctxt[offset].far_el2;
+	else if (index == V_HPFAR_EL2)
+		val = el2_data->shadow_vcpu_ctxt[offset].hpfar;
+	else if (index == V_HCR_EL2)
+		val = el2_data->shadow_vcpu_ctxt[offset].hcr_el2;
+	else if (index == V_EC)
+		val = el2_data->shadow_vcpu_ctxt[offset].ec;
+	else if (index == V_DIRTY)
+		val = el2_data->shadow_vcpu_ctxt[offset].dirty;
+	else if (index == V_FLAGS)
+		val = el2_data->shadow_vcpu_ctxt[offset].flags;
+	else if (index >= SYSREGS_START) {
+		index -= SYSREGS_START;
+		val = el2_data->shadow_vcpu_ctxt[offset].sys_regs[index];
+	} else {
+		print_string("\rinvalid get shadow ctxt\n");
+		val = INVALID64;
+	}
+
+	return val;
+};
+
+//TODO: Define the following
+static void inline set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int offset = VCPU_IDX(vmid, vcpuid);
+	//el2_data->shadow_vcpu_ctxt[offset].regs[index] = value;
+	if (index < V_FAR_EL2)
+		el2_data->shadow_vcpu_ctxt[offset].regs[index] = value; 
+	else if (index == V_FAR_EL2)
+		el2_data->shadow_vcpu_ctxt[offset].far_el2 = value;
+	else if (index == V_HPFAR_EL2)
+		el2_data->shadow_vcpu_ctxt[offset].hpfar = value;
+	else if (index == V_HCR_EL2)
+		el2_data->shadow_vcpu_ctxt[offset].hcr_el2 = value;
+	else if (index == V_EC)
+		el2_data->shadow_vcpu_ctxt[offset].ec = value;
+	else if (index == V_DIRTY)
+		el2_data->shadow_vcpu_ctxt[offset].dirty = value;
+	else if (index == V_FLAGS)
+		el2_data->shadow_vcpu_ctxt[offset].flags = value;
+	else if (index >= SYSREGS_START) {
+		index -= SYSREGS_START;
+		el2_data->shadow_vcpu_ctxt[offset].sys_regs[index] = value;
+	} else
+		print_string("\rinvalid set shadow ctxt\n");
+}
 
 void save_shadow_kvm_regs(void);
 void restore_shadow_kvm_regs(void);
