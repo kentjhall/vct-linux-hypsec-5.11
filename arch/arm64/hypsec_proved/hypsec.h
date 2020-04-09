@@ -566,7 +566,7 @@ u32 get_vm_poweron(u32 vmid);
 
 void map_page_host(u64 addr);
 void clear_vm_page(u32 vmid, u64 pfn);
-void assign_pfn_to_vm(u32 vmid, u64 pfn);
+void assign_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum);
 void map_pfn_vm(u32 vmid, u64 addr, u64 new_pte, u32 level, u32 exec);
 void grant_vm_page(u32 vmid, u64 pfn);
 void revoke_vm_page(u32 vmid, u64 pfn);

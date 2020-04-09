@@ -35,15 +35,9 @@ void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 
 	u64 target_addr = phys_page(new_pte);
 	u64 target_pfn = target_addr / PAGE_SIZE;
 	if (level == 2) {
-		u64 n = PMD_PAGE_NUM;
-		u64 pfn = target_pfn;
-		while (n > 0) {
-			assign_pfn_to_vm(vmid, pfn);
-			pfn += 1;
-			n -= 1;
-		}
+		assign_pfn_to_vm(vmid, target_pfn, PMD_PAGE_NUM);
 	} else {
-		assign_pfn_to_vm(vmid, target_pfn);
+		assign_pfn_to_vm(vmid, target_pfn, 1);
 	}
 	map_pfn_vm(vmid, fault_addr, new_pte, level, iabt);
 }

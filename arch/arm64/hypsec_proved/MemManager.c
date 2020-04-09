@@ -49,25 +49,30 @@ void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
     release_lock_s2page();
 }
 
-void __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn)
+void __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum)
 {
-    u32 owner, count;
-    u64 perm;
-    acquire_lock_s2page();
-    owner = get_pfn_owner(pfn);
-    count = get_pfn_count(pfn);
-    /*
-     * There could be some other VCPU that has the faulted pfn
-     * mapped and changed the owner before we come here.
-     */
-    if (owner == HOSTVISOR && count == 0U) {
-        set_pfn_owner(pfn, 1UL, vmid);
-        perm = pgprot_val(PAGE_GUEST);
-        set_pfn_host(pfn, 1UL, 0UL, perm);
-    } else if (owner != vmid)
-        v_panic();
+	u32 owner, count, i = 0;
+	u64 perm;
 
-    release_lock_s2page();
+	acquire_lock_s2page();
+	while (i < pgnum) {
+		owner = get_pfn_owner(pfn);
+		count = get_pfn_count(pfn);
+		/*
+		 * There could be some other VCPU that has the faulted pfn
+		 * mapped and changed the owner before we come here.
+		 */
+		if (owner == HOSTVISOR && count == 0U) {
+			set_pfn_owner(pfn, 1UL, vmid);
+			perm = pgprot_val(PAGE_GUEST);
+			set_pfn_host(pfn, 1UL, 0UL, perm);
+		} else if (owner != vmid)
+			v_panic();
+
+		pfn++;
+		i++;
+	}
+	release_lock_s2page();
 }
 
 extern void t_mmap_s2pt(phys_addr_t addr, u64 desc, int level, u32 vmid);
