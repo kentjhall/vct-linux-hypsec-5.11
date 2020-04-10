@@ -49,13 +49,13 @@ void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
     release_lock_s2page();
 }
 
-u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum)
+/* TODO: Move to a bottom layer. */
+u32 __hyp_text check_s2_page_fresh(u32 vmid, u64 pfn, u32 pgnum)
 {
-	u32 owner, count, i = 0;
-	u64 perm;
-	u32 ret = 1;
+	u32 i = 0;
+	u32 ret = 0;
+	u32 owner, count;
 
-	acquire_lock_s2page();
 	while (i < pgnum) {
 		owner = get_pfn_owner(pfn);
 		count = get_pfn_count(pfn);
@@ -64,17 +64,49 @@ u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum)
 		 * mapped and changed the owner before we come here.
 		 */
 		if (owner == HOSTVISOR && count == 0U) {
-			set_pfn_owner(pfn, 1UL, vmid);
-			perm = pgprot_val(PAGE_GUEST);
-			set_pfn_host(pfn, 1UL, 0UL, perm);
 		} else if (owner == vmid) {
-			ret = 0;
+			ret++;	
 		} else
 			v_panic();
 
 		pfn++;
 		i++;
 	}
+
+	return ret;
+}
+
+/* TODO: Move to a bottom layer. */
+u32 __hyp_text __assign_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum)
+{
+	u32 i = 0;
+	u32 ret = 0;
+	u32 owner, count;
+	u64 perm;
+
+	while (i < pgnum) {
+		owner = get_pfn_owner(pfn);
+		count = get_pfn_count(pfn);
+		set_pfn_owner(pfn, 1UL, vmid);
+		perm = pgprot_val(PAGE_GUEST);
+		set_pfn_host(pfn, 1UL, 0UL, perm);
+		pfn++;
+		i++;
+	}
+
+	return ret;
+}
+
+u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn, u64 apfn, u32 pgnum)
+{
+	u32 ret;
+
+	acquire_lock_s2page();
+	ret = check_s2_page_fresh(vmid, pfn, pgnum);
+	if (ret == 0)
+		__assign_pfn_to_vm(vmid, pfn, pgnum);
+	else if (pgnum == 512 && ret)
+		__assign_pfn_to_vm(vmid, apfn, 1);
 	release_lock_s2page();
 	return ret;
 }
