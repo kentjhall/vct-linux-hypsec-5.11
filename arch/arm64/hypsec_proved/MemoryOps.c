@@ -29,7 +29,7 @@ void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 	}
 }
 
-#define PMD_PAGE_NUM	256
+#define PMD_PAGE_NUM	512
 void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 level, u32 iabt)
 {
 	u64 target_addr = phys_page(new_pte);
