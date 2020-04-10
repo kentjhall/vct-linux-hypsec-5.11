@@ -34,12 +34,18 @@ void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 
 {
 	u64 target_addr = phys_page(new_pte);
 	u64 target_pfn = target_addr / PAGE_SIZE;
+	u32 ret;
 	if (level == 2) {
-		assign_pfn_to_vm(vmid, target_pfn, PMD_PAGE_NUM);
+		ret = assign_pfn_to_vm(vmid, target_pfn, PMD_PAGE_NUM);
 	} else {
-		assign_pfn_to_vm(vmid, target_pfn, 1);
+		ret = assign_pfn_to_vm(vmid, target_pfn, 1);
 	}
-	map_pfn_vm(vmid, fault_addr, new_pte, level, iabt);
+
+	if (ret == 0 && v_search_load_info(vmid, (fault_addr >> PMD_SHIFT) << PMD_SHIFT))
+		ret = 1;
+
+	if (ret)
+		map_pfn_vm(vmid, fault_addr, new_pte, level, iabt);
 }
 
 void __hyp_text v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)

@@ -49,10 +49,11 @@ void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
     release_lock_s2page();
 }
 
-void __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum)
+u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum)
 {
 	u32 owner, count, i = 0;
 	u64 perm;
+	u32 ret = 1;
 
 	acquire_lock_s2page();
 	while (i < pgnum) {
@@ -66,13 +67,16 @@ void __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum)
 			set_pfn_owner(pfn, 1UL, vmid);
 			perm = pgprot_val(PAGE_GUEST);
 			set_pfn_host(pfn, 1UL, 0UL, perm);
-		} else if (owner != vmid)
+		} else if (owner == vmid) {
+			ret = 0;
+		} else
 			v_panic();
 
 		pfn++;
 		i++;
 	}
 	release_lock_s2page();
+	return ret;
 }
 
 extern void t_mmap_s2pt(phys_addr_t addr, u64 desc, int level, u32 vmid);
