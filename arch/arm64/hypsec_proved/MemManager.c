@@ -87,8 +87,17 @@ u32 __hyp_text __assign_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum)
 			set_pfn_owner(pfn, 1UL, vmid);
 			perm = pgprot_val(PAGE_GUEST);
 			set_pfn_host(pfn, 1UL, 0UL, perm);
-		} else if (owner != vmid)
+		} else if (owner != vmid) {
+			print_string("\rassign pfn to vm\n");
+			printhex_ul(pfn);
+			print_string("\rowner\n");
+			printhex_ul(owner);
+			print_string("\rvmid\n");
+			printhex_ul(vmid);
+			print_string("\rcount\n");
+			printhex_ul(count);
 			v_panic();
+		}
 
 		pfn++;
 		i++;
@@ -104,8 +113,9 @@ u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn, u64 apfn, u32 pgnum)
 	acquire_lock_s2page();
 	ret = check_s2_page_fresh(vmid, pfn, pgnum);
 	/* if pfn is new, we simply assign it */
-	if (ret == 0)
+	if (ret == 0) {
 		__assign_pfn_to_vm(vmid, pfn, pgnum);
+	}
 	/* if pfn is partially overlapped */
 	else if ((ret > 0) && (ret < pgnum)) {
 		__assign_pfn_to_vm(vmid, apfn, 1);

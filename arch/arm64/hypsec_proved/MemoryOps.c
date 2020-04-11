@@ -36,6 +36,9 @@ void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 
 	u64 target_pfn = target_addr / PAGE_SIZE;
 	u32 ret;
 
+	if (new_pte == 0)
+		return;
+
 	if (level == 2) {
 		u64 target_addr_off = fault_addr & (PMD_SIZE - 1);
 		u64 apfn = target_pfn + (target_addr_off >> PAGE_SHIFT);

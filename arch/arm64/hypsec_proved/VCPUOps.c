@@ -24,8 +24,10 @@ void __hyp_text save_shadow_kvm_regs()
             prep_abort(vmid, vcpuid);
         else if (hsr_ec == ESR_ELx_EC_DABT_LOW)
             prep_abort(vmid, vcpuid);
-        else
+        else {
+	    print_string("\runknown exception\n");
 	    v_panic();
+	}
     }
 }
 
