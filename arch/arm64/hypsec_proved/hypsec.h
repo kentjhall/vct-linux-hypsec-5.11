@@ -591,8 +591,7 @@ u64 alloc_remap_addr(u64 pgnum);
  * BootAux
  */
 
-void v_unmap_image_from_host_s2pt(u32 vmid, u64 remap_addr, u64 num);
-void v_load_image_to_shadow_s2pt(u32 vmid, u64 target_addr, u64 remap_addr, u64 num);
+void unmap_and_load_vm_image(u32 vmid, u64 target_addr, u64 remap_addr, u64 num);
 
 /*
  * BootOps

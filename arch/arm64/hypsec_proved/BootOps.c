@@ -187,10 +187,10 @@ void __hyp_text verify_and_load_images(u32 vmid)
             load_addr = get_vm_load_addr(vmid, load_idx);
             remap_addr = get_vm_remap_addr(vmid, load_idx);
             mapped = get_vm_mapped_pages(vmid, load_idx);
-            v_unmap_image_from_host_s2pt(vmid, remap_addr, mapped);
+	    unmap_and_load_vm_image(vmid, load_addr, remap_addr, mapped);
             valid = verify_image(vmid, load_idx, remap_addr);
-            if (valid == 1U) {
-                v_load_image_to_shadow_s2pt(vmid, load_addr, remap_addr, mapped);
+            if (valid != 1U) {
+		v_panic();
             }
             load_idx += 1U;
         }
