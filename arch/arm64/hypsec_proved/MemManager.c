@@ -59,16 +59,8 @@ u32 __hyp_text check_s2_page_fresh(u32 vmid, u64 pfn, u32 pgnum)
 	while (i < pgnum) {
 		owner = get_pfn_owner(pfn);
 		count = get_pfn_count(pfn);
-		/*
-		 * There could be some other VCPU that has the faulted pfn
-		 * mapped and changed the owner before we come here.
-		 */
-		if (owner == HOSTVISOR && count == 0U) {
-		} else if (owner == vmid) {
-			ret++;	
-		} else
-			v_panic();
-
+		if (owner == vmid)
+			ret++;
 		pfn++;
 		i++;
 	}
@@ -87,9 +79,17 @@ u32 __hyp_text __assign_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum)
 	while (i < pgnum) {
 		owner = get_pfn_owner(pfn);
 		count = get_pfn_count(pfn);
-		set_pfn_owner(pfn, 1UL, vmid);
-		perm = pgprot_val(PAGE_GUEST);
-		set_pfn_host(pfn, 1UL, 0UL, perm);
+		/*
+		 * There could be some other VCPU that has the faulted pfn
+		 * mapped and changed the owner before we come here.
+		 */
+		if (owner == HOSTVISOR && count == 0U) {
+			set_pfn_owner(pfn, 1UL, vmid);
+			perm = pgprot_val(PAGE_GUEST);
+			set_pfn_host(pfn, 1UL, 0UL, perm);
+		} else if (owner != vmid)
+			v_panic();
+
 		pfn++;
 		i++;
 	}
@@ -103,10 +103,17 @@ u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn, u64 apfn, u32 pgnum)
 
 	acquire_lock_s2page();
 	ret = check_s2_page_fresh(vmid, pfn, pgnum);
+	/* if pfn is new, we simply assign it */
 	if (ret == 0)
 		__assign_pfn_to_vm(vmid, pfn, pgnum);
-	else if (pgnum == 512 && ret)
+	/* if pfn is partially overlapped */
+	else if ((ret > 0) && (ret < pgnum)) {
 		__assign_pfn_to_vm(vmid, apfn, 1);
+		ret = 1;
+	/* if pfn is mapped, we neither assign nor map it */
+	} else if (ret == pgnum)
+		ret = 2;
+
 	release_lock_s2page();
 	return ret;
 }
