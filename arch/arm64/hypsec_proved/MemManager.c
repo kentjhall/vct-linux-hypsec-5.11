@@ -50,7 +50,7 @@ void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
 }
 
 /* TODO: Move to a bottom layer. */
-u32 __hyp_text check_s2_page_fresh(u32 vmid, u64 pfn, u32 pgnum)
+u32 __hyp_text check_s2_page_fresh(u32 vmid, u64 pfn, u32 pgnum, u64 apfn)
 {
 	u32 i = 0;
 	u32 ret = 0;
@@ -58,9 +58,19 @@ u32 __hyp_text check_s2_page_fresh(u32 vmid, u64 pfn, u32 pgnum)
 
 	while (i < pgnum) {
 		owner = get_pfn_owner(pfn);
-		count = get_pfn_count(pfn);
-		if (owner == vmid)
-			ret++;
+		if (owner != HOSTVISOR) {
+			if (owner != vmid)
+				v_panic();
+			else {
+				// ret = 2 -> apfn.owenr != HOSTVISOR
+				// ret = 1 -> apfn.owner == HOSTVISOR but not all pages owner == HOSTVISOR
+				// ret = 0 -> all pages' owner == HOSTVISOR
+				if (pfn == apfn)
+					ret = 2;
+				else if (ret == 0)
+					ret = 1;
+			}
+		}
 		pfn++;
 		i++;
 	}
@@ -77,29 +87,9 @@ u32 __hyp_text __assign_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum)
 	u64 perm;
 
 	while (i < pgnum) {
-		owner = get_pfn_owner(pfn);
-		count = get_pfn_count(pfn);
-		/*
-		 * There could be some other VCPU that has the faulted pfn
-		 * mapped and changed the owner before we come here.
-		 */
-		if (owner == HOSTVISOR && count == 0U) {
-			set_pfn_owner(pfn, 1UL, vmid);
-			perm = pgprot_val(PAGE_GUEST);
-			set_pfn_host(pfn, 1UL, 0UL, perm);
-		} else if (owner != vmid) {
-			print_string("\rassign pfn to vm\n");
-			printhex_ul(pfn);
-			print_string("\rowner\n");
-			printhex_ul(owner);
-			print_string("\rvmid\n");
-			printhex_ul(vmid);
-			print_string("\rcount\n");
-			printhex_ul(count);
-			v_panic();
-		} else if (owner == vmid)
-			ret = 2;
-
+		set_pfn_owner(pfn, 1UL, vmid);
+		perm = pgprot_val(PAGE_GUEST);
+		set_pfn_host(pfn, 1UL, 0UL, perm);
 		pfn++;
 		i++;
 	}
@@ -112,19 +102,17 @@ u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn, u64 apfn, u32 pgnum)
 	u32 ret;
 
 	acquire_lock_s2page();
-	ret = check_s2_page_fresh(vmid, pfn, pgnum);
+	ret = check_s2_page_fresh(vmid, pfn, pgnum, apfn);
 	/* if pfn is new, we simply assign it */
 	if (ret == 0) {
 		__assign_pfn_to_vm(vmid, pfn, pgnum);
 	}
 	/* if pfn is partially overlapped */
-	else if ((ret > 0) && (ret < pgnum)) {
-		ret = __assign_pfn_to_vm(vmid, apfn, 1);
+	else if (ret == 1) {
+		__assign_pfn_to_vm(vmid, apfn, 1);
 		//ret = 1;
 	/* if pfn is mapped, we neither assign nor map it */
-	} else if (ret == pgnum)
-		ret = 2;
-
+	}
 	release_lock_s2page();
 	return ret;
 }
