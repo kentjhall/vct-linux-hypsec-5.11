@@ -72,7 +72,7 @@ u32 __hyp_text check_s2_page_fresh(u32 vmid, u64 pfn, u32 pgnum)
 u32 __hyp_text __assign_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum)
 {
 	u32 i = 0;
-	u32 ret = 0;
+	u32 ret = 1;
 	u32 owner, count;
 	u64 perm;
 
@@ -97,7 +97,8 @@ u32 __hyp_text __assign_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum)
 			print_string("\rcount\n");
 			printhex_ul(count);
 			v_panic();
-		}
+		} else if (owner == vmid)
+			ret = 2;
 
 		pfn++;
 		i++;
@@ -118,8 +119,8 @@ u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn, u64 apfn, u32 pgnum)
 	}
 	/* if pfn is partially overlapped */
 	else if ((ret > 0) && (ret < pgnum)) {
-		__assign_pfn_to_vm(vmid, apfn, 1);
-		ret = 1;
+		ret = __assign_pfn_to_vm(vmid, apfn, 1);
+		//ret = 1;
 	/* if pfn is mapped, we neither assign nor map it */
 	} else if (ret == pgnum)
 		ret = 2;
