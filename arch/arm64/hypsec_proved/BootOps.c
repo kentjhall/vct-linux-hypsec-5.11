@@ -43,9 +43,9 @@ void __hyp_text set_vcpu_inactive(u32 vmid, u32 vcpuid)
     if (vcpu_state == ACTIVE) {
         set_vcpu_state(vmid, vcpuid, READY);
     }
-	else {
-		v_panic();
-	}
+    else {
+	v_panic();
+    }
     release_lock_vm(vmid);
 }
 
@@ -79,14 +79,14 @@ u32 __hyp_text register_vcpu(u32 vmid, u32 vcpuid)
     acquire_lock_vm(vmid);
     vm_state = get_vm_state(vmid);
     vcpu_state = get_vcpu_state(vmid, vcpuid);
-    if (vm_state != READY || vcpu_state != UNUSED) {
-		v_panic();
-    }
-    else {
-        vcpu = get_shared_vcpu(vmid, vcpuid);
+    if (vm_state == READY || vcpu_state == UNUSED) {
+	vcpu = get_shared_vcpu(vmid, vcpuid);
         set_vm_vcpu(vmid, vcpuid, vcpu);
 	set_vcpu_state(vmid, vcpuid, READY);
         set_shadow_ctxt(vmid, vcpuid, V_DIRTY, INVALID64);
+    }
+    else {
+	v_panic(); 
     }
     release_lock_vm(vmid);
     return 0U;
@@ -98,26 +98,22 @@ u32 __hyp_text register_kvm()
     u32 vmid = gen_vmid();
     u32 state;
     u64 kvm;
-    if (vmid == INVALID) {
-		v_panic();
+
+    acquire_lock_vm(vmid);
+    state = get_vm_state(vmid);
+    if (state == UNUSED) {
+        set_vm_inc_exe(vmid, 0U);
+        kvm = get_shared_kvm(vmid);
+        set_vm_kvm(vmid, kvm);
+        init_s2pt(vmid);
+	map_vgic_to_vm(vmid);
+	set_vm_public_key(vmid);
+        set_vm_state(vmid, READY);
     }
     else {
-        acquire_lock_vm(vmid);
-        state = get_vm_state(vmid);
-        if (state != UNUSED) {
-		v_panic();
-        }
-        else {
-            set_vm_inc_exe(vmid, 0U);
-            kvm = get_shared_kvm(vmid);
-            set_vm_kvm(vmid, kvm);
-            init_s2pt(vmid);
-	    map_vgic_to_vm(vmid);
-	    set_vm_public_key(vmid);
-            set_vm_state(vmid, READY);
-        }
-        release_lock_vm(vmid);
+	v_panic();        
     }
+    release_lock_vm(vmid);
     return vmid;
 }
 
@@ -169,6 +165,8 @@ void __hyp_text remap_vm_image(u32 vmid, u64 pfn, u32 load_idx)
             }
         }
     }
+    else
+        v_panic();
     release_lock_vm(vmid);
 }
 
@@ -196,5 +194,7 @@ void __hyp_text verify_and_load_images(u32 vmid)
         }
         set_vm_state(vmid, VERIFIED);
     }
+    else
+	v_panic();
     release_lock_vm(vmid);
 }

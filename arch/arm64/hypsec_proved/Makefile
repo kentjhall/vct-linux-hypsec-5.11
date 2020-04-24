@@ -9,6 +9,7 @@ obj-y += PTAlloc.o
 obj-y += PTWalk.o
 obj-y += NPTWalk.o
 obj-y += NPTOps.o
+obj-y += MemManagerAux.o
 obj-y += MemManager.o
 obj-y += MemoryOps.o
 obj-y += VMPower.o

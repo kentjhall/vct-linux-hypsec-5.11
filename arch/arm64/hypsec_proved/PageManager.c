@@ -14,15 +14,11 @@ u32 __hyp_text get_pfn_owner(u64 pfn)
 	return ret;
 }
 
-void __hyp_text set_pfn_owner(u64 pfn, u64 num, u32 vmid)
+void __hyp_text set_pfn_owner(u64 pfn, u32 vmid)
 {
-	while (num > 0U)
-	{
-		u64 index = get_s2_page_index(pfn * PAGE_SIZE);
-		if (index != INVALID_MEM) set_s2_page_vmid(index, vmid);
-		pfn += 1U;
-		num -= 1U;
-	}
+	u64 index = get_s2_page_index(pfn * PAGE_SIZE);
+	if (index != INVALID_MEM)
+		set_s2_page_vmid(index, vmid);
 }
 
 u32 __hyp_text get_pfn_count(u64 pfn)

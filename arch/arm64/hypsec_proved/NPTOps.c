@@ -46,19 +46,17 @@ void __hyp_text mmap_s2pt(u32 vmid, u64 addr, u32 level, u64 pte)
 }
 
 extern void kvm_tlb_flush_vmid_ipa_host(phys_addr_t ipa);
-void __hyp_text set_pfn_host(u64 gfn, u64 num, u64 pfn, u64 prot)
+void __hyp_text clear_pfn_host(u64 pfn)
 {
-    u32 level;
-    acquire_lock_pt(HOSTVISOR);
-    while (num > 0UL) {
-        level = get_npt_level(HOSTVISOR, gfn * PAGE_SIZE);
+	u32 level;
+
+	acquire_lock_pt(HOSTVISOR);
+
+	level = get_npt_level(HOSTVISOR, pfn * PAGE_SIZE);
         if (level != 0) {
-            set_npt(HOSTVISOR, gfn * PAGE_SIZE, 3, pfn * PAGE_SIZE + prot);
-	    kvm_tlb_flush_vmid_ipa_host(gfn * PAGE_SIZE);
+		set_npt(HOSTVISOR, pfn * PAGE_SIZE, 3, pgprot_val(PAGE_GUEST));
+		kvm_tlb_flush_vmid_ipa_host(pfn * PAGE_SIZE);
         }
-        if (pfn != 0) pfn++;
-        gfn++;
-        num--;
-    }
-    release_lock_pt(HOSTVISOR);
+
+	release_lock_pt(HOSTVISOR);
 }

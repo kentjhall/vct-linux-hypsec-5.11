@@ -495,6 +495,7 @@ uint8_t* get_vm_public_key(u32 vmid);
 void set_vm_public_key(u32 vmid);
 uint8_t* get_vm_load_signature(u32 vmid, u32 load_idx);
 void set_vm_load_signature(u32 vmid, u32 load_idx);
+
 /*
  * PTAlloc
  */
@@ -530,7 +531,7 @@ u64 get_vm_vttbr(u32 vmid);
 u32 get_level_s2pt(u32 vmid, u64 addr);
 u64 walk_s2pt(u32 vmid, u64 addr);
 void mmap_s2pt(u32 vmid, u64 addr, u32 level, u64 pte);
-void set_pfn_host(u64 gfn, u64 num, u64 pfn, u64 prot);
+void clear_pfn_host(u64 pfn);
 
 /*
  * MemRegion
@@ -549,7 +550,7 @@ u64 get_s2_page_index(u64 addr);
  */
 
 u32 get_pfn_owner(u64 pfn);
-void set_pfn_owner(u64 pfn, u64 num, u32 vmid);
+void set_pfn_owner(u64 pfn, u32 vmid);
 u32 get_pfn_count(u64 pfn);
 void set_pfn_count(u64 pfn, u32 count);
 
@@ -561,13 +562,19 @@ void set_vm_poweroff(u32 vmid);
 u32 get_vm_poweron(u32 vmid);
 
 /*
+ * MemManagerAux
+ */
+u32 check_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum, u64 apfn);
+void set_pfn_to_vm(u32 vmid, u64 pfn, u64 pgnum);
+
+/*
  * MemManager
  */
 
 void map_page_host(u64 addr);
 void clear_vm_page(u32 vmid, u64 pfn);
 u32 assign_pfn_to_vm(u32 vmid, u64 pfn, u64 apfn, u32 pgnum);
-void map_pfn_vm(u32 vmid, u64 addr, u64 new_pte, u32 level, u32 exec);
+void map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level);
 void grant_vm_page(u32 vmid, u64 pfn);
 void revoke_vm_page(u32 vmid, u64 pfn);
 void clear_phys_page(unsigned long pfn);

@@ -316,16 +316,6 @@ static void inline set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
 void save_shadow_kvm_regs(void);
 void restore_shadow_kvm_regs(void);
 
-static u64 inline get_pt_vttbr(u32 vmid) {
-    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
-    return el2_data->vm_info[vmid].vttbr;
-};
-
-static void inline set_pt_vttbr(u32 vmid, u64 vttbr) {
-    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
-    el2_data->vm_info[vmid].vttbr = vttbr;
-};
-
 void __vm_sysreg_restore_state_nvhe(u32 vmid, u32 vcpuid);
 void __vm_sysreg_save_state_nvhe(u32 vmid, u32 vcpuid);
 
@@ -335,4 +325,19 @@ void v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
 void init_hacl_hash(struct el2_data *el2_data);
 uint64_t get_hacl_hash_sha2_constant_k384_512(int i);
 uint32_t get_hacl_hash_sha2_constant_k224_256(int i);
+
+static u64 inline get_pt_vttbr(u32 vmid)
+{
+	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+	if (vmid < COREVISOR) {
+		return el2_data->vm_info[vmid].vttbr;
+	} else {
+		return read_sysreg(ttbr0_el2);
+	}
+}
+
+static void inline set_pt_vttbr(u32 vmid, u64 vttbr) {
+	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+	el2_data->vm_info[vmid].vttbr = vttbr;
+};
 #endif /* __ARM_STAGE2_H__ */

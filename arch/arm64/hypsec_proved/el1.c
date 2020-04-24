@@ -190,7 +190,7 @@ void init_el2_data_page(void)
 
 
 	el2_data->host_vttbr = el2_data->vm_info[0].page_pool_start;
-	el2_data->vm_info[0].used_pages = 2;
+	el2_data->vm_info[0].used_pages = 1;
 	el2_data->vm_info[0].vttbr = el2_data->host_vttbr;
 
 	memset(el2_data->smmu_cfg, 0,

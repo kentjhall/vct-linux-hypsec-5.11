@@ -54,7 +54,7 @@ void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 
 	}
 
 	if (!ret)
-		map_pfn_vm(vmid, fault_addr, new_pte, level, iabt);
+		map_pfn_vm(vmid, fault_addr, new_pte, level);
 }
 
 void __hyp_text v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)

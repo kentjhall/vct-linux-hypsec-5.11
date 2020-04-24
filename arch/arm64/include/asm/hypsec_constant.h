@@ -108,8 +108,7 @@
 #define pud_idx(addr)	pud_index(addr)
 #define pmd_idx(addr)	pmd_index(addr)
 #define pte_idx(addr)	pte_index(addr)
-#define v_pmd_table(pmd)	((pmd & PMD_TYPE_MASK) == \
-				 PMD_TYPE_TABLE)
+#define v_pmd_table(pmd)	(pmd & PMD_TYPE_MASK)
 #define writable(pte) (((pte) >> 2UL) & 1UL)
 
 #endif //HYPSEC_CONSTANTS_H
