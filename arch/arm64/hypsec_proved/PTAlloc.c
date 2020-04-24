@@ -55,3 +55,31 @@ u64 __hyp_text alloc_s2pt_pmd(u32 vmid)
 
 	return next;
 }
+
+u64 __hyp_text alloc_smmu_pgd_page(void)
+{
+	u64 next = get_smmu_pgd_next();
+	u64 end = SMMU_PMD_START;
+
+	if (next + PAGE_SIZE <= end) {
+		set_smmu_pgd_next(next + PAGE_SIZE);
+	}
+	else {
+		v_panic();
+	}
+	return next;
+}
+
+u64 __hyp_text alloc_smmu_pmd_page(void)
+{
+	u64 next = get_smmu_pmd_next();
+	u64 end = SMMU_POOL_END;
+
+	if (next + PAGE_SIZE <= end) {
+		set_smmu_pmd_next(next + PAGE_SIZE);
+	}
+	else {
+		v_panic();
+	}
+	return next;
+}

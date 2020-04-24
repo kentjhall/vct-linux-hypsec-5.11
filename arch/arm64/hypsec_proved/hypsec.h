@@ -558,6 +558,22 @@ void set_vm_public_key(u32 vmid);
 uint8_t* get_vm_load_signature(u32 vmid, u32 load_idx);
 void set_vm_load_signature(u32 vmid, u32 load_idx);
 
+//for SMMU
+#define SMMU_POOL_START 65536UL
+#define SMMU_PGD_START 131072UL
+#define SMMU_PMD_START 196608UL
+#define SMMU_POOL_END 262144UL
+
+static void inline acquire_lock_smmu(void) {};
+static void inline release_lock_smmu(void) {};
+static u64 inline get_smmu_pgd_next(void) {return 0;};
+static void inline set_smmu_pgd_next(u64 next) {};
+static u64 inline get_smmu_pmd_next(void) {return 0;};
+static void inline set_smmu_pmd_next(u64 next) {};
+static u64 inline smmu_pt_load(u64 addr) {return 0;};
+static void inline smmu_pt_store(u64 addr, u64 value) {};
+static void inline smmu_pt_clear(u32 cbndx, u32 num){};
+
 /*
  * PTAlloc
  */
