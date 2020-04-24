@@ -14,7 +14,7 @@ u64 __hyp_text walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc)
         u64 pgd_pa = phys_page(pgd);
         if (pgd_pa == 0UL && alloc == 1U)
         {
-	    pgd_pa = alloc_s2pt_pud(vmid);
+	    pgd_pa = alloc_s2pt_pgd(vmid);
             pgd = pgd_pa | PUD_TYPE_TABLE;
             pt_store(vmid, vttbr_pa + pgd_idx * 8UL, pgd);
         }
@@ -33,7 +33,7 @@ u64 __hyp_text walk_pud(u32 vmid, u64 pgd, u64 addr, u32 alloc)
         u64 pud_pa = phys_page(pud);
         if (pud_pa == 0UL && alloc == 1U)
         {
-	    pud_pa = alloc_s2pt_pmd(vmid);
+	    pud_pa = alloc_s2pt_pud(vmid);
             pud = pud_pa | PUD_TYPE_TABLE;
             pt_store(vmid, pgd_pa + pud_idx * 8UL, pud);
         }
@@ -52,7 +52,7 @@ u64 __hyp_text walk_pmd(u32 vmid, u64 pgd, u64 addr, u32 alloc)
         u64 pmd_pa = phys_page(pmd);
         if (pmd_pa == 0UL && alloc == 1U)
         {
-	    pmd_pa = alloc_s2pt_pte(vmid);
+	    pmd_pa = alloc_s2pt_pmd(vmid);
             pmd = pmd_pa | PMD_TYPE_TABLE;
             pt_store(vmid, pgd_pa + pmd_idx * 8UL, pmd);
         }
