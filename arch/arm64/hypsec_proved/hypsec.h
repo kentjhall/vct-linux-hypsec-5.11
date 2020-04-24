@@ -562,7 +562,6 @@ void set_vm_load_signature(u32 vmid, u32 load_idx);
  * PTAlloc
  */
 
-u64 alloc_s2pt_page(u32 vmid);
 u64 alloc_s2pt_pud(u32 vmid);
 u64 alloc_s2pt_pmd(u32 vmid);
 u64 alloc_s2pt_pte(u32 vmid);
