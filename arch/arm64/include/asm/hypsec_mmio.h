@@ -4,8 +4,10 @@
 /* We map a smmu_cfg to each context bank on the hardware.
  * We hardcode the value here since we have 8 ctxtbnk on Seattle.
  */
-#define EL2_SMMU_CFG_SIZE	8
+
+#define SMMU_NUM_CTXT_BANKS	8
 #define SMMU_NUM		4
+#define EL2_SMMU_CFG_SIZE	SMMU_NUM_CTXT_BANKS * SMMU_NUM
 
 /* FIXME: Hardcoded SMMU addresses now.. */
 #define SMMU_BASE(smmu)		smmu.phys_base
@@ -13,6 +15,13 @@
 
 /* Maximum number of context banks per SMMU */
 #define ARM_SMMU_MAX_CBS		128
+
+struct el2_smmu_cfg {
+	u32 vmid;
+	unsigned long ttbr;
+	u64 hw_ttbr;
+};
+
 
 struct el2_arm_smmu_device {
 	u64				phys_base;
@@ -42,21 +51,8 @@ struct el2_arm_smmu_device {
 	bool				exists;
 
 	unsigned long			hyp_base;
+	u32				index;
 };
 
-struct el2_smmu_cfg {
-	u32 vmid;
-	unsigned long ttbr;
-	u64 hw_ttbr;
-};
-
-struct el2_smmu_cfg* get_smmu_cfg(struct el2_data *el2_data, unsigned long addr);
 struct el2_smmu_cfg* alloc_smmu_cfg(struct el2_data *el2_data);
-void handle_host_mmio(phys_addr_t addr, struct s2_host_regs *host_regs, int index);
-
-void   __el2_free_smmu_pgd(unsigned long addr);
-void   __el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid, u64 base);
-void  __el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
-				   size_t size, u64 prot, u64 ttbr);
-phys_addr_t __el2_arm_lpae_iova_to_phys(unsigned long iova, u64 ttbr);
 #endif /* __ARM_STAGE2_MMIO__ */

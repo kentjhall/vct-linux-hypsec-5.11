@@ -197,9 +197,6 @@ void init_el2_data_page(void)
 	el2_data->vm_info[0].used_pages = 1;
 	el2_data->vm_info[0].vttbr = el2_data->host_vttbr;
 
-	memset(el2_data->smmu_cfg, 0,
-		sizeof(struct el2_smmu_cfg) * EL2_SMMU_CFG_SIZE);
-
 	for (i = 0; i < SHADOW_SYS_REGS_DESC_SIZE; i++)
 		el2_data->s2_sys_reg_descs[i] = host_sys_reg_descs[i];
 
@@ -443,4 +440,26 @@ int hypsec_register_kvm(void)
 int hypsec_register_vcpu(u32 vmid, int vcpu_id)
 {
 	return kvm_call_core((void *)HVC_REGISTER_VCPU, vmid, vcpu_id);
+}
+
+/* DMA Protection */
+void el2_free_smmu_pgd(u32 cbndx, u32 num)
+{
+	kvm_call_core(HVC_FREE_SMMU_PGD, cbndx, num);
+}
+
+void el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 num)
+{
+	kvm_call_core(HVC_ALLOC_SMMU_PGD, cbndx, vmid, num);
+}
+
+void el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
+		      size_t size, u64 prot, u32 cbndx, u32 num)
+{
+	kvm_call_core(HVC_SMMU_LPAE_MAP, iova, paddr, size, prot, cbndx, num);
+}
+
+phys_addr_t el2_arm_lpae_iova_to_phys(unsigned long iova, u32 cbndx, u32 num)
+{
+	return kvm_call_core(HVC_SMMU_LPAE_IOVA_TO_PHYS, iova, cbndx, num);
 }

@@ -574,6 +574,22 @@ static u64 inline smmu_pt_load(u64 addr) {return 0;};
 static void inline smmu_pt_store(u64 addr, u64 value) {};
 static void inline smmu_pt_clear(u32 cbndx, u32 num){};
 
+u32 get_smmu_cfg_vmid(u32 cbndx, u32 num);
+void set_smmu_cfg_vmid(u32 cbndx, u32 num, u32 vmid);
+u64 get_smmu_cfg_ttbr(u32 cbndx, u32 num);
+void set_smmu_cfg_ttbr(u32 cbndx, u32 num, u64 ttbr);
+u64 get_smmu_cfg_hw_ttbr(u32 cbndx, u32 num);
+void set_smmu_cfg_hw_ttbr(u32 cbndx, u32 num, u64 hw_ttbr);
+u32 get_smmu_num_context_banks(u32 num);
+u32 get_smmu_pgshift(u32 num);
+u32 get_smmu_num(void);
+u64 get_smmu_size(u32 num);
+u64 get_smmu_base(u32 num);
+
+void set_per_cpu_host_regs(u64 hr); 
+void set_host_regs(int nr, u64 value);
+u64 get_host_regs(int nr);
+
 /*
  * PTAlloc
  */
@@ -586,6 +602,7 @@ u64 alloc_s2pt_pmd(u32 vmid);
  * PTWalk
  */
 
+u64 walk_smmu_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc);
 u64 walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc);
 u64 walk_pud(u32 vmid, u64 pgd, u64 addr, u32 alloc);
 u64 walk_pmd(u32 vmid, u64 pgd, u64 addr, u32 alloc);
@@ -601,11 +618,14 @@ void init_npt(u32 vmid);
 u32 get_npt_level(u32 vmid, u64 addr);
 u64 walk_npt(u32 vmid, u64 addr);
 void set_npt(u32 vmid, u64 addr, u32 level, u64 pte);
+u64 walk_smmu_pt(u32 vmid, u64 vttbr, u64 addr);
+void set_smmu_pt(u32 vmid, u64 addr, u64 vttbr, u64 pte);
 
 /*
  * NPTOps
  */
 
+u64 init_smmu_pt(u32 vmid);
 void init_s2pt(u32 vmid);
 u64 get_vm_vttbr(u32 vmid);
 u32 get_level_s2pt(u32 vmid, u64 addr);
@@ -720,5 +740,42 @@ void save_shadow_kvm_regs(void);
 void restore_shadow_kvm_regs(void);
 //void save_encrypted_vcpu(u32 vmid, u32 vcpuid);
 
+/*
+ * MmioOps
+ */
+u32 emulate_mmio(u64 addr, u32 hsr);
+void   __el2_free_smmu_pgd(u32 cbndx, u32 index);
+void   __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index);
+void  __el2_arm_lpae_map(u64 iova, u64 paddr, u32 size, u64 prot, u32 cbndx, u32 index);
+u64 __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index);
+void __hyp_text __el2_arm_lpae_clear(u64 iova, u32 size, u64 prot, u32 cbndx, u32 index);
+
+/*
+ * MmioOpsAux
+ */
+void handle_host_mmio(u64 addr, u32 index, u32 hsr);
+u32 is_smmu_range(u64 addr);
+
+/*
+ * MmioCore
+ */
+void mmap_smmu(u32 vmid, u64 ttbr, u64 addr, u64 pte);
+u64 walk_smmu(u32 vmid, u64 ttbr, u64 addr);
+u32 check_smmu_pfn(u64 pfn, u32 vmid);
+void handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index);
+void handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len, u32 index);
+
+/*
+ * MmioCoreAux
+ */
+u32 handle_smmu_global_access(u32 hsr, u64 fault_ipa, u32 offset, u32 is_write, u32 smmu_index);
+void __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val);
+u32 handle_smmu_cb_access(u32 hsr, u64 fault_ipa, u32 cbndx, u32 offset, u32 is_write, u32 smmu_index);
+void __handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len);
+
+u32 host_get_mmio_data(u32 hsr);
+u64 smmu_init_pte(u64 prot, u64 paddr);
+u32 smmu_get_cbndx(u32 smmu_index, u32 offset);
+ 
 #endif //HYPSEC_HYPSEC_H
 

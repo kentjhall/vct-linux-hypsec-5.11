@@ -27,6 +27,7 @@ struct shared_data {
 struct el2_per_cpu_data {
 	int vmid;
 	int vcpu_id;
+	struct s2_host_regs *host_regs;
 };
 
 typedef struct b_arch_spinlock_t b_arch_spinlock_t;
@@ -114,7 +115,6 @@ struct el2_data {
 	unsigned long last_remap_ptr;
 
 	struct el2_smmu_cfg smmu_cfg[EL2_SMMU_CFG_SIZE];
-	struct el2_arm_smmu_device smmu;
 	struct el2_arm_smmu_device smmus[SMMU_NUM];
 	int el2_smmu_num;
 
@@ -186,11 +186,12 @@ int el2_memcmp(void *dest, void *src, size_t len);
 int el2_hex_to_bin(char ch);
 int el2_hex2bin(unsigned char *dst, const char *src, int count);
 
-extern void el2_alloc_smmu_pgd(unsigned long addr, u8 cbndx, u32 vmid, u64 base);
-extern void el2_free_smmu_pgd(unsigned long addr);
+extern void el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 num);
+extern void el2_free_smmu_pgd(u32 cbndx, u32 num);
+
 extern void el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
-		      size_t size, u64 prot, u64 ttbr);
-extern phys_addr_t el2_arm_lpae_iova_to_phys(unsigned long iova, u64 ttbr);
+		      size_t size, u64 prot, u32 cbndx, u32 num);
+extern phys_addr_t el2_arm_lpae_iova_to_phys(unsigned long iova, u32 cbndx, u32 num);
 
 void encrypt_buf(u32 vmid, void *buf, uint32_t len);
 void decrypt_buf(u32 vmid, void *buf, uint32_t len);
@@ -229,22 +230,6 @@ extern void map_vgic_cpu_to_shadow_s2pt(u32 vmid, struct el2_data *el2_data);
 
 extern struct kvm* hypsec_alloc_vm(u32 vmid);
 extern struct kvm_vcpu* hypsec_alloc_vcpu(u32 vmid, int vcpu_id);
-
-static inline int is_smmu_range(struct el2_data *el2_data, phys_addr_t addr)
-{
-	int ret = -EINVAL, i;
-	struct el2_arm_smmu_device smmu;
-
-	for (i = 0; i < el2_data->el2_smmu_num; i++) {
-		smmu = el2_data->smmus[i];
-		if ((addr >= smmu.phys_base) &&
-		    (addr <= smmu.phys_base + smmu.size)) {
-			ret = i;
-			break;
-		}
-	}
-	return ret;
-}
 
 void set_per_cpu(int vmid, int vcpu_id);
 //int get_cur_vmid(void);

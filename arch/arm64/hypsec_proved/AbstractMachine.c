@@ -141,3 +141,108 @@ void __hyp_text test_aes(struct el2_data *el2_data)
 void    int_to_shadow_decrypt(u32 vmid, u32 vcpuid);
 void    shadow_to_int_encrypt(u32 vmid, u32 vcpuid);
 #endif
+
+void __hyp_text set_per_cpu_host_regs(u64 hr)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
+	el2_data->per_cpu_data[pcpuid].host_regs = (struct s2_host_regs *)hr;
+};
+
+void __hyp_text set_host_regs(int nr, u64 value)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
+	if (nr == 0)
+		el2_data->per_cpu_data[pcpuid].host_regs->regs[31] = value;
+	else
+		el2_data->per_cpu_data[pcpuid].host_regs->regs[nr] = value;
+};
+
+u64 __hyp_text get_host_regs(int nr)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
+	return el2_data->per_cpu_data[pcpuid].host_regs->regs[nr];
+};
+
+//MMIOOps
+u32 __hyp_text get_smmu_cfg_vmid(u32 cbndx, u32 num)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u32 index;
+	index = SMMU_NUM_CTXT_BANKS * num + cbndx;
+	return el2_data->smmu_cfg[index].vmid;
+}
+
+void __hyp_text set_smmu_cfg_vmid(u32 cbndx, u32 num, u32 vmid)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u32 index;
+	index = SMMU_NUM_CTXT_BANKS * num + cbndx;
+	el2_data->smmu_cfg[index].vmid = vmid;
+}
+
+u64 __hyp_text get_smmu_cfg_ttbr(u32 cbndx, u32 num)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u32 index;
+	index = SMMU_NUM_CTXT_BANKS * num + cbndx;
+	return el2_data->smmu_cfg[index].ttbr;
+}
+
+void __hyp_text set_smmu_cfg_ttbr(u32 cbndx, u32 num, u64 ttbr)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u32 index;
+	index = SMMU_NUM_CTXT_BANKS * num + cbndx;
+	el2_data->smmu_cfg[index].ttbr = ttbr;
+}
+
+u64 __hyp_text get_smmu_cfg_hw_ttbr(u32 cbndx, u32 num)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u32 index;
+	index = SMMU_NUM_CTXT_BANKS * num + cbndx;
+	return el2_data->smmu_cfg[index].hw_ttbr;
+}
+
+void __hyp_text set_smmu_cfg_hw_ttbr(u32 cbndx, u32 num, u64 hw_ttbr)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u32 index;
+	index = SMMU_NUM_CTXT_BANKS * num + cbndx;
+	el2_data->smmu_cfg[index].hw_ttbr = hw_ttbr;
+}
+
+//MMIOAux
+u32 __hyp_text get_smmu_num(void)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->el2_smmu_num;
+}	
+
+u64 __hyp_text get_smmu_base(u32 num)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->smmus[num].phys_base;
+}
+
+u64 __hyp_text get_smmu_size(u32 num)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->smmus[num].size;
+}
+
+u32 __hyp_text get_smmu_num_context_banks(u32 num)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->smmus[num].num_context_banks;
+}
+
+u32 __hyp_text get_smmu_pgshift(u32 num)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->smmus[num].pgshift;
+}
+

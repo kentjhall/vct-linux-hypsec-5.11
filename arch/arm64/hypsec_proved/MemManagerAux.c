@@ -9,7 +9,7 @@ u32 __hyp_text check_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum, u64 apfn)
 {
        u32 i = 0;
        u32 ret = 0;
-       u32 owner, count;
+       u32 owner;
 
        while (i < pgnum) {
                owner = get_pfn_owner(pfn);
