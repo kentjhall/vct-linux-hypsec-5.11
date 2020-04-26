@@ -454,9 +454,9 @@ void el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 num)
 }
 
 void el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
-		      size_t size, u64 prot, u32 cbndx, u32 num)
+		      u64 prot, u32 cbndx, u32 num)
 {
-	kvm_call_core(HVC_SMMU_LPAE_MAP, iova, paddr, size, prot, cbndx, num);
+	kvm_call_core(HVC_SMMU_LPAE_MAP, iova, paddr, prot, cbndx, num);
 }
 
 phys_addr_t el2_arm_lpae_iova_to_phys(unsigned long iova, u32 cbndx, u32 num)

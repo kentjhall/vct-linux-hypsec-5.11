@@ -743,17 +743,17 @@ void restore_shadow_kvm_regs(void);
 /*
  * MmioOps
  */
-u32 emulate_mmio(u64 addr, u32 hsr);
+u64 emulate_mmio(u64 addr, u32 hsr);
 void   __el2_free_smmu_pgd(u32 cbndx, u32 index);
 void   __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index);
-void  __el2_arm_lpae_map(u64 iova, u64 paddr, u32 size, u64 prot, u32 cbndx, u32 index);
+void  __el2_arm_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index);
 u64 __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index);
-void __hyp_text __el2_arm_lpae_clear(u64 iova, u32 size, u64 prot, u32 cbndx, u32 index);
+void __hyp_text __el2_arm_lpae_clear(u64 iova, u32 cbndx, u32 index);
 
 /*
  * MmioOpsAux
  */
-void handle_host_mmio(u64 addr, u32 index, u32 hsr);
+void handle_host_mmio(u64 addr, u64 index, u32 hsr);
 u32 is_smmu_range(u64 addr);
 
 /*
@@ -768,14 +768,14 @@ void handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len, u32 index);
 /*
  * MmioCoreAux
  */
-u32 handle_smmu_global_access(u32 hsr, u64 fault_ipa, u32 offset, u32 is_write, u32 smmu_index);
-void __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val);
-u32 handle_smmu_cb_access(u32 hsr, u64 fault_ipa, u32 cbndx, u32 offset, u32 is_write, u32 smmu_index);
+u32 handle_smmu_global_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smmu_index);
+u32 handle_smmu_cb_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smmu_index);
+void __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u32 write_val);
 void __handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len);
 
-u32 host_get_mmio_data(u32 hsr);
+u64 host_get_mmio_data(u32 hsr);
 u64 smmu_init_pte(u64 prot, u64 paddr);
-u32 smmu_get_cbndx(u32 smmu_index, u32 offset);
+u64 smmu_get_cbndx(u64 offset);
  
 #endif //HYPSEC_HYPSEC_H
 

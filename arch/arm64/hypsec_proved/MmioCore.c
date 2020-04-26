@@ -3,17 +3,13 @@
 
 void __hyp_text mmap_smmu(u32 vmid, u64 ttbr, u64 addr, u64 pte)
 {
-	acquire_lock_pt(vmid);
 	set_smmu_pt(vmid, addr, ttbr, pte);
-	release_lock_pt(vmid);
 }
 
 u64 __hyp_text walk_smmu(u32 vmid, u64 ttbr, u64 addr)
 {
 	u64 pte;
-	acquire_lock_pt(vmid);
 	pte = walk_smmu_pt(vmid, addr, ttbr);
-	release_lock_pt(vmid);
 	return pte;
 }
 
@@ -27,43 +23,45 @@ u32 __hyp_text check_smmu_pfn(u64 pfn, u32 vmid)
 	return 1;
 }
 
-void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
+void handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 {
-	u64 size = get_smmu_size(index);
-	u64 val = 0;
-	u32 ret;	
-	u32 offset = fault_ipa & (size - 1);
-	u32 cbndx = smmu_get_cbndx(index, offset);
+	u32 ret;
+	u64 offset = fault_ipa & ARM_SMMU_OFFSET_MASK;
+	u32 write_val = 0;
 
-	if (offset < (size >> 1)) {
+	if (offset < ARM_SMMU_GLOBAL_BASE) {
 		ret = handle_smmu_global_access(hsr, fault_ipa, 
-						offset, true, index);
+						offset, index);
+		if (ret == 0) {
+			v_panic();
+		} else {
+			__handle_smmu_write(hsr, fault_ipa, len, 0UL, write_val);
+		}
 	} else {
-		ret = handle_smmu_cb_access(hsr, fault_ipa, cbndx,
-					    offset, true, index);
-		if (ret == 2)
-			val = get_smmu_cfg_hw_ttbr(cbndx, index);
+		ret = handle_smmu_cb_access(hsr, fault_ipa,
+					    offset, index);
+		if (ret == 0) {
+			v_panic();	
+		} else {
+			if (ret == 2) {
+				u64 cbndx = smmu_get_cbndx(offset);
+				u64 val = get_smmu_cfg_hw_ttbr(cbndx, index);
+				write_val = 1;
+				__handle_smmu_write(hsr, fault_ipa, len, val, write_val);
+			} else {
+				__handle_smmu_write(hsr, fault_ipa, len, 0UL, write_val);
+			}
+		}
 	}
-
-	if (ret)
-		__handle_smmu_write(hsr, fault_ipa, len, val);
 }
 
 void __hyp_text handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 {
-	u64 size = get_smmu_size(index);
-	u32 offset = fault_ipa & (size - 1);
-	u32 ret;
-	u32 cbndx = smmu_get_cbndx(index, offset);
+	u64 offset = fault_ipa & ARM_SMMU_OFFSET_MASK;
 
-	if (offset < (size >> 1)) {
-		ret = handle_smmu_global_access(hsr, fault_ipa,
-						offset, true, index);
+	if (offset < ARM_SMMU_GLOBAL_BASE) {
+	    __handle_smmu_read(hsr, fault_ipa, len);
 	} else {
-		ret = handle_smmu_cb_access(hsr, fault_ipa, cbndx,
-					    offset, true, index);
-	}
-
-	if (ret)
-		__handle_smmu_read(hsr, fault_ipa, len);
+	    __handle_smmu_read(hsr, fault_ipa, len);
+	}	
 }

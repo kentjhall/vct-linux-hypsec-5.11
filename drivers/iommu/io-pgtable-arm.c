@@ -499,7 +499,7 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
 #ifndef CONFIG_VERIFIED_KVM
 	ret = __arm_lpae_map(data, iova, paddr, size, prot, lvl, ptep);
 #else
-	el2_arm_lpae_map(iova, paddr, size, prot, cfg.cbndx, smmu_num);
+	el2_arm_lpae_map(iova, paddr, prot, cfg.cbndx, smmu_num);
 	ret = 0;
 #endif
 	/*

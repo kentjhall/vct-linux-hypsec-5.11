@@ -93,6 +93,19 @@ typedef u64 arm_lpae_iopte;
 
 #define	get_cbndx(offset, base)		(offset - base) >> 2
 
+#define ARM_SMMU_PGSHIFT	12U
+//(1 << ARM_SMMU_PGSHIFT) - 1
+#define ARM_SMMU_PGSHIFT_MASK	4095U
+//1 << ARM_SMMU_PGSHIFT
+#define ARM_SMMU_GR1_BASE	4096U
+//ARM_SMMU_GR1_BASE + 0x800
+#define ARM_SMMU_GR1_END	6144U
+
+#define ARM_SMMU_SIZE		65536U
+#define ARM_SMMU_OFFSET_MASK	65535U
+#define ARM_SMMU_GLOBAL_BASE	32768U
+
+
 static inline u32 host_dabt_get_as(u32 hsr)
 {
 	return 1 << ((hsr & ESR_ELx_SAS) >> ESR_ELx_SAS_SHIFT);
