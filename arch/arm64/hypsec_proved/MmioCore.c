@@ -1,18 +1,6 @@
 #include "hypsec.h"
 #include "MmioOps.h"
 
-void __hyp_text mmap_smmu(u32 vmid, u64 ttbr, u64 addr, u64 pte)
-{
-	set_smmu_pt(vmid, addr, ttbr, pte);
-}
-
-u64 __hyp_text walk_smmu(u32 vmid, u64 ttbr, u64 addr)
-{
-	u64 pte;
-	pte = walk_smmu_pt(vmid, addr, ttbr);
-	return pte;
-}
-
 u32 __hyp_text check_smmu_pfn(u64 pfn, u32 vmid)
 {
 	u32 owner;
@@ -33,6 +21,7 @@ void handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 		ret = handle_smmu_global_access(hsr, fault_ipa, 
 						offset, index);
 		if (ret == 0) {
+			print_string("\rsmmu invalid write: global access\n");
 			v_panic();
 		} else {
 			__handle_smmu_write(hsr, fault_ipa, len, 0UL, write_val);
@@ -41,6 +30,7 @@ void handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 		ret = handle_smmu_cb_access(hsr, fault_ipa,
 					    offset, index);
 		if (ret == 0) {
+			print_string("\rsmmu invalid write: cb access\n");
 			v_panic();	
 		} else {
 			if (ret == 2) {

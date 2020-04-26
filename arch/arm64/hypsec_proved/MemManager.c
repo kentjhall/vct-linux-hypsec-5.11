@@ -71,6 +71,32 @@ u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn, u64 apfn, u32 pgnum)
 	return ret;
 }
 
+void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 pfn)
+{
+    u32 ret;
+    acquire_lock_s2page();
+    u32 owner = get_pfn_owner(pfn);
+    u32 count = get_pfn_count(count);
+
+    if (owner == HOSTVISOR) {
+	if (vmid == HOSTVISOR) {
+	    set_pfn_count(pfn, 1U);
+	}
+	else {
+	    if (count == 0) {
+		set_pfn_to_vm(vmid, pfn, 1UL);
+		set_pfn_count(pfn, INVALID_MEM);
+	    }
+	    else {
+		v_panic();
+	    }
+	}
+    } else if (owner != vmid) {
+	v_panic();
+    }
+    release_lock_s2page();
+}
+
 extern void t_mmap_s2pt(phys_addr_t addr, u64 desc, int level, u32 vmid);
 void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 {

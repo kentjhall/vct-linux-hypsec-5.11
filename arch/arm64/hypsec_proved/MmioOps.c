@@ -36,7 +36,6 @@ void __hyp_text  __el2_free_smmu_pgd(u32 cbndx, u32 index)
 void __hyp_text  __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index)
 {
 	u32 target_vmid, num_context_banks;
-	u64 new_ttbr;
 
 	acquire_lock_smmu();
 
@@ -45,7 +44,7 @@ void __hyp_text  __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index)
 		target_vmid = get_smmu_cfg_vmid(cbndx, index);
 		if (target_vmid == 0) {
 			set_smmu_cfg_vmid(cbndx, index, vmid);
-			new_ttbr = (u64)init_smmu_pt(vmid);
+			init_smmu_pt(cbndx, index);
 			//set_smmu_cfg_hw_ttbr(cbndx, index, new_ttbr);
 		}
 	} else

@@ -1,7 +1,7 @@
 #include "hypsec.h"
 #include "MmioOps.h"
 
-u32 is_smmu_range(u64 addr)
+u32 __hyp_text is_smmu_range(u64 addr)
 {
 	u32 total_smmu = get_smmu_num();
 	u32 i = 0U, res = INVALID_MEM;

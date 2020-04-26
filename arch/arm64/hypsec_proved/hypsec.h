@@ -572,7 +572,8 @@ static u64 inline get_smmu_pmd_next(void) {return 0;};
 static void inline set_smmu_pmd_next(u64 next) {};
 static u64 inline smmu_pt_load(u64 addr) {return 0;};
 static void inline smmu_pt_store(u64 addr, u64 value) {};
-static void inline smmu_pt_clear(u32 cbndx, u32 num){};
+static void inline smmu_pt_clear(u32 cbndx, u32 num) {};
+static u64 inline get_smmu_ttbr(u64 cbndx, u64 num) {return 0;};
 
 u32 get_smmu_cfg_vmid(u32 cbndx, u32 num);
 void set_smmu_cfg_vmid(u32 cbndx, u32 num, u32 vmid);
@@ -597,18 +598,23 @@ u64 get_host_regs(int nr);
 u64 alloc_s2pt_pgd(u32 vmid);
 u64 alloc_s2pt_pud(u32 vmid);
 u64 alloc_s2pt_pmd(u32 vmid);
+u64 alloc_smmu_pgd_page(void);
+u64 alloc_smmu_pmd_page(void);
 
 /*
  * PTWalk
  */
 
-u64 walk_smmu_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc);
 u64 walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc);
 u64 walk_pud(u32 vmid, u64 pgd, u64 addr, u32 alloc);
 u64 walk_pmd(u32 vmid, u64 pgd, u64 addr, u32 alloc);
 u64 walk_pte(u32 vmid, u64 pmd, u64 addr);
 void v_set_pmd(u32 vmid, u64 pgd, u64 addr, u64 pmd);
 void v_set_pte(u32 vmid, u64 pmd, u64 addr, u64 pte);
+u64 walk_smmu_pgd(u64 ttbr, u64 addr, u32 alloc);
+u64 walk_smmu_pmd(u64 pgd, u64 addr, u32 alloc);
+u64 walk_smmu_pte(u64 pmd, u64 addr);
+void set_smmu_pte(u64 pmd, u64 addr, u64 pte);
 
 /*
  * NPTWalk
@@ -618,14 +624,14 @@ void init_npt(u32 vmid);
 u32 get_npt_level(u32 vmid, u64 addr);
 u64 walk_npt(u32 vmid, u64 addr);
 void set_npt(u32 vmid, u64 addr, u32 level, u64 pte);
-u64 walk_smmu_pt(u32 vmid, u64 vttbr, u64 addr);
-void set_smmu_pt(u32 vmid, u64 addr, u64 vttbr, u64 pte);
+void init_smmu_pt(u32 cbndx, u32 num);
+u64 walk_smmu_pt(u32 cbndx, u32 num, u64 addr);
+void set_smmu_pt(u32 cbndx, u32 num, u64 addr, u64 pte);
 
 /*
  * NPTOps
  */
 
-u64 init_smmu_pt(u32 vmid);
 void init_s2pt(u32 vmid);
 u64 get_vm_vttbr(u32 vmid);
 u32 get_level_s2pt(u32 vmid, u64 addr);
@@ -664,7 +670,7 @@ u32 get_vm_poweron(u32 vmid);
 /*
  * MemManagerAux
  */
-u32 check_pfn_to_vm(u32 vmid, u64 pfn, u32 pgnum, u64 apfn);
+u32 check_pfn_to_vm(u32 vmid, u64 pfn, u64 pgnum, u64 apfn);
 void set_pfn_to_vm(u32 vmid, u64 pfn, u64 pgnum);
 
 /*
