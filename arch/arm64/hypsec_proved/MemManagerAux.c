@@ -48,24 +48,27 @@ void __hyp_text set_pfn_to_vm(u32 vmid, u64 pfn, u64 pgnum)
 
 u32 __hyp_text check_pfn_to_vm(u32 vmid, u64 pfn, u64 pgnum, u64 apfn)
 {
-    u32 ret = 0U;
-    while (pgnum > 0UL) {
-	u32 owner = get_pfn_owner(pfn);
-	u32 count = get_pfn_count(pfn);
-	if (owner == HOSTVISOR) {
-	    if (count != 0U) ret = 3U;
+	u32 ret = 0U;
+	while (pgnum > 0UL) {
+		u32 owner = get_pfn_owner(pfn);
+		u32 count = get_pfn_count(pfn);
+		if (owner == HOSTVISOR) {
+			if (count != 0U)
+				ret = 3U;
+		} else if (owner == vmid) {
+			if (ret < 2U && count != INVALID_MEM) {
+				if (pfn == apfn)
+					ret = 2U;
+				else
+					ret = 1U;
+			}
+		} else {
+			ret = 3U;
+		}
+		pgnum -= 1UL;
+		pfn += 1UL;
 	}
-	else if (owner == vmid) {
-	    if (ret < 2U && count != INVALID_MEM) {
-		if (pfn == apfn) ret = 2U;
-		else ret = 1U;
-	    }
-	}
-	else ret = 3U;
-	pgnum -= 1UL;
-	pfn += 1UL;
-    }
-    return ret;
+	return ret;
 }
 
 void __hyp_text set_pfn_to_vm(u32 vmid, u64 pfn, u64 pgnum)

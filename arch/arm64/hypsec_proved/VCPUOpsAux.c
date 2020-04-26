@@ -166,9 +166,5 @@ void __hyp_text v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid)
     u64 pte = get_int_new_pte(vmid, vcpuid);
     u32 level = get_int_new_level(vmid, vcpuid);
 
-    u64 esr = get_shadow_esr(vmid, vcpuid);
-    u64 esr_ec = (esr / ESR_ELx_EC_SHIFT) % ESR_ELx_EC_MASK;
-    u32 is_iabt = 0U;
-    if (esr_ec == ESR_ELx_EC_IABT_LOW) is_iabt = 1U;
-    prot_and_map_vm_s2pt(vmid, addr, pte, level, is_iabt);
+    prot_and_map_vm_s2pt(vmid, addr, pte, level);
 }

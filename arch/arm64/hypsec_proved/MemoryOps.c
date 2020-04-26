@@ -29,8 +29,9 @@ void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 	}
 }
 
-/* FIXME: update the following as verified code */
 #define PMD_PAGE_NUM	512
+#if 0
+/* old code */
 void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 level, u32 iabt)
 {
 	u64 target_addr = phys_page(new_pte);
@@ -56,6 +57,38 @@ void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 
 
 	if (!ret)
 		map_pfn_vm(vmid, fault_addr, new_pte, level);
+}
+#endif
+
+void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 level)
+{
+	u64 pfn, apfn, gfn, agfn;
+	u32 ret;
+	u64 target_addr = phys_page(new_pte);
+	pfn = target_addr / PAGE_SIZE;
+	agfn = fault_addr / PAGE_SIZE;
+
+	if (new_pte == 0)
+		return;
+
+	if (level == 2U) {
+		gfn = agfn / PTRS_PER_PMD * PTRS_PER_PMD;
+		apfn = pfn + (agfn - gfn);
+		ret = assign_pfn_to_vm(vmid, pfn, apfn, PMD_PAGE_NUM);
+		if (ret == 1) {
+			new_pte += (agfn - gfn) * PAGE_SIZE;
+			map_pfn_vm(vmid, fault_addr, new_pte, 3U);
+		}
+		else if (ret == 0) {
+			map_pfn_vm(vmid, fault_addr, new_pte, 2U);
+		}
+	}
+	else {
+		ret = assign_pfn_to_vm(vmid, pfn, pfn, 1UL);
+		if (ret == 0) {
+			map_pfn_vm(vmid, fault_addr, new_pte, 3U);
+		}
+	}
 }
 
 void __hyp_text v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
