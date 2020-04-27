@@ -86,8 +86,11 @@ void __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u32 write_val
 			writeq_relaxed(val, (void *)fault_ipa);
 	} else if(len == 4)
 		writel_relaxed(data, (void *)fault_ipa);
-	else
+	else {
+		print_string("\rhandle smmu write panic\n");
+		printhex_ul(len);
 		v_panic();
+	}
 }
 
 void __hyp_text __handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len)
@@ -103,7 +106,10 @@ void __hyp_text __handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len)
 	} else if (len == 4) {
 		data_32 = readl_relaxed((void *)fault_ipa);
 		set_host_regs(rt, data_32);
-	} else
+	} else {
 		/* We don't handle cases which len is smaller than 4 bytes */
+		print_string("\rhandle smmu read panic\n");
+		printhex_ul(len);
 		v_panic();
+	}
 }

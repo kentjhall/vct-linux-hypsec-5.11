@@ -564,8 +564,14 @@ void set_vm_load_signature(u32 vmid, u32 load_idx);
 #define SMMU_PMD_START 196608UL
 #define SMMU_POOL_END 262144UL
 
-static void inline acquire_lock_smmu(void) {};
-static void inline release_lock_smmu(void) {};
+static void inline acquire_lock_smmu(void) {
+	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+	stage2_spin_lock(&el2_data->smmu_lock);
+};
+static void inline release_lock_smmu(void) {
+	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+	stage2_spin_unlock(&el2_data->smmu_lock);
+};
 static u64 inline get_smmu_pgd_next(void) {return 0;};
 static void inline set_smmu_pgd_next(u64 next) {};
 static u64 inline get_smmu_pmd_next(void) {return 0;};
@@ -760,7 +766,7 @@ void __hyp_text __el2_arm_lpae_clear(u64 iova, u32 cbndx, u32 index);
  * MmioOpsAux
  */
 void handle_host_mmio(u64 addr, u64 index, u32 hsr);
-u32 is_smmu_range(u64 addr);
+u64 is_smmu_range(u64 addr);
 
 /*
  * MmioCore
