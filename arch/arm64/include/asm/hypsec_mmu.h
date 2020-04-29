@@ -28,6 +28,7 @@ struct vring_data {
 struct s2_page {
 	int count;
 	u32 vmid;
+	u64 gfn;
 };
 
 struct s2_memblock_info {

@@ -117,8 +117,8 @@ void el2_shared_data_init(void)
 
 	shared_data = (void *)kvm_ksym_ref(shared_data_start);
 	memset(shared_data, 0, sizeof(struct shared_data));
-	printk("EL2: cleared %lx byte data size %lx\n",
-		sizeof(struct shared_data), PAGE_SIZE * PAGE_SIZE * 16);
+	printk("[EL2] cleared %lx byte data size %lx\n",
+		sizeof(struct shared_data), PAGE_SIZE * PAGE_SIZE);
 }
 
 #define CORE_PUD_BASE PAGE_SIZE
@@ -131,6 +131,12 @@ void init_el2_data_page(void)
 	struct el2_data *el2_data;
 	struct memblock_region *r;
 	u64 pool_start;
+
+	WARN_ON(sizeof(struct el2_data) >= CORE_DATA_SIZE);
+
+	printk("[EL2] stage2: el2_data struct size %lx reserved core data size %lx\n",
+		sizeof(struct el2_data), CORE_DATA_SIZE);
+
 
 	memset((void *)kvm_ksym_ref(stage2_pgs_start), 0, STAGE2_PAGES_SIZE);
 	__flush_dcache_area((void *)kvm_ksym_ref(stage2_pgs_start), STAGE2_PAGES_SIZE);

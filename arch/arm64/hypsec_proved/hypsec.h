@@ -251,6 +251,16 @@ static void inline set_s2_page_count(u64 index, u32 count) {
     el2_data->s2_pages[index].count = count;
 }
 
+static u32 inline get_s2_page_gfn(u64 index) {
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+    return el2_data->s2_pages[index].gfn;
+}
+
+static void inline set_s2_page_gfn(u64 index, u64 gfn) {
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+    el2_data->s2_pages[index].gfn = gfn;
+}
+
 /*
 void    acquire_lock_vm(u32 vmid);
 void    release_lock_vm(u32 vmid);

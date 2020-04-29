@@ -38,3 +38,24 @@ void __hyp_text set_pfn_count(u64 pfn, u32 count)
 		set_s2_page_count(index, count);
 	}
 }
+
+u64 __hyp_text get_pfn_map(u64 pfn)
+{
+	u64 index = get_s2_page_index(pfn * PAGE_SIZE);
+	u64 ret;
+	if (index != INVALID_MEM) {
+		ret = get_s2_page_gfn(index);
+	}
+	else {
+		ret = INVALID_MEM;
+	}
+	return ret;
+}
+
+void __hyp_text set_pfn_map(u64 pfn, u64 gfn)
+{
+	u64 index = get_s2_page_index(pfn * PAGE_SIZE);
+	if (index != INVALID_MEM) {
+		set_s2_page_gfn(index, gfn);
+	}
+}
