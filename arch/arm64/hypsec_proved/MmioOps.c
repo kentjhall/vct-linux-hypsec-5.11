@@ -55,17 +55,32 @@ void __hyp_text __el2_arm_lpae_map(u64 iova, u64 paddr,
 				   u64 prot, u32 cbndx, u32 index)
 {
 	u32 vmid;
-	u64 pfn, pte, ttbr;
+	u64 pfn, pte, ttbr, gfn;
+
+	pfn = paddr / PAGE_SIZE;
+	gfn = iova / PAGE_SIZE;
 
 	acquire_lock_smmu();
 
-	vmid = get_smmu_cfg_vmid(cbndx, index);
-	ttbr = get_smmu_cfg_hw_ttbr(cbndx, index);
-	pfn = paddr / PAGE_SIZE;
-	//assign_pfn_to_smmu(vmid, pfn);
-	pte = smmu_init_pte(prot, paddr);
-	set_smmu_pt(cbndx, index, iova, pte);
-	
+	if (vmid == HOSTVISOR) {
+		if (pfn == gfn) {
+			assign_pfn_to_smmu(vmid, gfn, pfn);
+			pte = smmu_init_pte(prot, paddr);
+			set_smmu_pt(cbndx, index, iova, pte);
+		}
+	} else {
+		acquire_lock_vm(vmid);
+		if (get_vm_state(vmid) == READY) {
+			assign_pfn_to_smmu(vmid, gfn, pfn);
+			pte = smmu_init_pte(prot, paddr);
+			set_smmu_pt(cbndx, index, iova, pte);
+		}
+		else {
+	    		v_panic();
+		}
+		release_lock_vm(vmid);
+	}
+
 	release_lock_smmu();
 	return;
 }
@@ -79,6 +94,7 @@ u64 __hyp_text __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index)
 	return (phys_page(pte) | iova); 
 }
 
+/* FIXME: apply changes in XP's upstream code */
 void __hyp_text __el2_arm_lpae_clear(u64 iova, u32 cbndx, u32 index)
 {
 	acquire_lock_smmu();

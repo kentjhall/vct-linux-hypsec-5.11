@@ -27,7 +27,7 @@ void __hyp_text map_page_host(u64 addr)
 			mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
 		} else {
 			reject_invalid_mem_access(addr);
-			//v_panic();
+			v_panic();
 		}
 	}
 	release_lock_s2page();
@@ -42,6 +42,7 @@ void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
     if (owner == vmid) {
         set_pfn_owner(pfn, HOSTVISOR);
         set_pfn_count(pfn, 0U);
+        set_pfn_map(pfn, 0UL);
         perm = pgprot_val(PAGE_NONE);
         level = get_npt_level(vmid, pfn * PAGE_SIZE);
         mmap_s2pt(vmid, pfn * PAGE_SIZE, level, perm);
@@ -49,34 +50,38 @@ void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
     release_lock_s2page();
 }
 
-u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 pfn, u64 apfn, u32 pgnum)
+u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 apfn, u32 pgnum)
 {
 	u32 ret;
 
 	acquire_lock_s2page();
-	ret = check_pfn_to_vm(vmid, pfn, pgnum, apfn);
+	ret = check_pfn_to_vm(vmid, gfn, pfn, pgnum, apfn);
 	/* if pfn is new, we simply assign it */
 	if (ret == 0) {
-		set_pfn_to_vm(vmid, pfn, pgnum);
+		set_pfn_to_vm(vmid, gfn, pfn, pgnum);
 	}
 	/* if pfn is partially overlapped */
 	else if (ret == 1) {
-		set_pfn_to_vm(vmid, apfn, 1);
-		//ret = 1;
+		u64 agfn = gfn + (apfn - pfn);
+		set_pfn_to_vm(vmid, agfn, apfn, 1);
 	/* if pfn is mapped, we neither assign nor map it */
 	} else if (ret != 2) {
+		print_string("\rpanic in assign_pfn_to_vm\n");
 		v_panic();
 	}
 	release_lock_s2page();
 	return ret;
 }
 
-void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 pfn)
+void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 {
-    u32 ret;
+    u32 ret, owner, count;
+    u64 map;
+
     acquire_lock_s2page();
-    u32 owner = get_pfn_owner(pfn);
-    u32 count = get_pfn_count(count);
+    owner = get_pfn_owner(pfn);
+    count = get_pfn_count(count);
+    map = get_pfn_map(pfn);
 
     if (owner == HOSTVISOR) {
 	if (vmid == HOSTVISOR) {
@@ -84,14 +89,16 @@ void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 pfn)
 	}
 	else {
 	    if (count == 0) {
-		set_pfn_to_vm(vmid, pfn, 1UL);
+		set_pfn_to_vm(vmid, gfn, pfn, 1UL);
 		set_pfn_count(pfn, INVALID_MEM);
 	    }
 	    else {
+                print_string("\rpanic in assign_pfn_to_smmu: count is invalid\n");
 		v_panic();
 	    }
 	}
     } else if (owner != vmid) {
+        print_string("\rpanic in assign_pfn_to_smmu: owner != vmid\n");
 	v_panic();
     }
     release_lock_s2page();
