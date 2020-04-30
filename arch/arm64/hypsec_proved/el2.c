@@ -123,23 +123,24 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		verify_and_load_images((u32)hr->regs[1]);
 		hr->regs[31] = 1;
 		break;
-	/*case HVC_FREE_SMMU_PGD:
-		__el2_free_smmu_pgd((unsigned long)hr->regs[1]);
+	case HVC_SMMU_FREE_PGD:
+		__el2_free_smmu_pgd(hr->regs[1], hr->regs[2]);
 		break;
-	case HVC_ALLOC_SMMU_PGD:
-		__el2_alloc_smmu_pgd((unsigned long)hr->regs[1], (u8)hr->regs[2],
-					(u32)hr->regs[3], (u64)hr->regs[4]);
+	case HVC_SMMU_ALLOC_PGD:
+		__el2_alloc_smmu_pgd(hr->regs[1],  hr->regs[2], hr->regs[3]);
 		break;
 	case HVC_SMMU_LPAE_MAP:
-		__el2_arm_lpae_map((unsigned long)hr->regs[1], hr->regs[2],
-					hr->regs[3], hr->regs[4], hr->regs[5]);
+		__el2_arm_lpae_map(hr->regs[1], hr->regs[2], hr->regs[3], hr->regs[4],
+				   hr->regs[5]);
 		break;
 	case HVC_SMMU_LPAE_IOVA_TO_PHYS:
-		ret = (u64)el2_arm_lpae_iova_to_phys((unsigned long)hr->regs[1],
-							(u64)hr->regs[2]);
+		ret = (u64)__el2_arm_lpae_iova_to_phys(hr->regs[1], hr->regs[2], hr->regs[3]);
 		hr->regs[31] = (u64)ret;
 		break;
-	case HVC_BOOT_FROM_SAVED_VM:
+	case HVC_SMMU_CLEAR:
+		__el2_arm_lpae_clear(hr->regs[1], hr->regs[2], hr->regs[3]);
+		break;
+	/*case HVC_BOOT_FROM_SAVED_VM:
 		__el2_boot_from_inc_exe((u32)hr->regs[1]);
 		break;
 	case HVC_ENCRYPT_BUF:

@@ -413,7 +413,7 @@ static void arm_smmu_init_context_bank(struct arm_smmu_domain *smmu_domain,
 	cb->cfg = cfg;
 #ifdef CONFIG_VERIFIED_KVM
 	smmu_num = smmu->index;
-	el2_alloc_smmu_pgd(cfg->cbndx, ARM_SMMU_CB_VMID(smmu, cfg), smmu_num);
+	el2_smmu_alloc_pgd(cfg->cbndx, ARM_SMMU_CB_VMID(smmu, cfg), smmu_num);
 #endif
 
 	/* TTBCR */

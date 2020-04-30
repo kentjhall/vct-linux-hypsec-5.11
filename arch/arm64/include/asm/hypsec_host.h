@@ -187,12 +187,11 @@ int el2_memcmp(void *dest, void *src, size_t len);
 int el2_hex_to_bin(char ch);
 int el2_hex2bin(unsigned char *dst, const char *src, int count);
 
-extern void el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 num);
-extern void el2_free_smmu_pgd(u32 cbndx, u32 num);
-
-extern void el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
-			     u64 prot, u32 cbndx, u32 num);
-extern phys_addr_t el2_arm_lpae_iova_to_phys(unsigned long iova, u32 cbndx, u32 num);
+extern void el2_smmu_alloc_pgd(u32 cbndx, u32 vmid, u32 num);
+extern void el2_smmu_free_pgd(u32 cbndx, u32 num);
+extern void el2_arm_lpae_map(u64 iova, phys_addr_t paddr, u64 prot, u32 cbndx, u32 num);
+extern phys_addr_t el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 num);
+extern void el2_smmu_clear(u64 iova, u32 cbndx, u32 num);
 
 void encrypt_buf(u32 vmid, void *buf, uint32_t len);
 void decrypt_buf(u32 vmid, void *buf, uint32_t len);

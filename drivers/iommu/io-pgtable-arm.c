@@ -479,7 +479,7 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
 	int ret, lvl = ARM_LPAE_START_LVL(data);
 #else
 	struct io_pgtable iop = data->iop;
-	int ret;
+	int ret, i;
 	struct arm_smmu_domain *smmu_domain = iop.cookie;
 	struct arm_smmu_cfg cfg = smmu_domain->cfg;
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
@@ -499,7 +499,13 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
 #ifndef CONFIG_VERIFIED_KVM
 	ret = __arm_lpae_map(data, iova, paddr, size, prot, lvl, ptep);
 #else
-	el2_arm_lpae_map(iova, paddr, prot, cfg.cbndx, smmu_num);
+	/* We check if size is aligned to page size */
+	WARN_ON(size % PAGE_SIZE);
+	for (i = 0; i < (size / PAGE_SIZE); i++) {
+		iova += PAGE_SIZE * i;
+		paddr += PAGE_SIZE * i;
+		el2_arm_lpae_map(iova, paddr, prot, cfg.cbndx, smmu_num);
+	}
 	ret = 0;
 #endif
 	/*
@@ -553,7 +559,7 @@ static void arm_lpae_free_pgtable(struct io_pgtable *iop)
 	struct arm_smmu_cfg *cfg = &smmu_domain->cfg;
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
 	u32 smmu_num = smmu->index;
-	el2_free_smmu_pgd(cfg->cbndx, smmu_num);
+	el2_smmu_free_pgd(cfg->cbndx, smmu_num);
 	__arm_lpae_free_pages(data->pgd, data->pgd_size, &data->iop.cfg);
 #endif
 	kfree(data);
@@ -677,6 +683,12 @@ static size_t arm_lpae_unmap(struct io_pgtable_ops *ops, unsigned long iova,
 	struct arm_smmu_cfg cfg = smmu_domain->cfg;
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
 	u32 smmu_num = smmu->index;
+	/* We check if size is aligned to page size */
+	WARN_ON(size % PAGE_SIZE);
+	for (i = 0; i < (size / PAGE_SIZE); i++) {
+		iova += PAGE_SIZE * i;
+		el2_smmu_clear(iova, cfg.cbndx, smmu_num);
+	}
 	el2_arm_lpae_map(iova, 0, size, 0, cfg.cbndx, smmu_num);
 	return size;
 #endif

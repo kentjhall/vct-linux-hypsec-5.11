@@ -450,23 +450,27 @@ int hypsec_register_vcpu(u32 vmid, int vcpu_id)
 }
 
 /* DMA Protection */
-void el2_free_smmu_pgd(u32 cbndx, u32 num)
+void el2_smmu_free_pgd(u32 cbndx, u32 num)
 {
-	kvm_call_core(HVC_FREE_SMMU_PGD, cbndx, num);
+	kvm_call_core(HVC_SMMU_FREE_PGD, cbndx, num);
 }
 
-void el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 num)
+void el2_smmu_alloc_pgd(u32 cbndx, u32 vmid, u32 num)
 {
-	kvm_call_core(HVC_ALLOC_SMMU_PGD, cbndx, vmid, num);
+	kvm_call_core(HVC_SMMU_ALLOC_PGD, cbndx, vmid, num);
 }
 
-void el2_arm_lpae_map(unsigned long iova, phys_addr_t paddr,
-		      u64 prot, u32 cbndx, u32 num)
+void el2_arm_lpae_map(u64 iova, phys_addr_t paddr, u64 prot, u32 cbndx, u32 num)
 {
 	kvm_call_core(HVC_SMMU_LPAE_MAP, iova, paddr, prot, cbndx, num);
 }
 
-phys_addr_t el2_arm_lpae_iova_to_phys(unsigned long iova, u32 cbndx, u32 num)
+phys_addr_t el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 num)
 {
 	return kvm_call_core(HVC_SMMU_LPAE_IOVA_TO_PHYS, iova, cbndx, num);
+}
+
+void el2_smmu_clear(u64 iova, u32 cbndx, u32 num)
+{
+	kvm_call_core(HVC_SMMU_CLEAR, iova, cbndx, num);
 }

@@ -69,10 +69,11 @@
 #define HVC_DECRYPT_BUF 21
 #define HVC_SAVE_CRYPT_VCPU 22
 /* SMMU */
-#define HVC_FREE_SMMU_PGD 23
-#define HVC_ALLOC_SMMU_PGD 24
+#define HVC_SMMU_FREE_PGD 23
+#define HVC_SMMU_ALLOC_PGD 24
 #define HVC_SMMU_LPAE_MAP 25
 #define HVC_SMMU_LPAE_IOVA_TO_PHYS 26
+#define HVC_SMMU_CLEAR 27
 #endif
 
 /* Error returned when an invalid stub number is passed into x0 */
