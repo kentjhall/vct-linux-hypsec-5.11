@@ -124,7 +124,7 @@ void el2_shared_data_init(void)
 #define CORE_PUD_BASE PAGE_SIZE
 #define CORE_PMD_BASE (CORE_PUD_BASE + (PAGE_SIZE * 16))
 #define CORE_PTE_BASE SZ_2M
-#define CORE_PGD_START	(8 * PAGE_SIZE * PAGE_SIZE) 
+#define CORE_PGD_START	(10 * PAGE_SIZE * PAGE_SIZE) 
 void init_el2_data_page(void)
 {
 	int i = 0, index = 0;

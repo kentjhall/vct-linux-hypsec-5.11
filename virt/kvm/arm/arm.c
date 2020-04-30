@@ -1607,7 +1607,7 @@ static int init_hyp_mode(void)
 #ifndef CONFIG_VERIFIED_KVM
 		stack_page = __get_free_page(GFP_KERNEL);
 #else
-		stack_page = (unsigned long)phys_to_virt(host_alloc_stage2_page(PAGE_SIZE));
+		stack_page = (unsigned long)phys_to_virt(host_alloc_stage2_page(PAGE_SIZE + 64));
 #endif
 		if (!stack_page) {
 			err = -ENOMEM;
