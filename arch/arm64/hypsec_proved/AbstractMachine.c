@@ -206,12 +206,6 @@ u32 __hyp_text get_smmu_num(void)
 	return el2_data->el2_smmu_num;
 }	
 
-u64 __hyp_text get_smmu_base(u32 num)
-{
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	return el2_data->smmus[num].phys_base;
-}
-
 u64 __hyp_text get_smmu_size(u32 num)
 {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -233,6 +227,8 @@ u32 __hyp_text get_smmu_pgshift(u32 num)
 void __hyp_text smmu_pt_clear(u32 cbndx, u32 num) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	u32 index;
+	u64 va;
 	index = SMMU_NUM_CTXT_BANKS * num + cbndx;
-	el2_memset((void *)el2_data->smmu_cfg[index].hw_ttbr, 0, PAGE_SIZE * 2);
+	va = __el2_va(el2_data->smmu_cfg[index].hw_ttbr); 
+	el2_memset((void *)va, 0, PAGE_SIZE * 2);
 };

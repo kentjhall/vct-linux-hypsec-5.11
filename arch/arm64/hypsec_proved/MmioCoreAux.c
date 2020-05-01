@@ -2,12 +2,13 @@
 #include "MmioOps.h"
 
 
-u32 handle_smmu_global_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smmu_index)
+u32 __hyp_text handle_smmu_global_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smmu_index)
 {
 	/* We don't care if it's read accesses */
 
 	u32 ret;
 	u64 data = host_get_mmio_data(hsr);
+
 	/* GR0 */
 	if (offset >= 0 && offset <= ARM_SMMU_GR1_BASE) {
 		if (offset == ARM_SMMU_GR0_sCR0) {
@@ -53,7 +54,7 @@ u32 handle_smmu_global_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smmu_index
 }
 
 /* FIXME: we have a pointer here */
-u32 handle_smmu_cb_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smmu_index)
+u32 __hyp_text handle_smmu_cb_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smmu_index)
 {
 	u64 cb_offset;
 	u32 ret;
@@ -72,21 +73,34 @@ u32 handle_smmu_cb_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smmu_index)
 		ret = 1U;
 	}
 
+	/*
+	print_string("\rhandle cb access: cb_offset\n");
+	printhex_ul(cb_offset);
+	print_string("\rhandle cb access: ret\n");
+	printhex_ul(ret);
+	*/
 	return ret;
 }
 
 
-void __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u32 write_val)
+void __hyp_text __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u32 write_val)
 {
 	u64 data = host_get_mmio_data(hsr);
 	if (len == 8) {
-		if (write_val == 0)
+		if (write_val == 0) {
+			//print_string("\rwriteq data\n");
 			writeq_relaxed(data, (void *)fault_ipa);
-		else
+			//print_string("\rafter writeq data\n");
+		} else {
+			//print_string("\rwriteq val\n");
 			writeq_relaxed(val, (void *)fault_ipa);
-	} else if(len == 4)
+			//print_string("\rafter writeq val\n");
+		}
+	} else if(len == 4) {
+		//print_string("\rwritel data\n");
 		writel_relaxed(data, (void *)fault_ipa);
-	else {
+		//print_string("\rafter writel val\n");
+	} else {
 		print_string("\rhandle smmu write panic\n");
 		printhex_ul(len);
 		v_panic();

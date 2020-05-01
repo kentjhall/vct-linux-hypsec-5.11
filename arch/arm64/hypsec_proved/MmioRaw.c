@@ -9,7 +9,7 @@ u64 __hyp_text host_get_mmio_data(u32 hsr)
 	return get_host_regs(rt);
 }
 
-u64 smmu_init_pte(u64 prot, u64 paddr)
+u64 __hyp_text smmu_init_pte(u64 prot, u64 paddr)
 {
 	u64 val;
 
@@ -21,7 +21,7 @@ u64 smmu_init_pte(u64 prot, u64 paddr)
 	return val;
 }
 
-u64 smmu_get_cbndx(u64 offset)
+u64 __hyp_text smmu_get_cbndx(u64 offset)
 {
 	u64 cbndx;
 	offset -= ARM_SMMU_GLOBAL_BASE;

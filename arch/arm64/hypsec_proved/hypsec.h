@@ -629,7 +629,18 @@ u32 get_smmu_num_context_banks(u32 num);
 u32 get_smmu_pgshift(u32 num);
 u32 get_smmu_num(void);
 u64 get_smmu_size(u32 num);
-u64 get_smmu_base(u32 num);
+
+static u64 inline get_smmu_base(u32 num)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->smmus[num].phys_base;
+}
+
+static u64 inline get_smmu_hyp_base(u32 num)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->smmus[num].hyp_base;
+}
 
 void set_per_cpu_host_regs(u64 hr); 
 void set_host_regs(int nr, u64 value);
@@ -806,7 +817,7 @@ void __hyp_text __el2_arm_lpae_clear(u64 iova, u32 cbndx, u32 index);
 /*
  * MmioOpsAux
  */
-void handle_host_mmio(u64 addr, u64 index, u32 hsr);
+void handle_host_mmio(u64 index, u32 hsr);
 u64 is_smmu_range(u64 addr);
 
 /*

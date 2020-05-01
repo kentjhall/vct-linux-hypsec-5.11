@@ -124,21 +124,31 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		hr->regs[31] = 1;
 		break;
 	case HVC_SMMU_FREE_PGD:
+		//print_string("\rfree smmu pgd\n");
 		__el2_free_smmu_pgd(hr->regs[1], hr->regs[2]);
+		//print_string("\rafter free smmu pgd\n");
 		break;
 	case HVC_SMMU_ALLOC_PGD:
+		//print_string("\ralloc smmu pgd\n");
 		__el2_alloc_smmu_pgd(hr->regs[1],  hr->regs[2], hr->regs[3]);
+		//print_string("\rafter alloc smmu pgd\n");
 		break;
 	case HVC_SMMU_LPAE_MAP:
+		//print_string("\rsmmu mmap\n");
 		__el2_arm_lpae_map(hr->regs[1], hr->regs[2], hr->regs[3], hr->regs[4],
 				   hr->regs[5]);
+		//print_string("\rafter smmu mmap\n");
 		break;
 	case HVC_SMMU_LPAE_IOVA_TO_PHYS:
+		//print_string("\rsmmu iova to phys\n");
 		ret = (u64)__el2_arm_lpae_iova_to_phys(hr->regs[1], hr->regs[2], hr->regs[3]);
 		hr->regs[31] = (u64)ret;
+		//print_string("\rafter smmu iova to phys\n");
 		break;
 	case HVC_SMMU_CLEAR:
+		//print_string("\rsmmu clear\n");
 		__el2_arm_lpae_clear(hr->regs[1], hr->regs[2], hr->regs[3]);
+		//print_string("\rafter smmu clear\n");
 		break;
 	/*case HVC_BOOT_FROM_SAVED_VM:
 		__el2_boot_from_inc_exe((u32)hr->regs[1]);

@@ -11,7 +11,7 @@ u32 __hyp_text check_smmu_pfn(u64 pfn, u32 vmid)
 	return 1;
 }
 
-void handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
+void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 {
 	u32 ret;
 	u64 offset = fault_ipa & ARM_SMMU_OFFSET_MASK;

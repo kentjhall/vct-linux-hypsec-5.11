@@ -269,7 +269,9 @@ void init_hypsec_io(void)
 		if (err) {
 			kvm_err("Cannot map smmu %d from %llx\n", i, smmu->phys_base);
 			goto out_err;
-		}
+		} else
+			kvm_info("SMMU remapped to EL2: %llx to %llx\n",
+				smmu->hyp_base, smmu->hyp_base + smmu->size);
 	}
 
 out_err:
