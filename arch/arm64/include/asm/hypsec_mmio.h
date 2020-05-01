@@ -6,7 +6,7 @@
  */
 
 #define SMMU_NUM_CTXT_BANKS	8
-#define SMMU_NUM		4
+#define SMMU_NUM		2
 #define EL2_SMMU_CFG_SIZE	SMMU_NUM_CTXT_BANKS * SMMU_NUM
 
 /* FIXME: Hardcoded SMMU addresses now.. */
@@ -18,7 +18,6 @@
 
 struct el2_smmu_cfg {
 	u32 vmid;
-	unsigned long ttbr;
 	u64 hw_ttbr;
 };
 

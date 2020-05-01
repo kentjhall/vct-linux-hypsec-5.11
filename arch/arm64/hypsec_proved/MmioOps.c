@@ -25,7 +25,6 @@ void __hyp_text  __el2_free_smmu_pgd(u32 cbndx, u32 index)
 			v_panic();
 	}
 	set_smmu_cfg_vmid(cbndx, index, 0);
-	set_smmu_cfg_ttbr(cbndx, index, 0);
 	set_smmu_cfg_hw_ttbr(cbndx, index, 0);
 	release_lock_smmu();
 

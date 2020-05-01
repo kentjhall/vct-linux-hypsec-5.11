@@ -98,9 +98,7 @@ void __hyp_text set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 //3 Level PT walk in SMMU
 void __hyp_text init_smmu_pt(u32 cbndx, u32 num)
 {
-	u64 ttbr = get_smmu_ttbr(cbndx, num);
 	smmu_pt_clear(cbndx, num);
-	set_smmu_cfg_hw_ttbr(cbndx, num, ttbr);
 }
 
 u64 __hyp_text walk_smmu_pt(u32 cbndx, u32 num, u64 addr)

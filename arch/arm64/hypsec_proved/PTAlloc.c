@@ -59,7 +59,7 @@ u64 __hyp_text alloc_s2pt_pmd(u32 vmid)
 u64 __hyp_text alloc_smmu_pgd_page(void)
 {
 	u64 next = get_smmu_pgd_next();
-	u64 end = SMMU_PMD_START;
+	u64 end = SMMU_PMD_BASE;
 
 	if (next + PAGE_SIZE <= end) {
 		set_smmu_pgd_next(next + PAGE_SIZE);

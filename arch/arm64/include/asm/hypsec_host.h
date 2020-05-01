@@ -131,6 +131,10 @@ struct el2_data {
         uint32_t hacl_hash0[64U];
 
 	uint8_t key[16];
+
+	unsigned long smmu_page_pool_start;
+	unsigned long smmu_pgd_used_pages;
+	unsigned long smmu_pmd_used_pages;
 };
 
 void init_el2_data_page(void);

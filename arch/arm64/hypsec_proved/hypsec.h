@@ -572,8 +572,9 @@ void set_vm_load_signature(u32 vmid, u32 load_idx);
 #define SMMU_POOL_START 65536UL
 #define SMMU_PGD_START 131072UL
 #define SMMU_PMD_START 196608UL
-#define SMMU_POOL_END 262144UL
+#define SMMU_POOL_END	STAGE2_VM_POOL_SIZE
 
+#define SMMU_PMD_BASE	(PAGE_SIZE * 16)
 static void inline acquire_lock_smmu(void) {
 	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	stage2_spin_lock(&el2_data->smmu_lock);
@@ -582,19 +583,46 @@ static void inline release_lock_smmu(void) {
 	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	stage2_spin_unlock(&el2_data->smmu_lock);
 };
-static u64 inline get_smmu_pgd_next(void) {return 0;};
-static void inline set_smmu_pgd_next(u64 next) {};
-static u64 inline get_smmu_pmd_next(void) {return 0;};
-static void inline set_smmu_pmd_next(u64 next) {};
-static u64 inline smmu_pt_load(u64 addr) {return 0;};
-static void inline smmu_pt_store(u64 addr, u64 value) {};
-static void inline smmu_pt_clear(u32 cbndx, u32 num) {};
-static u64 inline get_smmu_ttbr(u64 cbndx, u64 num) {return 0;};
+
+static u64 inline get_smmu_pgd_next(void) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u64 pool_start = el2_data->smmu_page_pool_start;
+	u64 used_pages = el2_data->smmu_pgd_used_pages;
+	return pool_start + (used_pages * PAGE_SIZE);
+};
+
+static void inline set_smmu_pgd_next(u64 next) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	el2_data->smmu_pgd_used_pages += next;
+};
+
+
+static u64 inline get_smmu_pmd_next(void) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u64 pool_start = el2_data->smmu_page_pool_start;
+	u64 used_pages = el2_data->smmu_pmd_used_pages;
+	return pool_start + (used_pages * PAGE_SIZE) + SMMU_PMD_BASE;
+};
+
+static void inline set_smmu_pmd_next(u64 next) {
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	el2_data->smmu_pmd_used_pages += next;
+};
+
+static u64 inline smmu_pt_load(u64 addr) {
+	unsigned long *ptr = __el2_va(addr);
+	return (u64)*ptr;
+};
+
+static void inline smmu_pt_store(u64 addr, u64 value) {
+	unsigned long *ptr = __el2_va(addr);
+	*ptr = value;
+};
+
+extern void smmu_pt_clear(u32 cbndx, u32 num);
 
 u32 get_smmu_cfg_vmid(u32 cbndx, u32 num);
 void set_smmu_cfg_vmid(u32 cbndx, u32 num, u32 vmid);
-u64 get_smmu_cfg_ttbr(u32 cbndx, u32 num);
-void set_smmu_cfg_ttbr(u32 cbndx, u32 num, u64 ttbr);
 u64 get_smmu_cfg_hw_ttbr(u32 cbndx, u32 num);
 void set_smmu_cfg_hw_ttbr(u32 cbndx, u32 num, u64 hw_ttbr);
 u32 get_smmu_num_context_banks(u32 num);

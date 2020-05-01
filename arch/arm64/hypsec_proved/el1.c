@@ -204,6 +204,11 @@ void init_el2_data_page(void)
 	el2_data->vm_info[0].used_pages = 1;
 	el2_data->vm_info[0].vttbr = el2_data->host_vttbr;
 
+	/* FIXME: hardcode this for now */
+	el2_data->smmu_page_pool_start = el2_data->vm_info[EL2_VM_INFO_SIZE - 3].page_pool_start;
+	el2_data->smmu_pgd_used_pages = 0;
+	el2_data->smmu_pmd_used_pages = 0;
+
 	for (i = 0; i < SHADOW_SYS_REGS_DESC_SIZE; i++)
 		el2_data->s2_sys_reg_descs[i] = host_sys_reg_descs[i];
 
@@ -223,6 +228,9 @@ void init_el2_data_page(void)
 
 	init_hacl_hash(el2_data);
 	//test_aes(el2_data);
+
+	for (i = 0; i < EL2_SMMU_CFG_SIZE; i++)
+		el2_data->smmu_cfg[i].hw_ttbr = host_alloc_stage2_page(2);
 
 	return;
 }
