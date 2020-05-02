@@ -118,7 +118,8 @@ static inline bool host_dabt_is_write(u32 hsr)
 
 static inline u64 host_get_fault_ipa(phys_addr_t addr)
 {
-	return (addr | (read_sysreg_el2(far) & ((1 << 12) - 1)));
+	//return (addr | (read_sysreg_el2(far) & ((1 << 12) - 1)));
+	return (addr | (read_sysreg_el2(far) & ARM_SMMU_OFFSET_MASK));
 }
 
 static inline int host_dabt_get_rd(u32 hsr)

@@ -572,9 +572,9 @@ void set_vm_load_signature(u32 vmid, u32 load_idx);
 #define SMMU_POOL_START 65536UL
 #define SMMU_PGD_START 131072UL
 #define SMMU_PMD_START 196608UL
-#define SMMU_POOL_END	STAGE2_VM_POOL_SIZE
+#define SMMU_POOL_END	STAGE2_VM_POOL_SIZE * 2
 
-#define SMMU_PMD_BASE	(PAGE_SIZE * 16)
+#define SMMU_PMD_BASE	(PAGE_SIZE * 256)
 static void inline acquire_lock_smmu(void) {
 	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	stage2_spin_lock(&el2_data->smmu_lock);

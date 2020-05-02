@@ -56,7 +56,7 @@ u32 __hyp_text handle_smmu_global_access(u32 hsr, u64 fault_ipa, u64 offset, u32
 /* FIXME: we have a pointer here */
 u32 __hyp_text handle_smmu_cb_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smmu_index)
 {
-	u64 cb_offset;
+	u64 cb_offset = 0;
 	u32 ret;
 
 	offset -= ARM_SMMU_GLOBAL_BASE;

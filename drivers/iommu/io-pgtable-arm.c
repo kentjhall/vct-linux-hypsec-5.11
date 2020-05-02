@@ -669,7 +669,7 @@ static size_t arm_lpae_unmap(struct io_pgtable_ops *ops, unsigned long iova,
 			     size_t size)
 {
 	struct arm_lpae_io_pgtable *data = io_pgtable_ops_to_data(ops);
-#ifndef CONFIG_STAGE2_KERNEL
+#ifndef CONFIG_VERIFIED_KVM
 	arm_lpae_iopte *ptep = data->pgd;
 	int lvl = ARM_LPAE_START_LVL(data);
 
@@ -683,13 +683,13 @@ static size_t arm_lpae_unmap(struct io_pgtable_ops *ops, unsigned long iova,
 	struct arm_smmu_cfg cfg = smmu_domain->cfg;
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
 	u32 smmu_num = smmu->index;
+	int i;
 	/* We check if size is aligned to page size */
 	WARN_ON(size % PAGE_SIZE);
 	for (i = 0; i < (size / PAGE_SIZE); i++) {
 		iova += PAGE_SIZE * i;
 		el2_smmu_clear(iova, cfg.cbndx, smmu_num);
 	}
-	el2_arm_lpae_map(iova, 0, size, 0, cfg.cbndx, smmu_num);
 	return size;
 #endif
 }

@@ -41,12 +41,17 @@ void __hyp_text  __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index)
 	if (cbndx < num_context_banks) {
 		target_vmid = get_smmu_cfg_vmid(cbndx, index);
 		if (target_vmid == 0) {
+			print_string("\ralloc smmu pgd\n");
+			printhex_ul(index);
+			printhex_ul(cbndx);
 			set_smmu_cfg_vmid(cbndx, index, vmid);
 			init_smmu_pt(cbndx, index);
 			//set_smmu_cfg_hw_ttbr(cbndx, index, new_ttbr);
 		}
-	} else
+	} else {
+		print_string("\rsmmu pgd alloc panic\n");
 		v_panic();
+	}
 
 	release_lock_smmu();
 }
@@ -76,6 +81,7 @@ void __hyp_text __el2_arm_lpae_map(u64 iova, u64 paddr,
 			set_smmu_pt(cbndx, index, iova, pte);
 		}
 		else {
+			print_string("\rsmmu map: VM state is not ready\n");
 	    		v_panic();
 		}
 		release_lock_vm(vmid);
@@ -97,6 +103,7 @@ u64 __hyp_text __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index)
 /* FIXME: apply changes in XP's upstream code */
 void __hyp_text __el2_arm_lpae_clear(u64 iova, u32 cbndx, u32 index)
 {
+	return;
 	acquire_lock_smmu();
 	set_smmu_pt(cbndx, index, iova, 0UL);
 	release_lock_smmu();	

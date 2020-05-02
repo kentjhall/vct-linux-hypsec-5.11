@@ -23,7 +23,7 @@ u64 __hyp_text smmu_init_pte(u64 prot, u64 paddr)
 
 u64 __hyp_text smmu_get_cbndx(u64 offset)
 {
-	u64 cbndx;
+	u64 cbndx = 0;
 	offset -= ARM_SMMU_GLOBAL_BASE;
 	cbndx = offset >> ARM_SMMU_PGSHIFT;
 	return cbndx;

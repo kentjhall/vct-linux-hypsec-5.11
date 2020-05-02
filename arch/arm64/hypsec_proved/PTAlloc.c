@@ -65,6 +65,7 @@ u64 __hyp_text alloc_smmu_pgd_page(void)
 		set_smmu_pgd_next(next + PAGE_SIZE);
 	}
 	else {
+	        print_string("\rwe used all smmu pgd pages\n");
 		v_panic();
 	}
 	return next;
@@ -79,6 +80,7 @@ u64 __hyp_text alloc_smmu_pmd_page(void)
 		set_smmu_pmd_next(next + PAGE_SIZE);
 	}
 	else {
+	        print_string("\rwe used all smmu pmd pages\n");
 		v_panic();
 	}
 	return next;

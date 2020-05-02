@@ -117,9 +117,10 @@ void __hyp_text set_smmu_pt(u32 cbndx, u32 num, u64 addr, u64 pte)
 	u64 ttbr, pgd, pmd;
 
 	ttbr = get_smmu_cfg_hw_ttbr(cbndx, num);
-	if (ttbr == 0UL)
+	if (ttbr == 0UL) {
+	    print_string("\rset smmu pt: vttbr = 0\n");
 	    v_panic();
-	else {
+	} else {
 		pgd = walk_smmu_pgd(ttbr, addr, 1U);
 		pmd = walk_smmu_pmd(pgd, addr, 1U);
 		set_smmu_pte(pmd, addr, pte);

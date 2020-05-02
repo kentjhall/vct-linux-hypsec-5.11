@@ -17,9 +17,11 @@ void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 	u64 offset = fault_ipa & ARM_SMMU_OFFSET_MASK;
 	u32 write_val = 0;
 
-	if (offset < ARM_SMMU_GLOBAL_BASE) {
+	//if (offset < ARM_SMMU_GLOBAL_BASE) {
+	if (offset < (get_smmu_size(index) >> 1)) {
 		ret = handle_smmu_global_access(hsr, fault_ipa, 
 						offset, index);
+		ret = 1;
 		if (ret == 0) {
 			print_string("\rsmmu invalid write: global access\n");
 			v_panic();
