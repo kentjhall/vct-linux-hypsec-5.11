@@ -1233,6 +1233,7 @@ static int stage2_pmdp_test_and_clear_young(pmd_t *pmd)
 int kvm_phys_addr_ioremap(struct kvm *kvm, phys_addr_t guest_ipa,
 			  phys_addr_t pa, unsigned long size, bool writable)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	phys_addr_t addr, end;
 	int ret = 0;
 	unsigned long pfn;
@@ -1264,6 +1265,10 @@ int kvm_phys_addr_ioremap(struct kvm *kvm, phys_addr_t guest_ipa,
 out:
 	mmu_free_memory_cache(&cache);
 	return ret;
+#else
+	el2_kvm_phys_addr_ioremap(kvm->arch.vmid, guest_ipa, pa, size);
+	return 0;
+#endif
 }
 
 static bool transparent_hugepage_adjust(kvm_pfn_t *pfnp, phys_addr_t *ipap)

@@ -149,3 +149,16 @@ void __hyp_text v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
         len -= 1UL;
     }
 }
+
+void __hyp_text __kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size)
+{
+	u64 pte; 
+	u32 i = 0;
+	while (i < size) {
+		pte = pa + (pgprot_val(PAGE_S2_DEVICE) | S2_RDWR);
+		mmap_s2pt(vmid, gpa, 3U, pte);
+		i += PAGE_SIZE;
+		gpa += PAGE_SIZE;
+		pa += PAGE_SIZE;
+	}
+}

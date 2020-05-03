@@ -170,6 +170,9 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		ret = (int)register_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
 		hr->regs[31] = (u64)ret;
 		break;
+	case HVC_PHYS_ADDR_IOREMAP:
+		__kvm_phys_addr_ioremap((u32)hr->regs[1], hr->regs[2], hr->regs[3], hr->regs[4]);
+		break;
 	default:
 		print_string("\rno support hvc:\n");
 		printhex_ul(callno);
@@ -293,6 +296,7 @@ void __hyp_text reset_fp_regs(u32 vmid, int vcpu_id)
 					sizeof(struct user_fpsimd_state));
 }
 
+/*
 void __hyp_text map_vgic_to_vm(u32 vmid)
 {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -301,6 +305,7 @@ void __hyp_text map_vgic_to_vm(u32 vmid)
 	mmap_s2pt(vmid, vgic_cpu_gpa, 3U, pte);
 	mmap_s2pt(vmid, vgic_cpu_gpa + PAGE_SIZE, 3U, pte + PAGE_SIZE);
 }
+*/
 
 #define CURRENT_EL_SP_EL0_VECTOR	0x0
 #define CURRENT_EL_SP_ELx_VECTOR	0x200

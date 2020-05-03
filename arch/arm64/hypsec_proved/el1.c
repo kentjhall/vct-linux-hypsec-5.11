@@ -484,3 +484,8 @@ void el2_smmu_clear(u64 iova, u32 cbndx, u32 num)
 {
 	kvm_call_core(HVC_SMMU_CLEAR, iova, cbndx, num);
 }
+
+void el2_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size)
+{
+	kvm_call_core(HVC_PHYS_ADDR_IOREMAP, vmid, gpa, pa, size);
+}

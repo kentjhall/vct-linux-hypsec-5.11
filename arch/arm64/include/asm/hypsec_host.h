@@ -196,6 +196,7 @@ extern void el2_smmu_free_pgd(u32 cbndx, u32 num);
 extern void el2_arm_lpae_map(u64 iova, phys_addr_t paddr, u64 prot, u32 cbndx, u32 num);
 extern phys_addr_t el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 num);
 extern void el2_smmu_clear(u64 iova, u32 cbndx, u32 num);
+extern void el2_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
 
 void encrypt_buf(u32 vmid, void *buf, uint32_t len);
 void decrypt_buf(u32 vmid, void *buf, uint32_t len);
