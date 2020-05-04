@@ -31,7 +31,7 @@
 
 #ifdef CONFIG_VERIFIED_KVM
 .macro save_callee_saved_regs
-	stp	lr, x0,   [sp, #-16]!
+	stp	lr, xzr,   [sp, #-16]!
 	stp	x28, x29, [sp, #-16]!
 	stp	x26, x27, [sp, #-16]!
 	stp	x24, x25, [sp, #-16]!
@@ -65,7 +65,7 @@
 	ldp	x24, x25, [sp], #16
 	ldp	x26, x27, [sp], #16
 	ldp	x28, x29, [sp], #16
-	ldp	lr, x0,   [sp], #16
+	ldp	lr, xzr,   [sp], #16
 .endm
 
 .macro  handle_dabt

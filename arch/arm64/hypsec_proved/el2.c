@@ -97,7 +97,7 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		break;
 	case HVC_VCPU_RUN:
 		ret = (u64)__kvm_vcpu_run_nvhe((u32)hr->regs[1], (int)hr->regs[2]);
-		hr->regs[31] = ret;
+		set_host_regs(0, ret);
 		break;
 	case HVC_TIMER_SET_CNTVOFF:
 		__kvm_timer_set_cntvoff((u32)hr->regs[1], (u32)hr->regs[2]);
@@ -110,8 +110,7 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 	case HVC_SET_BOOT_INFO:
 		ret = set_boot_info((u32)hr->regs[1], (unsigned long)hr->regs[2],
 			      (unsigned long)hr->regs[3]);
-		hr->regs[31] = (u32)ret;
-		//hr->regs[31] = 1;
+		set_host_regs(0, ret);
 		break;
 	case HVC_REMAP_VM_IMAGE:
 		remap_vm_image((u32)hr->regs[1], (unsigned long)hr->regs[2],
@@ -121,7 +120,7 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		//ret = (u64)__el2_verify_and_load_images((u32)hr->regs[1]);
 		//hr->regs[31] = (u64)ret;
 		verify_and_load_images((u32)hr->regs[1]);
-		hr->regs[31] = 1;
+		set_host_regs(0, 1);
 		break;
 	case HVC_SMMU_FREE_PGD:
 		//print_string("\rfree smmu pgd\n");
@@ -142,7 +141,7 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 	case HVC_SMMU_LPAE_IOVA_TO_PHYS:
 		//print_string("\rsmmu iova to phys\n");
 		ret = (u64)__el2_arm_lpae_iova_to_phys(hr->regs[1], hr->regs[2], hr->regs[3]);
-		hr->regs[31] = (u64)ret;
+		set_host_regs(0, ret);
 		//print_string("\rafter smmu iova to phys\n");
 		break;
 	case HVC_SMMU_CLEAR:
@@ -164,11 +163,11 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		break;*/
 	case HVC_REGISTER_KVM:
 		ret = (int)register_kvm();
-		hr->regs[31] = (u64)ret;
+		set_host_regs(0, ret);
 		break;
 	case HVC_REGISTER_VCPU:
 		ret = (int)register_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
-		hr->regs[31] = (u64)ret;
+		set_host_regs(0, ret);
 		break;
 	case HVC_PHYS_ADDR_IOREMAP:
 		__kvm_phys_addr_ioremap((u32)hr->regs[1], hr->regs[2], hr->regs[3], hr->regs[4]);

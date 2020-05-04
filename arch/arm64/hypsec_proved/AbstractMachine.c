@@ -153,10 +153,7 @@ void __hyp_text set_host_regs(int nr, u64 value)
 {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
-	if (nr == 0)
-		el2_data->per_cpu_data[pcpuid].host_regs->regs[31] = value;
-	else
-		el2_data->per_cpu_data[pcpuid].host_regs->regs[nr] = value;
+	el2_data->per_cpu_data[pcpuid].host_regs->regs[nr] = value;
 };
 
 u64 __hyp_text get_host_regs(int nr)
