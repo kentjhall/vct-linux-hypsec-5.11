@@ -100,7 +100,7 @@ u64 __hyp_text walk_smmu_pgd(u64 ttbr, u64 addr, u32 alloc)
         if (pgd_pa == 0UL && alloc == 1U)
         {
             pgd_pa = alloc_smmu_pgd_page();
-            pgd = pgd_pa | PMD_TYPE_TABLE;
+            pgd = pgd_pa | PUD_TYPE_TABLE;
             smmu_pt_store(ttbr_pa + pgd_idx * 8UL, pgd);
         }
         ret = pgd;

@@ -229,8 +229,10 @@ void init_el2_data_page(void)
 	init_hacl_hash(el2_data);
 	//test_aes(el2_data);
 
-	for (i = 0; i < EL2_SMMU_CFG_SIZE; i++)
+	for (i = 0; i < EL2_SMMU_CFG_SIZE; i++) {
 		el2_data->smmu_cfg[i].hw_ttbr = host_alloc_stage2_page(2);
+		printk("SMMU index %d hw_ttbr %lx\n", i, el2_data->smmu_cfg[i].hw_ttbr);
+	}
 
 	return;
 }
@@ -270,7 +272,7 @@ void init_hypsec_io(void)
 			kvm_err("Cannot map smmu %d from %llx\n", i, smmu->phys_base);
 			goto out_err;
 		} else
-			kvm_info("SMMU remapped to EL2: %llx to %llx\n",
+			printk("SMMU remapped to EL2: %llx to %llx\n",
 				smmu->hyp_base, smmu->hyp_base + smmu->size);
 	}
 

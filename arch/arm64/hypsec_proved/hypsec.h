@@ -596,6 +596,12 @@ static void inline set_smmu_pgd_next(u64 next) {
 	el2_data->smmu_pgd_used_pages += next;
 };
 
+static u64 inline smmu_pgd_end(void)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u64 pool_start = el2_data->smmu_page_pool_start;
+	return pool_start + SMMU_PMD_BASE;
+};
 
 static u64 inline get_smmu_pmd_next(void) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
@@ -608,6 +614,13 @@ static void inline set_smmu_pmd_next(u64 next) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	el2_data->smmu_pmd_used_pages += next;
 };
+
+static u64 inline smmu_pmd_end(void)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	u64 pool_start = el2_data->smmu_page_pool_start;
+	return pool_start + SMMU_POOL_END;
+}
 
 static u64 inline smmu_pt_load(u64 addr) {
 	unsigned long *ptr = __el2_va(addr);

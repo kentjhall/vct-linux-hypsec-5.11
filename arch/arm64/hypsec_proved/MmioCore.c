@@ -14,7 +14,8 @@ u32 __hyp_text check_smmu_pfn(u64 pfn, u32 vmid)
 void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 {
 	u32 ret;
-	u64 offset = fault_ipa & ARM_SMMU_OFFSET_MASK;
+	//u64 offset = fault_ipa & ARM_SMMU_OFFSET_MASK;
+	u64 offset = read_sysreg_el2(far) & ARM_SMMU_OFFSET_MASK;
 	u32 write_val = 0;
 
 	//if (offset < ARM_SMMU_GLOBAL_BASE) {
@@ -40,6 +41,15 @@ void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 				u64 val = get_smmu_cfg_hw_ttbr(cbndx, index);
 				write_val = 1;
 				__handle_smmu_write(hsr, fault_ipa, len, val, write_val);
+				print_string("\rwrite TTBR0\n");
+				print_string("\roffset\n");
+				printhex_ul(offset);
+				print_string("\rcbndx\n");
+				printhex_ul(cbndx);
+				print_string("\rindex\n");
+				printhex_ul(index);
+				print_string("\rTTBR0\n");
+				printhex_ul(val);
 			} else {
 				__handle_smmu_write(hsr, fault_ipa, len, 0UL, write_val);
 			}

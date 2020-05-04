@@ -67,24 +67,29 @@ void __hyp_text __el2_arm_lpae_map(u64 iova, u64 paddr,
 
 	acquire_lock_smmu();
 
+	vmid = get_smmu_cfg_vmid(cbndx, index);
 	if (vmid == HOSTVISOR) {
 		if (pfn == gfn) {
-			assign_pfn_to_smmu(vmid, gfn, pfn);
+			//assign_pfn_to_smmu(vmid, gfn, pfn);
+			//print_string("\rsmmu map host\n");
+			//printhex_ul(iova);
 			pte = smmu_init_pte(prot, paddr);
 			set_smmu_pt(cbndx, index, iova, pte);
 		}
 	} else {
-		acquire_lock_vm(vmid);
-		if (get_vm_state(vmid) == READY) {
-			assign_pfn_to_smmu(vmid, gfn, pfn);
+		//acquire_lock_vm(vmid);
+		//if (get_vm_state(vmid) == READY) {
+			//assign_pfn_to_smmu(vmid, gfn, pfn);
+			//print_string("\rsmmu map vm\n");
+			//printhex_ul(iova);
 			pte = smmu_init_pte(prot, paddr);
 			set_smmu_pt(cbndx, index, iova, pte);
-		}
-		else {
-			print_string("\rsmmu map: VM state is not ready\n");
-	    		v_panic();
-		}
-		release_lock_vm(vmid);
+		//}
+		//else {
+		//	print_string("\rsmmu map: VM state is not ready\n");
+	    	//	v_panic();
+		//}
+		//release_lock_vm(vmid);
 	}
 
 	release_lock_smmu();
@@ -95,6 +100,8 @@ u64 __hyp_text __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index)
 {
 	u64 pte;
 	acquire_lock_smmu();
+	//print_string("\rsmmu walk\n");
+	//printhex_ul(iova);
 	pte = walk_smmu_pt(cbndx, index, iova);
 	release_lock_smmu();
 	return (phys_page(pte) | iova); 
@@ -105,6 +112,8 @@ void __hyp_text __el2_arm_lpae_clear(u64 iova, u32 cbndx, u32 index)
 {
 	return;
 	acquire_lock_smmu();
+	//print_string("\rsmmu clear vm\n");
+	//printhex_ul(iova);
 	set_smmu_pt(cbndx, index, iova, 0UL);
 	release_lock_smmu();	
 }

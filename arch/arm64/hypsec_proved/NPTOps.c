@@ -60,34 +60,3 @@ void __hyp_text clear_pfn_host(u64 pfn)
 
 	release_lock_pt(HOSTVISOR);
 }
-
-#if 0
-u64 __hyp_text walk_smmu_pt(u32 vmid, u64 vttbr, u64 addr)
-{
-    u64 pgd, pmd, ret;
-
-    pgd = walk_smmu_pgd(vmid, vttbr, addr, 0U);
-
-    pmd = walk_pmd(vmid, pgd, addr, 0U);
-    if (v_pmd_table(pmd) == 0UL) {
-        ret = pmd;
-    }
-    else {
-        u64 pte = walk_pte(vmid, pmd, addr);
-        ret = pte;
-    }
-    return ret;
-}
-
-//3 Level PT walk in SMMU
-void __hyp_text set_smmu_pt(u32 vmid, u64 addr, u64 vttbr, u64 pte)
-{
-	u64 pgd, pmd;
-
-	pgd = walk_smmu_pgd(vmid, vttbr, addr, 1U);
-
-	pmd = walk_pmd(vmid, pgd, addr, 1U);
-
-	v_set_pte(vmid, pmd, addr, pte);
-}
-#endif

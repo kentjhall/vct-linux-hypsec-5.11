@@ -59,10 +59,12 @@ u64 __hyp_text alloc_s2pt_pmd(u32 vmid)
 u64 __hyp_text alloc_smmu_pgd_page(void)
 {
 	u64 next = get_smmu_pgd_next();
-	u64 end = SMMU_PMD_BASE;
+	u64 end = smmu_pgd_end();
 
+	//print_string("\ralloc smmu pgd page\n");
+	//printhex_ul(next);
 	if (next + PAGE_SIZE <= end) {
-		set_smmu_pgd_next(next + PAGE_SIZE);
+		set_smmu_pgd_next(1);
 	}
 	else {
 	        print_string("\rwe used all smmu pgd pages\n");
@@ -74,10 +76,12 @@ u64 __hyp_text alloc_smmu_pgd_page(void)
 u64 __hyp_text alloc_smmu_pmd_page(void)
 {
 	u64 next = get_smmu_pmd_next();
-	u64 end = SMMU_POOL_END;
+	u64 end = smmu_pmd_end();
 
+	//print_string("\ralloc smmu pmd page\n");
+	//printhex_ul(next);
 	if (next + PAGE_SIZE <= end) {
-		set_smmu_pmd_next(next + PAGE_SIZE);
+		set_smmu_pmd_next(1);
 	}
 	else {
 	        print_string("\rwe used all smmu pmd pages\n");

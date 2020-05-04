@@ -414,6 +414,7 @@ static void arm_smmu_init_context_bank(struct arm_smmu_domain *smmu_domain,
 #ifdef CONFIG_VERIFIED_KVM
 	smmu_num = smmu->index;
 	el2_smmu_alloc_pgd(cfg->cbndx, ARM_SMMU_CB_VMID(smmu, cfg), smmu_num);
+	printk("SMMU SHIT %s smmu index %d cbndx %d\n", __func__, smmu->index, cfg->cbndx);
 #endif
 
 	/* TTBCR */
@@ -466,7 +467,9 @@ static void arm_smmu_write_context_bank(struct arm_smmu_device *smmu, int idx)
 	struct arm_smmu_cfg *cfg = cb->cfg;
 	void __iomem *cb_base, *gr1_base;
 
+	printk("SMMU SHIT %s smmu index %d cbndx %d\n", __func__, smmu->index, idx);
 	cb_base = ARM_SMMU_CB(smmu, idx);
+	printk("SMMU SHIT smmu_cb_base %llx target_cb_base %llx\n", smmu->cb_base, cb_base);
 
 	/* Unassigned context banks only need disabling */
 	if (!cfg) {

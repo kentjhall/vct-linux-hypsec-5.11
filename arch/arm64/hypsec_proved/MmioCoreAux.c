@@ -92,7 +92,8 @@ void __hyp_text __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u3
 			writeq_relaxed(data, (void *)fault_ipa);
 			//print_string("\rafter writeq data\n");
 		} else {
-			//print_string("\rwriteq val\n");
+			print_string("\rwriteq val\n");
+			printhex_ul(val);
 			writeq_relaxed(val, (void *)fault_ipa);
 			//print_string("\rafter writeq val\n");
 		}

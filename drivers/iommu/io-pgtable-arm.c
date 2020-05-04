@@ -502,8 +502,8 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
 	/* We check if size is aligned to page size */
 	WARN_ON(size % PAGE_SIZE);
 	for (i = 0; i < (size / PAGE_SIZE); i++) {
-		iova += PAGE_SIZE * i;
-		paddr += PAGE_SIZE * i;
+		iova += PAGE_SIZE;
+		paddr += PAGE_SIZE;
 		el2_arm_lpae_map(iova, paddr, prot, cfg.cbndx, smmu_num);
 	}
 	ret = 0;
@@ -687,7 +687,7 @@ static size_t arm_lpae_unmap(struct io_pgtable_ops *ops, unsigned long iova,
 	/* We check if size is aligned to page size */
 	WARN_ON(size % PAGE_SIZE);
 	for (i = 0; i < (size / PAGE_SIZE); i++) {
-		iova += PAGE_SIZE * i;
+		iova += PAGE_SIZE;
 		el2_smmu_clear(iova, cfg.cbndx, smmu_num);
 	}
 	return size;
