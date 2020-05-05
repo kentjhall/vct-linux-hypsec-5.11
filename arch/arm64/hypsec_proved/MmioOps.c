@@ -6,7 +6,7 @@ u64 __hyp_text emulate_mmio(u64 addr, u32 hsr)
 	u64 ret;
 	acquire_lock_smmu();
 	ret = is_smmu_range(addr);
-	if (ret != INVALID64) {	
+	if (ret != INVALID64) {
 		handle_host_mmio(ret, hsr);
 	}
 	release_lock_smmu();

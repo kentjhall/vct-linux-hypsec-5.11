@@ -7,7 +7,8 @@
 #define S2_PFN_SIZE	4096 * 4096
 #define IPA_HASH_SIZE	4096 * 32 
 
-#define EL2_REMAP_START                 0xc0000000
+//#define EL2_REMAP_START                 0xc0000000
+#define EL2_REMAP_START                 0x100000000
 #define EL2_PAGE_OFFSET			0x40000000000UL
 
 #define PAGE_GUEST			__pgprot(PTE_S2_GUEST)

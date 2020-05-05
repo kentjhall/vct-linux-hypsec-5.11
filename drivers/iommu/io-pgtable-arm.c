@@ -318,7 +318,7 @@ static void __arm_lpae_init_pte(struct arm_lpae_io_pgtable *data,
 	__arm_lpae_set_pte(ptep, pte, &data->iop.cfg);
 }
 
-#ifndef CONFIG_VERIFIED_KVM
+#ifdef CONFIG_VERIFIED_KVM
 static int arm_lpae_init_pte(struct arm_lpae_io_pgtable *data,
 			     unsigned long iova, phys_addr_t paddr,
 			     arm_lpae_iopte prot, int lvl,
@@ -380,7 +380,7 @@ static arm_lpae_iopte arm_lpae_install_table(arm_lpae_iopte *table,
 	return old;
 }
 
-#ifndef CONFIG_VERIFIED_KVM
+#ifdef CONFIG_VERIFIED_KVM
 static int __arm_lpae_map(struct arm_lpae_io_pgtable *data, unsigned long iova,
 			  phys_addr_t paddr, size_t size, arm_lpae_iopte prot,
 			  int lvl, arm_lpae_iopte *ptep)
@@ -474,7 +474,7 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
 			phys_addr_t paddr, size_t size, int iommu_prot)
 {
 	struct arm_lpae_io_pgtable *data = io_pgtable_ops_to_data(ops);
-#ifndef CONFIG_VERIFIED_KVM
+#ifdef CONFIG_VERIFIED_KVM
 	arm_lpae_iopte *ptep = data->pgd;
 	int ret, lvl = ARM_LPAE_START_LVL(data);
 #else
@@ -496,7 +496,7 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
 		return -ERANGE;
 
 	prot = arm_lpae_prot_to_pte(data, iommu_prot);
-#ifndef CONFIG_VERIFIED_KVM
+#ifdef CONFIG_VERIFIED_KVM
 	ret = __arm_lpae_map(data, iova, paddr, size, prot, lvl, ptep);
 #else
 	/* We check if size is aligned to page size */
@@ -552,7 +552,7 @@ static void arm_lpae_free_pgtable(struct io_pgtable *iop)
 {
 	struct arm_lpae_io_pgtable *data = io_pgtable_to_data(iop);
 
-#ifndef CONFIG_VERIFIED_KVM	
+#ifdef CONFIG_VERIFIED_KVM	
 	__arm_lpae_free_pgtable(data, ARM_LPAE_START_LVL(data), data->pgd);
 #else
 	struct arm_smmu_domain *smmu_domain = iop->cookie;
@@ -669,7 +669,7 @@ static size_t arm_lpae_unmap(struct io_pgtable_ops *ops, unsigned long iova,
 			     size_t size)
 {
 	struct arm_lpae_io_pgtable *data = io_pgtable_ops_to_data(ops);
-#ifndef CONFIG_VERIFIED_KVM
+#ifdef CONFIG_VERIFIED_KVM
 	arm_lpae_iopte *ptep = data->pgd;
 	int lvl = ARM_LPAE_START_LVL(data);
 
@@ -698,7 +698,7 @@ static phys_addr_t arm_lpae_iova_to_phys(struct io_pgtable_ops *ops,
 					 unsigned long iova)
 {
 	struct arm_lpae_io_pgtable *data = io_pgtable_ops_to_data(ops);
-#ifndef CONFIG_VERIFIED_KVM
+#ifdef CONFIG_VERIFIED_KVM
 	arm_lpae_iopte pte, *ptep = data->pgd;
 	int lvl = ARM_LPAE_START_LVL(data);
 

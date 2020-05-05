@@ -85,22 +85,17 @@ u32 __hyp_text handle_smmu_cb_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smm
 
 void __hyp_text __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u32 write_val)
 {
+	void __iomem *base = (void*)fault_ipa;
 	u64 data = host_get_mmio_data(hsr);
+
 	if (len == 8) {
 		if (write_val == 0) {
-			//print_string("\rwriteq data\n");
-			writeq_relaxed(data, (void *)fault_ipa);
-			//print_string("\rafter writeq data\n");
+			writeq_relaxed(data, base);
 		} else {
-			print_string("\rwriteq val\n");
-			printhex_ul(val);
-			writeq_relaxed(val, (void *)fault_ipa);
-			//print_string("\rafter writeq val\n");
+			writeq_relaxed(val, base);
 		}
 	} else if(len == 4) {
-		//print_string("\rwritel data\n");
-		writel_relaxed(data, (void *)fault_ipa);
-		//print_string("\rafter writel val\n");
+		writel_relaxed(data, base);
 	} else {
 		print_string("\rhandle smmu write panic\n");
 		printhex_ul(len);
@@ -112,8 +107,8 @@ void __hyp_text __handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len)
 {
 	//the following is a macro
 	u32 rt = host_dabt_get_rd(hsr);
-	u32 data_32;
 	u64 data_64;
+	u32 data_32;
 
 	if (len == 8) {
 		data_64 = readq_relaxed((void *)fault_ipa);

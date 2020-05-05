@@ -919,17 +919,25 @@ int create_hyp_exec_mappings(phys_addr_t phys_addr, size_t size,
 int create_hypsec_io_mappings(phys_addr_t phys_addr, size_t size,
 			      unsigned long *haddr)
 {
-	unsigned long addr;
+	//unsigned long addr;
 	int ret;
 
-	ret = __create_hyp_private_mapping(phys_addr, size,
+	/*ret = __create_hyp_private_mapping(phys_addr, size,
 					   &addr, PAGE_HYP_DEVICE);
 	if (ret) {
 		*haddr = 0;
 		return ret;
-	}
+	}*/
 
-	*haddr = addr;
+	ret = __create_hyp_mappings(hyp_pgd, PTRS_PER_PGD,
+				    phys_addr, phys_addr + size,
+				    __phys_to_pfn(phys_addr), PAGE_HYP_DEVICE);
+
+	if (ret)
+		return -EINVAL;
+
+	//*haddr = addr;
+	*haddr = phys_addr;
 	return 0;
 }
 #endif

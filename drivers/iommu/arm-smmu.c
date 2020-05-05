@@ -413,8 +413,8 @@ static void arm_smmu_init_context_bank(struct arm_smmu_domain *smmu_domain,
 	cb->cfg = cfg;
 #ifdef CONFIG_VERIFIED_KVM
 	smmu_num = smmu->index;
-	el2_smmu_alloc_pgd(cfg->cbndx, ARM_SMMU_CB_VMID(smmu, cfg), smmu_num);
-	printk("SMMU SHIT %s smmu index %d cbndx %d\n", __func__, smmu->index, cfg->cbndx);
+	//el2_smmu_alloc_pgd(cfg->cbndx, ARM_SMMU_CB_VMID(smmu, cfg), smmu_num);
+	//printk("SMMU SHIT %s smmu index %d cbndx %d\n", __func__, smmu->index, cfg->cbndx);
 #endif
 
 	/* TTBCR */
@@ -467,9 +467,9 @@ static void arm_smmu_write_context_bank(struct arm_smmu_device *smmu, int idx)
 	struct arm_smmu_cfg *cfg = cb->cfg;
 	void __iomem *cb_base, *gr1_base;
 
-	printk("SMMU SHIT %s smmu index %d cbndx %d\n", __func__, smmu->index, idx);
+	//printk("SMMU SHIT %s smmu index %d cbndx %d\n", __func__, smmu->index, idx);
 	cb_base = ARM_SMMU_CB(smmu, idx);
-	printk("SMMU SHIT smmu_cb_base %llx target_cb_base %llx\n", smmu->cb_base, cb_base);
+	//printk("SMMU SHIT smmu_cb_base %llx target_cb_base %llx\n", smmu->cb_base, cb_base);
 
 	/* Unassigned context banks only need disabling */
 	if (!cfg) {
@@ -510,6 +510,7 @@ static void arm_smmu_write_context_bank(struct arm_smmu_device *smmu, int idx)
 		reg |= cfg->vmid << CBAR_VMID_SHIFT;
 	}
 	writel_relaxed(reg, gr1_base + ARM_SMMU_GR1_CBAR(idx));
+	//printk("to write %x read back %x\n", reg, readl_relaxed(gr1_base + ARM_SMMU_GR1_CBAR(idx)));
 
 	/*
 	 * TTBCR
@@ -519,6 +520,7 @@ static void arm_smmu_write_context_bank(struct arm_smmu_device *smmu, int idx)
 	if (stage1 && smmu->version > ARM_SMMU_V1)
 		writel_relaxed(cb->tcr[1], cb_base + ARM_SMMU_CB_TTBCR2);
 	writel_relaxed(cb->tcr[0], cb_base + ARM_SMMU_CB_TTBCR);
+	//printk("to write %x read back %x\n", cb->tcr[0], readl_relaxed(cb_base + ARM_SMMU_CB_TTBCR));
 
 	/* TTBRs */
 	if (cfg->fmt == ARM_SMMU_CTX_FMT_AARCH32_S) {
@@ -527,6 +529,7 @@ static void arm_smmu_write_context_bank(struct arm_smmu_device *smmu, int idx)
 		writel_relaxed(cb->ttbr[1], cb_base + ARM_SMMU_CB_TTBR1);
 	} else {
 		writeq_relaxed(cb->ttbr[0], cb_base + ARM_SMMU_CB_TTBR0);
+		//printk("to write %lx read back %lx\n", cb->ttbr[0], readq_relaxed(cb_base + ARM_SMMU_CB_TTBR0));
 		if (stage1)
 			writeq_relaxed(cb->ttbr[1], cb_base + ARM_SMMU_CB_TTBR1);
 	}
