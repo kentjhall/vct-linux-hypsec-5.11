@@ -529,7 +529,7 @@ static void arm_smmu_write_context_bank(struct arm_smmu_device *smmu, int idx)
 		writel_relaxed(cb->ttbr[1], cb_base + ARM_SMMU_CB_TTBR1);
 	} else {
 		writeq_relaxed(cb->ttbr[0], cb_base + ARM_SMMU_CB_TTBR0);
-		//printk("to write %lx read back %lx\n", cb->ttbr[0], readq_relaxed(cb_base + ARM_SMMU_CB_TTBR0));
+		printk("to write %lx read back %lx\n", cb->ttbr[0], readq_relaxed(cb_base + ARM_SMMU_CB_TTBR0));
 		if (stage1)
 			writeq_relaxed(cb->ttbr[1], cb_base + ARM_SMMU_CB_TTBR1);
 	}

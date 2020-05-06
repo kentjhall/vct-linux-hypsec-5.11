@@ -83,6 +83,7 @@ void __hyp_text __el2_arm_lpae_map(u64 iova, u64 paddr,
 			//print_string("\rsmmu map vm\n");
 			//printhex_ul(iova);
 			pte = smmu_init_pte(prot, paddr);
+			//printhex_ul(pte);
 			set_smmu_pt(cbndx, index, iova, pte);
 		//}
 		//else {
@@ -104,7 +105,11 @@ u64 __hyp_text __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index)
 	//printhex_ul(iova);
 	pte = walk_smmu_pt(cbndx, index, iova);
 	release_lock_smmu();
-	return (phys_page(pte) | iova); 
+
+	if (pte == 0UL)
+		return pte;
+	else
+		return (phys_page(pte) | iova & (PAGE_SIZE - 1));
 }
 
 /* FIXME: apply changes in XP's upstream code */
