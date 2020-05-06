@@ -123,6 +123,9 @@ void __hyp_text set_smmu_pt(u32 cbndx, u32 num, u64 addr, u64 pte)
 	} else {
 		pgd = walk_smmu_pgd(ttbr, addr, 1U);
 		pmd = walk_smmu_pmd(pgd, addr, 1U);
-		set_smmu_pte(pmd, addr, pte);
+		if (v_pmd_table(pmd) == PMD_TYPE_TABLE)
+			set_smmu_pte(pmd, addr, pte);
+		else
+			v_panic();
 	}
 }

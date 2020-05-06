@@ -22,6 +22,7 @@ typedef u64 arm_lpae_iopte;
 
 #define ARM_SMMU_CB_TTBR0		0x20
 #define ARM_SMMU_CB_TTBR1		0x28
+#define ARM_SMMU_CB_TTBCR		0x30
 #define ARM_SMMU_CB_CONTEXTIDR		0x34
 
 #define for_each_smmu_cfg(i) \

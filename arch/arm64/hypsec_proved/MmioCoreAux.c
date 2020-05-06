@@ -66,6 +66,8 @@ u32 __hyp_text handle_smmu_cb_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smm
 		ret = 2U;
 	} else if (cb_offset == ARM_SMMU_CB_CONTEXTIDR) {
 		ret = 0U;
+	} else if (cb_offset == ARM_SMMU_CB_TTBCR) {
+		ret = 3U;
 	} else {
 		/* let accesses to other registers and TLB flushes just
 		 * happen since they don't affect our guarantees.

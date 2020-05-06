@@ -982,6 +982,7 @@ arm_64_lpae_alloc_pgtable_s2(struct io_pgtable_cfg *cfg, void *cookie)
 		break;
 	case 40:
 		reg |= (ARM_LPAE_TCR_PS_40_BIT << ARM_LPAE_TCR_PS_SHIFT);
+		printk("SMMU IPA 40-bit\n");
 		break;
 	case 42:
 		reg |= (ARM_LPAE_TCR_PS_42_BIT << ARM_LPAE_TCR_PS_SHIFT);
@@ -1013,6 +1014,7 @@ arm_64_lpae_alloc_pgtable_s2(struct io_pgtable_cfg *cfg, void *cookie)
 
 	/* VTTBR */
 	cfg->arm_lpae_s2_cfg.vttbr = virt_to_phys(data->pgd);
+	printk("SMMU vttbr %lx vttbr_size %d levels %d", cfg->arm_lpae_s2_cfg.vttbr, data->pgd_size, data->levels);
 	return &data->iop;
 
 out_free_data:

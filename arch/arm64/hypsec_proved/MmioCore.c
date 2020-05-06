@@ -40,6 +40,7 @@ void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 			if (ret == 2) {
 				u64 cbndx = smmu_get_cbndx(offset);
 				u64 val = get_smmu_cfg_hw_ttbr(cbndx, index);
+				u64 data = host_get_mmio_data(hsr);
 				write_val = 1;
 				__handle_smmu_write(hsr, fault_ipa, len, val, write_val);
 				print_string("\rwrite TTBR0\n");
@@ -51,6 +52,12 @@ void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 				printhex_ul(index);
 				print_string("\rTTBR0\n");
 				printhex_ul(val);
+				print_string("\rHOST TTBR0\n");
+				printhex_ul(data);
+			} else if (ret == 3) {
+				u64 data = host_get_mmio_data(hsr);
+				print_string("\rHOST TTBCR\n");
+				printhex_ul(data);
 			} else {
 				__handle_smmu_write(hsr, fault_ipa, len, 0UL, write_val);
 			}
