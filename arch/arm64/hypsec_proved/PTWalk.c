@@ -1,4 +1,5 @@
 #include "hypsec.h"
+#include "MmioOps.h"
 
 /*
  * PTWalk
@@ -100,7 +101,7 @@ u64 __hyp_text walk_smmu_pgd(u64 ttbr, u64 addr, u32 alloc)
         if (pgd_pa == 0UL && alloc == 1U)
         {
             pgd_pa = alloc_smmu_pgd_page();
-            pgd = pgd_pa | PUD_TYPE_TABLE;
+            pgd = pgd_pa | ARM_LPAE_PTE_TYPE_TABLE;
             smmu_pt_store(ttbr_pa + pgd_idx * 8UL, pgd);
         }
         ret = pgd;
@@ -119,7 +120,7 @@ u64 __hyp_text walk_smmu_pmd(u64 pgd, u64 addr, u32 alloc)
         if (pmd_pa == 0UL && alloc == 1U)
         {
             pmd_pa = alloc_smmu_pmd_page();
-            pmd = pmd_pa | PMD_TYPE_TABLE;
+            pmd = pmd_pa | ARM_LPAE_PTE_TYPE_TABLE;
             smmu_pt_store(pgd_pa | (pmd_idx * 8UL), pmd);
         }
         ret = pmd;

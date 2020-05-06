@@ -110,7 +110,6 @@ u64 __hyp_text __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index)
 /* FIXME: apply changes in XP's upstream code */
 void __hyp_text __el2_arm_lpae_clear(u64 iova, u32 cbndx, u32 index)
 {
-	return;
 	acquire_lock_smmu();
 	//print_string("\rsmmu clear vm\n");
 	//printhex_ul(iova);

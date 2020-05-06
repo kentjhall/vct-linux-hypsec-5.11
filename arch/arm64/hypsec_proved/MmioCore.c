@@ -20,7 +20,7 @@ void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 
 	//if (offset < ARM_SMMU_GLOBAL_BASE) {
 	if (offset < (get_smmu_size(index) >> 1)) {
-		/*ret = handle_smmu_global_access(hsr, fault_ipa, 
+		ret = handle_smmu_global_access(hsr, fault_ipa, 
 						offset, index);
 		ret = 1;
 		if (ret == 0) {
@@ -28,10 +28,10 @@ void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 			v_panic();
 		} else {
 			__handle_smmu_write(hsr, fault_ipa, len, 0UL, write_val);
-		}*/
+		}
 		__handle_smmu_write(hsr, fault_ipa, len, 0UL, write_val);
 	} else {
-		/*ret = handle_smmu_cb_access(hsr, fault_ipa,
+		ret = handle_smmu_cb_access(hsr, fault_ipa,
 					    offset, index);
 		if (ret == 0) {
 			print_string("\rsmmu invalid write: cb access\n");
@@ -54,7 +54,7 @@ void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 			} else {
 				__handle_smmu_write(hsr, fault_ipa, len, 0UL, write_val);
 			}
-		}*/
+		}
 		__handle_smmu_write(hsr, fault_ipa, len, 0UL, write_val);
 	}
 }

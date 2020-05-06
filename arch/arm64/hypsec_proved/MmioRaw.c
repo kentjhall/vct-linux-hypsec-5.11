@@ -18,6 +18,7 @@ u64 __hyp_text smmu_init_pte(u64 prot, u64 paddr)
 	//val |= (((pfn) << 12) & ((1ULL << ARM_LPAE_MAX_ADDR_BITS) - 1));
 	//val |= paddr;
 	val |= pfn_to_iopte(paddr >> 12);
+	val |= ARM_LPAE_PTE_TYPE_PAGE;
 
 	return val;
 }

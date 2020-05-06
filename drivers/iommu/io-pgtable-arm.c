@@ -318,7 +318,7 @@ static void __arm_lpae_init_pte(struct arm_lpae_io_pgtable *data,
 	__arm_lpae_set_pte(ptep, pte, &data->iop.cfg);
 }
 
-#ifdef CONFIG_VERIFIED_KVM
+#ifndef CONFIG_VERIFIED_KVM
 static int arm_lpae_init_pte(struct arm_lpae_io_pgtable *data,
 			     unsigned long iova, phys_addr_t paddr,
 			     arm_lpae_iopte prot, int lvl,
@@ -380,7 +380,7 @@ static arm_lpae_iopte arm_lpae_install_table(arm_lpae_iopte *table,
 	return old;
 }
 
-#ifdef CONFIG_VERIFIED_KVM
+#ifndef CONFIG_VERIFIED_KVM
 static int __arm_lpae_map(struct arm_lpae_io_pgtable *data, unsigned long iova,
 			  phys_addr_t paddr, size_t size, arm_lpae_iopte prot,
 			  int lvl, arm_lpae_iopte *ptep)
@@ -474,7 +474,7 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
 			phys_addr_t paddr, size_t size, int iommu_prot)
 {
 	struct arm_lpae_io_pgtable *data = io_pgtable_ops_to_data(ops);
-#ifdef CONFIG_VERIFIED_KVM
+#ifndef CONFIG_VERIFIED_KVM
 	arm_lpae_iopte *ptep = data->pgd;
 	int ret, lvl = ARM_LPAE_START_LVL(data);
 #else
@@ -496,11 +496,12 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
 		return -ERANGE;
 
 	prot = arm_lpae_prot_to_pte(data, iommu_prot);
-#ifdef CONFIG_VERIFIED_KVM
+#ifndef CONFIG_VERIFIED_KVM
 	ret = __arm_lpae_map(data, iova, paddr, size, prot, lvl, ptep);
 #else
 	/* We check if size is aligned to page size */
 	WARN_ON(size % PAGE_SIZE);
+	//printk("%s iova start %lx iova end %lx paddr %lx\n", __func__, iova, iova + size, paddr);
 	for (i = 0; i < (size / PAGE_SIZE); i++) {
 		iova += PAGE_SIZE;
 		paddr += PAGE_SIZE;
@@ -552,7 +553,7 @@ static void arm_lpae_free_pgtable(struct io_pgtable *iop)
 {
 	struct arm_lpae_io_pgtable *data = io_pgtable_to_data(iop);
 
-#ifdef CONFIG_VERIFIED_KVM	
+#ifndef CONFIG_VERIFIED_KVM	
 	__arm_lpae_free_pgtable(data, ARM_LPAE_START_LVL(data), data->pgd);
 #else
 	struct arm_smmu_domain *smmu_domain = iop->cookie;
@@ -669,7 +670,7 @@ static size_t arm_lpae_unmap(struct io_pgtable_ops *ops, unsigned long iova,
 			     size_t size)
 {
 	struct arm_lpae_io_pgtable *data = io_pgtable_ops_to_data(ops);
-#ifdef CONFIG_VERIFIED_KVM
+#ifndef CONFIG_VERIFIED_KVM
 	arm_lpae_iopte *ptep = data->pgd;
 	int lvl = ARM_LPAE_START_LVL(data);
 
@@ -686,6 +687,7 @@ static size_t arm_lpae_unmap(struct io_pgtable_ops *ops, unsigned long iova,
 	int i;
 	/* We check if size is aligned to page size */
 	WARN_ON(size % PAGE_SIZE);
+	//printk("%s iova start %lx iova end %lx\n", __func__, iova, iova + size);
 	for (i = 0; i < (size / PAGE_SIZE); i++) {
 		iova += PAGE_SIZE;
 		el2_smmu_clear(iova, cfg.cbndx, smmu_num);
@@ -698,7 +700,7 @@ static phys_addr_t arm_lpae_iova_to_phys(struct io_pgtable_ops *ops,
 					 unsigned long iova)
 {
 	struct arm_lpae_io_pgtable *data = io_pgtable_ops_to_data(ops);
-#ifdef CONFIG_VERIFIED_KVM
+#ifndef CONFIG_VERIFIED_KVM
 	arm_lpae_iopte pte, *ptep = data->pgd;
 	int lvl = ARM_LPAE_START_LVL(data);
 
@@ -735,7 +737,8 @@ found_translation:
 	struct arm_smmu_cfg cfg = smmu_domain->cfg;
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
 	u32 smmu_num = smmu->index;
-	return el2_arm_lpae_iova_to_phys(iova, cfg.cbndx, smmu_num);
+	phys_addr_t ret = el2_arm_lpae_iova_to_phys(iova, cfg.cbndx, smmu_num);
+	//printk("%s iova %lx pa %lx index %d cbndx %d\n", __func__, iova, ret, smmu_num, cfg.cbndx);
 #endif
 }
 
