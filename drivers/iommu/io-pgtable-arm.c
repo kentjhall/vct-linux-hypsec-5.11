@@ -507,8 +507,8 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
 		iova += PAGE_SIZE;
 		paddr += PAGE_SIZE;
 	}
-	u64 addr = el2_arm_lpae_iova_to_phys(0x4eb8c000, cfg.cbndx, smmu_num);
-	printk("SHIT 0x4eb8c000 %llx\n", addr);
+	//u64 addr = el2_arm_lpae_iova_to_phys(0x4eb8c000, cfg.cbndx, smmu_num);
+	//printk("SHIT 0x4eb8c000 %llx\n", addr);
 	ret = 0;
 #endif
 	/*
@@ -740,6 +740,7 @@ found_translation:
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
 	u32 smmu_num = smmu->index;
 	phys_addr_t ret = el2_arm_lpae_iova_to_phys(iova, cfg.cbndx, smmu_num);
+	return ret;
 	//printk("%s iova %lx pa %lx index %d cbndx %d\n", __func__, iova, ret, smmu_num, cfg.cbndx);
 #endif
 }
