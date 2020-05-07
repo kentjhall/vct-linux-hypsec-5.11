@@ -109,7 +109,7 @@ u64 __hyp_text __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index)
 	if (pte == 0UL)
 		return pte;
 	else
-		return (phys_page(pte) | iova & (PAGE_SIZE - 1));
+		return (phys_page(pte) | (iova & (PAGE_SIZE - 1)));
 }
 
 /* FIXME: apply changes in XP's upstream code */
