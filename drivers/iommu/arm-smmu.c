@@ -364,6 +364,10 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 	fsynr = readl_relaxed(cb_base + ARM_SMMU_CB_FSYNR0);
 	iova = readq_relaxed(cb_base + ARM_SMMU_CB_FAR);
 
+	
+	unsigned long addr = el2_arm_lpae_iova_to_phys(iova, cfg->cbndx, smmu->index);
+	printk("Fauld IOVA %lx PA %lx\n", iova, addr);
+
 	dev_err_ratelimited(smmu->dev,
 	"Unhandled context fault: fsr=0x%x, iova=0x%08lx, fsynr=0x%x, cb=%d\n",
 			    fsr, iova, fsynr, cfg->cbndx);

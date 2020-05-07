@@ -507,8 +507,7 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
 		iova += PAGE_SIZE;
 		paddr += PAGE_SIZE;
 	}
-	//u64 addr = el2_arm_lpae_iova_to_phys(0x4eb8c000, cfg.cbndx, smmu_num);
-	//printk("SHIT 0x4eb8c000 %llx\n", addr);
+	
 	ret = 0;
 #endif
 	/*
