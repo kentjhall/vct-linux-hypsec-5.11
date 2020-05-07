@@ -97,7 +97,9 @@ void __hyp_text __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u3
 			writeq_relaxed(val, base);
 		}
 	} else if(len == 4) {
-		writel_relaxed(data, base);
+		u32 val;
+		el2_memcpy(&val, &data, sizeof(u32));
+		writel_relaxed(val, base);
 	} else {
 		print_string("\rhandle smmu write panic\n");
 		printhex_ul(len);
@@ -109,7 +111,7 @@ void __hyp_text __handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len)
 {
 	//the following is a macro
 	u32 rt = host_dabt_get_rd(hsr);
-	u64 data_64;
+	u64 data_64, val;
 	u32 data_32;
 
 	if (len == 8) {
@@ -117,7 +119,9 @@ void __hyp_text __handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len)
 		set_host_regs(rt, data_64);
 	} else if (len == 4) {
 		data_32 = readl_relaxed((void *)fault_ipa);
-		set_host_regs(rt, data_32);
+		val = get_host_regs(rt);
+		el2_memcpy(&val, &data_32, sizeof(u32));
+		set_host_regs(rt, val);
 	} else {
 		/* We don't handle cases which len is smaller than 4 bytes */
 		print_string("\rhandle smmu read panic\n");
