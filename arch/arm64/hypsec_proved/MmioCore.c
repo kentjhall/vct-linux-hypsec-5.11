@@ -22,7 +22,6 @@ void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 	if (offset < (get_smmu_size(index) >> 1)) {
 		ret = handle_smmu_global_access(hsr, fault_ipa, 
 						offset, index);
-		ret = 1;
 		if (ret == 0) {
 			print_string("\rsmmu invalid write: global access\n");
 			v_panic();
@@ -57,6 +56,7 @@ void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 				u64 data = host_get_mmio_data(hsr);
 				print_string("\rHOST TTBCR\n");
 				printhex_ul(data);
+				__handle_smmu_write(hsr, fault_ipa, len, 0UL, write_val);
 			} else {
 				__handle_smmu_write(hsr, fault_ipa, len, 0UL, write_val);
 			}
