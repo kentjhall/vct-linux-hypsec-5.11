@@ -75,29 +75,36 @@ u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 apfn, u32 pgnum)
 
 void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 {
-    u32 ret, owner, count;
+    u32 owner, count;
     u64 map;
 
     acquire_lock_s2page();
     owner = get_pfn_owner(pfn);
-    count = get_pfn_count(count);
+    count = get_pfn_count(pfn);
     map = get_pfn_map(pfn);
 
     if (owner == HOSTVISOR) {
 	if (vmid == HOSTVISOR) {
+	    //print_string("\rsmmu: map to host\n");
+	    //printhex_ul(pfn);
 	    set_pfn_count(pfn, 1U);
-	}
-	else {
+	} else {
 	    if (count == 0) {
+		//print_string("\rsmmu: map to vm\n");
+	        //printhex_ul(pfn);
 		set_pfn_to_vm(vmid, gfn, pfn, 1UL);
 		set_pfn_count(pfn, INVALID_MEM);
 	    }
 	    else {
                 print_string("\rpanic in assign_pfn_to_smmu: count is invalid\n");
+		print_string("\rpfn\n");
+                printhex_ul(pfn);
+		print_string("\rcount\n");
+		printhex_ul(count);
 		v_panic();
 	    }
 	}
-    } else if (owner != vmid) {
+    } else if (owner != INVALID_MEM && owner != vmid) {
         print_string("\rpanic in assign_pfn_to_smmu: owner != vmid\n");
 	v_panic();
     }

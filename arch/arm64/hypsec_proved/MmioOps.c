@@ -70,27 +70,27 @@ void __hyp_text __el2_arm_lpae_map(u64 iova, u64 paddr,
 	vmid = get_smmu_cfg_vmid(cbndx, index);
 	if (vmid == HOSTVISOR) {
 		if (pfn == gfn) {
-			//assign_pfn_to_smmu(vmid, gfn, pfn);
-			//print_string("\rsmmu map host\n");
-			//printhex_ul(iova);
+			assign_pfn_to_smmu(vmid, gfn, pfn);	
 			pte = smmu_init_pte(prot, paddr);
 			set_smmu_pt(cbndx, index, iova, pte);
+			print_string("\rsmmu map host\n");
+			printhex_ul(iova);
 		}
 	} else {
-		//acquire_lock_vm(vmid);
-		//if (get_vm_state(vmid) == READY) {
-			//assign_pfn_to_smmu(vmid, gfn, pfn);
+		acquire_lock_vm(vmid);
+		if (get_vm_state(vmid) == READY) {
+			assign_pfn_to_smmu(vmid, gfn, pfn);
 			//print_string("\rsmmu map vm\n");
 			//printhex_ul(iova);
 			pte = smmu_init_pte(prot, paddr);
 			//printhex_ul(pte);
 			set_smmu_pt(cbndx, index, iova, pte);
-		//}
-		//else {
-		//	print_string("\rsmmu map: VM state is not ready\n");
-	    	//	v_panic();
-		//}
-		//release_lock_vm(vmid);
+		}
+		else {
+			print_string("\rsmmu map: VM state is not ready\n");
+	    		v_panic();
+		}
+		release_lock_vm(vmid);
 	}
 
 	release_lock_smmu();
