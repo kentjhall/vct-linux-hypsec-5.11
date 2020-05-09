@@ -78,6 +78,11 @@ u32 __hyp_text check_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 pgnum, u64 apfn)
 				}
 			}	
 		} else {
+			print_string("\rcheck_pfn_to_vm: unknown owner\n");
+			print_string("\rpfn\n");
+			printhex_ul(pfn);
+			print_string("\rowner\n");
+			printhex_ul(owner);
 			ret = 3U;
 		}
 		pgnum -= 1UL;

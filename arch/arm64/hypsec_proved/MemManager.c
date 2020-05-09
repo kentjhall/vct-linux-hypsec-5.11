@@ -35,17 +35,14 @@ void __hyp_text map_page_host(u64 addr)
 
 void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
 {
-    u32 owner, level;
-    u64 perm;
+    u32 owner;
     acquire_lock_s2page();
     owner = get_pfn_owner(pfn);
     if (owner == vmid) {
         set_pfn_owner(pfn, HOSTVISOR);
         set_pfn_count(pfn, 0U);
         set_pfn_map(pfn, 0UL);
-        perm = pgprot_val(PAGE_NONE);
-        level = get_npt_level(vmid, pfn * PAGE_SIZE);
-        mmap_s2pt(vmid, pfn * PAGE_SIZE, level, perm);
+	clear_phys_page(pfn);
     }
     release_lock_s2page();
 }

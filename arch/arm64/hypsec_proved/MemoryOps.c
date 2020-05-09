@@ -23,7 +23,9 @@ void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 		while (i < n) {
 			u64 base = get_mem_region_base(i);
 			u64 sz = get_mem_region_size(i);
-			__clear_vm_range(vmid, base, sz);
+			u64 flags = get_mem_region_flag(i);
+			if ((flags & MEMBLOCK_NOMAP) == 0) 
+				__clear_vm_range(vmid, base, sz);
 			i++;
 		}
 	}
