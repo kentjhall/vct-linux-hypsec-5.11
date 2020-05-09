@@ -152,6 +152,7 @@ void __hyp_text v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
     }
 }
 
+//FIXME: 1. Add check if owner == INVALID 2. Add check if vmstate == READY
 void __hyp_text __kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size)
 {
 	u64 pte; 

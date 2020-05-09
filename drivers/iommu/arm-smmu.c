@@ -417,7 +417,8 @@ static void arm_smmu_init_context_bank(struct arm_smmu_domain *smmu_domain,
 	cb->cfg = cfg;
 #ifdef CONFIG_VERIFIED_KVM
 	smmu_num = smmu->index;
-	el2_smmu_alloc_pgd(cfg->cbndx, ARM_SMMU_CB_VMID(smmu, cfg), smmu_num);
+	//el2_smmu_alloc_pgd(cfg->cbndx, ARM_SMMU_CB_VMID(smmu, cfg), smmu_num);
+	el2_smmu_alloc_pgd(cfg->cbndx, cfg->vmid, smmu_num);
 	printk("SMMU SHIT %s smmu index %d cbndx %d\n", __func__, smmu->index, cfg->cbndx);
 #endif
 
@@ -682,9 +683,13 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 		cfg->irptndx = cfg->cbndx;
 	}
 
-	if (smmu_domain->stage == ARM_SMMU_DOMAIN_S2)
+	if (smmu_domain->stage == ARM_SMMU_DOMAIN_S2) {
+#ifndef CONFIG_VERIFIED_KVM
 		cfg->vmid = cfg->cbndx + 1 + smmu->cavium_id_base;
-	else
+#else
+		cfg->vmid = domain->vmid;
+#endif
+	} else
 		cfg->asid = cfg->cbndx + smmu->cavium_id_base;
 
 	pgtbl_cfg = (struct io_pgtable_cfg) {

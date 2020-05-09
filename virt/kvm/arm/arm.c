@@ -1373,6 +1373,9 @@ long kvm_arch_vm_ioctl(struct file *filp,
 		el2_boot_from_inc_exe(kvm->arch.vmid);
 		return 0;
 	}
+	case KVM_ARM_GET_VMID: {
+		return kvm->arch.vmid;
+	}
 #endif
 	default:
 		return -EINVAL;
