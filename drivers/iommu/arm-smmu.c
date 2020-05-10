@@ -417,7 +417,6 @@ static void arm_smmu_init_context_bank(struct arm_smmu_domain *smmu_domain,
 	cb->cfg = cfg;
 #ifdef CONFIG_VERIFIED_KVM
 	smmu_num = smmu->index;
-	//el2_smmu_alloc_pgd(cfg->cbndx, ARM_SMMU_CB_VMID(smmu, cfg), smmu_num);
 	el2_smmu_alloc_pgd(cfg->cbndx, cfg->vmid, smmu_num);
 	printk("SMMU SHIT %s smmu index %d cbndx %d\n", __func__, smmu->index, cfg->cbndx);
 #endif
