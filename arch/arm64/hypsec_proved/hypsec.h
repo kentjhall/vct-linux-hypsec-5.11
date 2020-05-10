@@ -665,7 +665,7 @@ static u64 inline get_phys_mem_size(void)
 	return el2_data->phys_mem_size;
 }
 
-static u64 get_phys_mem_start_pfn(void)
+static u64 inline get_phys_mem_start_pfn(void)
 {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	return el2_data->phys_mem_start >> PAGE_SHIFT;

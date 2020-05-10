@@ -10,7 +10,7 @@ u32 __hyp_text handle_smmu_global_access(u32 hsr, u64 fault_ipa, u64 offset, u32
 	u64 data = host_get_mmio_data(hsr);
 
 	/* GR0 */
-	if (offset >= 0 && offset <= ARM_SMMU_GR1_BASE) {
+	if (offset >= 0 && offset < ARM_SMMU_GR1_BASE) {
 		if (offset == ARM_SMMU_GR0_sCR0) {
 			/* Check if the host tries to bypass SMMU */
 			u64 smmu_enable = (data >> sCR0_SMCFCFG_SHIFT) & 1U;
