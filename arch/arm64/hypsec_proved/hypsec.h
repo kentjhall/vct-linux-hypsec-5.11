@@ -659,6 +659,18 @@ void set_per_cpu_host_regs(u64 hr);
 void set_host_regs(int nr, u64 value);
 u64 get_host_regs(int nr);
 
+static u64 inline get_phys_mem_size(void)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->phys_mem_size;
+}
+
+static u64 get_phys_mem_start_pfn(void)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->phys_mem_start >> PAGE_SHIFT;
+}
+
 /*
  * PTAlloc
  */

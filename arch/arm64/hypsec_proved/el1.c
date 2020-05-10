@@ -152,9 +152,14 @@ void init_el2_data_page(void)
 			index += (r->size >> PAGE_SHIFT);
 		} else
 			el2_data->s2_memblock_info[i].index = S2_PFN_SIZE;
+		el2_data->phys_mem_size += el2_data->regions[i].size; 
 		i++;
 	}
 	el2_data->regions_cnt = i;
+	el2_data->phys_mem_start += el2_data->regions[0].base; 
+
+	printk("EL2 system phys mem start %llx end %llx\n",
+		el2_data->phys_mem_start, el2_data->phys_mem_size);
 
 	el2_data->used_pages = 0;
 	el2_data->used_tmp_pages = 0;

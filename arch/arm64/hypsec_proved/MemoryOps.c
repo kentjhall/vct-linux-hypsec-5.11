@@ -4,6 +4,7 @@
  * MemoryOps
  */
 
+/*
 void __hyp_text __clear_vm_range(u32 vmid, u64 start, u64 size)
 {
 	u64 pfn = start >> PAGE_SHIFT;
@@ -27,6 +28,23 @@ void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 			if ((flags & MEMBLOCK_NOMAP) == 0) 
 				__clear_vm_range(vmid, base, sz);
 			i++;
+		}
+	}
+}
+*/
+
+void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
+{
+	u32 poweron = get_vm_poweron(vmid);
+	if (size == KVM_PHYS_SIZE && poweron == 0U) {
+		u32 i = 0U;
+		u64 size = get_phys_mem_size();
+		u64 num = size / PAGE_SIZE;
+		u64 pfn = get_phys_mem_start_pfn();
+		while (i < num) {
+			clear_vm_page(vmid, pfn);
+			pfn += 1;
+			i += 1;
 		}
 	}
 }

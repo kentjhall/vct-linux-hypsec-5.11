@@ -135,6 +135,9 @@ struct el2_data {
 	unsigned long smmu_page_pool_start;
 	unsigned long smmu_pgd_used_pages;
 	unsigned long smmu_pmd_used_pages;
+
+	u64 phys_mem_start;
+	u64 phys_mem_size;
 };
 
 void init_el2_data_page(void);
