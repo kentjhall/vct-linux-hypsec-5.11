@@ -26,7 +26,10 @@ void __hyp_text map_page_host(u64 addr)
 			new_pte = pfn * PAGE_SIZE + perm;
 			mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
 		} else {
-			reject_invalid_mem_access(addr);
+			//reject_invalid_mem_access(addr);
+			perm = pgprot_val(PAGE_S2_KERNEL);
+			new_pte = pfn * PAGE_SIZE + perm;
+			mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
 			v_panic();
 		}
 	}

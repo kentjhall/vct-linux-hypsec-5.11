@@ -99,9 +99,11 @@ void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 
 		if (ret == 1) {
 			new_pte += (agfn - gfn) * PAGE_SIZE;
 			map_pfn_vm(vmid, fault_addr, new_pte, 3U);
+			__flush_dcache_area(__el2_va(new_pte), PAGE_SIZE);
 		}
 		else if (ret == 0) {
 			map_pfn_vm(vmid, fault_addr, new_pte, 2U);
+			__flush_dcache_area(__el2_va(new_pte), PMD_SIZE);
 		}
 	}
 	else {
@@ -109,6 +111,7 @@ void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 
 		ret = assign_pfn_to_vm(vmid, agfn, pfn, pfn, 1UL);
 		if (ret == 0) {
 			map_pfn_vm(vmid, fault_addr, new_pte, 3U);
+			__flush_dcache_area(__el2_va(new_pte), PAGE_SIZE);
 		}
 	}
 }
