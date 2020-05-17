@@ -37,7 +37,7 @@ static void __hyp_text __activate_traps_common(struct kvm_vcpu *vcpu)
 	set_pmselr_el0(0);
 	set_pmuserenr_el0(ARMV8_PMU_USERENR_MASK);
 
-	set_mdcr_el2(HYPSEC_MDCR_EL2_FLAG);
+	set_mdcr_el2(0);
 }
 
 static void __hyp_text __deactivate_traps_common(void)

@@ -4,7 +4,6 @@
  * MemoryOps
  */
 
-/*
 void __hyp_text __clear_vm_range(u32 vmid, u64 start, u64 size)
 {
 	u64 pfn = start >> PAGE_SHIFT;
@@ -31,8 +30,8 @@ void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 		}
 	}
 }
-*/
 
+/*
 void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 {
 	u32 poweron = get_vm_poweron(vmid);
@@ -48,6 +47,7 @@ void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 		}
 	}
 }
+*/
 
 #define PMD_PAGE_NUM	512
 /* old code */
