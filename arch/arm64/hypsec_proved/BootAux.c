@@ -8,7 +8,6 @@ void __hyp_text unmap_and_load_vm_image(u32 vmid, u64 target_addr, u64 remap_add
 {
 	u32 ret;
 
-	return;
 	while (num > 0UL)
 	{
 		u64 pte = walk_s2pt(COREVISOR, remap_addr);

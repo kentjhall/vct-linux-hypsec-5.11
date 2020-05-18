@@ -211,7 +211,7 @@ extern unsigned long search_load_info(u32 vmid, struct el2_data *el2_data,
 
 extern int el2_alloc_vm_info(struct kvm *kvm);
 
-int handle_pvops(void);
+int handle_pvops(u32 vmid, u32 vcpuid);
 void save_encrypted_vcpu(struct kvm_vcpu *vcpu);
 
 //extern void set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,

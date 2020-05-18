@@ -233,7 +233,7 @@ static bool __hyp_text fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code,
 
 	ec = ESR_ELx_EC(esr_el2);
 	if (ec == ESR_ELx_EC_HVC64) {
-		if (handle_pvops() > 0)
+		if (handle_pvops(vmid, vcpuid) > 0)
 			return true;
 		else
 			return false;

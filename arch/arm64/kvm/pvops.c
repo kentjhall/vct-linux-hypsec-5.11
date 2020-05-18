@@ -11,13 +11,17 @@
 
 #include <kvm/pvops.h>
 
-int __hyp_text handle_pvops(void)
+int __hyp_text handle_pvops(u32 vmid, u32 vcpuid)
 {
-	u32 vmid = get_cur_vmid();
-	u32 vcpu_id = get_cur_vcpu_id();
-	u64 call_num = get_shadow_ctxt(vmid, vcpu_id, 0);
-	u64 addr = get_shadow_ctxt(vmid, vcpu_id, 1);
-	u64 size = get_shadow_ctxt(vmid, vcpu_id, 2);
+	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+	u32 index = VCPU_IDX(vmid, vcpuid);
+
+	//u64 call_num = get_shadow_ctxt(vmid, vcpu_id, 0);
+	u64 call_num = el2_data->shadow_vcpu_ctxt[index].regs[0];
+	//u64 addr = get_shadow_ctxt(vmid, vcpu_id, 1);
+	u64 addr = el2_data->shadow_vcpu_ctxt[index].regs[1];
+	//u64 size = get_shadow_ctxt(vmid, vcpu_id, 2);
+	u64 size = el2_data->shadow_vcpu_ctxt[index].regs[2];
 
 	switch (call_num) {
 		case KVM_SET_DESC_PFN:
