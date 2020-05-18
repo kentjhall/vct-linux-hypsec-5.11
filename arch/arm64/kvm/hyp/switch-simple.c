@@ -308,7 +308,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 	 * to erratum #852523 (Cortex-A57) or #853709 (Cortex-A72).
 	 */
 	__sysreg32_restore_state(vcpu);
-	__vm_sysreg_restore_state_nvhe(vmid, vcpu_id);
+	__vm_sysreg_restore_state_nvhe_opt(prot_ctxt);
 
 	__fpsimd_save_state(&host_ctxt->gp_regs.fp_regs);
 	__fpsimd_restore_state(&prot_ctxt->fp_regs);
@@ -325,7 +325,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 	//print_string("\resr\n");
 	//printhex_ul(read_sysreg(esr_el2));
 
-	__vm_sysreg_save_state_nvhe(vmid, vcpu_id);
+	__vm_sysreg_save_state_nvhe_opt(prot_ctxt);
 	__sysreg32_save_state(vcpu);
 	__timer_disable_traps(vcpu);
 	__hyp_vgic_save_state(vcpu);
