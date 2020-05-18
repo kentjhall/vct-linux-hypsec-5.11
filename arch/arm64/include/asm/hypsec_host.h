@@ -239,7 +239,14 @@ extern void map_vgic_cpu_to_shadow_s2pt(u32 vmid, struct el2_data *el2_data);
 extern struct kvm* hypsec_alloc_vm(u32 vmid);
 extern struct kvm_vcpu* hypsec_alloc_vcpu(u32 vmid, int vcpu_id);
 
-void set_per_cpu(int vmid, int vcpu_id);
+static void inline set_per_cpu(int vmid, int vcpu_id)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
+	el2_data->per_cpu_data[pcpuid].vmid = vmid;
+	el2_data->per_cpu_data[pcpuid].vcpu_id = vcpu_id;
+};
+
 //int get_cur_vmid(void);
 //int get_cur_vcpu_id(void);
 static int inline get_cur_vmid(void)

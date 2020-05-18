@@ -61,14 +61,6 @@ void __hyp_text int_to_shadow_fp_regs(u32 vmid, u32 vcpuid) {
 
 }
 
-void __hyp_text set_per_cpu(int vmid, int vcpu_id)
-{
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
-	el2_data->per_cpu_data[pcpuid].vmid = vmid;
-	el2_data->per_cpu_data[pcpuid].vcpu_id = vcpu_id;
-};
-
 void __hyp_text clear_phys_page(unsigned long pfn)
 {
 	unsigned long addr = __el2_va(pfn << PAGE_SHIFT);
