@@ -56,7 +56,7 @@ void __hyp_text restore_shadow_kvm_regs()
     else
     {	
         u64 ec = get_shadow_ctxt(vmid, vcpuid, V_EC);
-        if (ec == ARM_EXCEPTION_TRAP)
+        if (ec == ARM_EXCEPTION_TRAP && dirty)
             sync_dirty_to_shadow(vmid, vcpuid);
         if (dirty & PENDING_EXCEPT_INJECT_FLAG)
             v_update_exception_gp_regs(vmid, vcpuid);

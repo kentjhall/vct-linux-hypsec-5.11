@@ -98,10 +98,10 @@ void __hyp_text prep_wfx(u32 vmid, u32 vcpuid)
 void __hyp_text prep_hvc(u32 vmid, u32 vcpuid)
 {
     u64 psci_fn = get_shadow_ctxt(vmid, vcpuid, 0UL) & ~((u32) 0);
-    set_shadow_dirty_bit(vmid, vcpuid, 1 << 0U);
     set_int_gpr(vmid, vcpuid, 0U, get_shadow_ctxt(vmid, vcpuid, 0UL));
     if (psci_fn == PSCI_0_2_FN64_CPU_ON)
     {
+        set_shadow_dirty_bit(vmid, vcpuid, 1 << 0U);
         set_int_gpr(vmid, vcpuid, 1U, get_shadow_ctxt(vmid, vcpuid, 1U));
         set_int_gpr(vmid, vcpuid, 2U, get_shadow_ctxt(vmid, vcpuid, 2U));
         set_int_gpr(vmid, vcpuid, 3U, get_shadow_ctxt(vmid, vcpuid, 3U));
@@ -109,11 +109,13 @@ void __hyp_text prep_hvc(u32 vmid, u32 vcpuid)
     else if (psci_fn == PSCI_0_2_FN_AFFINITY_INFO ||
              psci_fn == PSCI_0_2_FN64_AFFINITY_INFO)
     {
+        set_shadow_dirty_bit(vmid, vcpuid, 1 << 0U);
         set_int_gpr(vmid, vcpuid, 1U, get_shadow_ctxt(vmid, vcpuid, 1U));
         set_int_gpr(vmid, vcpuid, 2U, get_shadow_ctxt(vmid, vcpuid, 2U));
 
     }
     else if (psci_fn == PSCI_0_2_FN_SYSTEM_OFF) {
+        set_shadow_dirty_bit(vmid, vcpuid, 1 << 0U);
         set_vm_poweroff(vmid);
     }
 }
