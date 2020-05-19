@@ -51,11 +51,11 @@ void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
     release_lock_s2page();
 }
 
-u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 apfn, u32 pgnum)
+u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u32 pgnum)
 {
 	u32 ret;
 	acquire_lock_s2page();
-	ret = check_pfn_to_vm(vmid, gfn, pfn, pgnum, apfn);
+	ret = check_pfn_to_vm(vmid, gfn, pfn, pgnum);
 	release_lock_s2page();
 	return ret;
 }

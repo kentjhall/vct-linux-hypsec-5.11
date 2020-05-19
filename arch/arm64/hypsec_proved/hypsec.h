@@ -752,7 +752,7 @@ u32 get_vm_poweron(u32 vmid);
 /*
  * MemManagerAux
  */
-u32 check_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 pgnum, u64 apfn);
+u32 check_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 pgnum);
 void set_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 pgnum);
 
 /*
@@ -761,7 +761,7 @@ void set_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 pgnum);
 
 void map_page_host(u64 addr);
 void clear_vm_page(u32 vmid, u64 pfn);
-u32 assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 apfn, u32 pgnum);
+u32 assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u32 pgnum);
 void assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn);
 void map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level);
 void grant_vm_page(u32 vmid, u64 pfn);

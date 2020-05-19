@@ -20,10 +20,7 @@ void __hyp_text unmap_and_load_vm_image(u32 vmid, u64 target_addr, u64 remap_add
 		if (pfn == 0UL) {
 			v_panic();
 		} else {
-			//print_string("\rmap boot images\n");
-	        	//printhex_ul(pfn);
-			//set_pfn_to_vm(vmid, gfn, pfn, 1);
-			ret = assign_pfn_to_vm(vmid, gfn, pfn, pfn, 512);
+			ret = assign_pfn_to_vm(vmid, gfn, pfn, 512);
 			if (ret == 0UL)
 				map_pfn_vm(vmid, start, pa, 2U);
 		}

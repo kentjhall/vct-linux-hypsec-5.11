@@ -82,7 +82,7 @@ void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 
 
 void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 level)
 {
-	u64 pfn, apfn, gfn, agfn;
+	u64 pfn, gfn, agfn;
 	u32 ret;
 	u64 target_addr = phys_page(new_pte);
 	pfn = target_addr / PAGE_SIZE;
@@ -94,8 +94,7 @@ void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 
 	if (level == 2U) {
 		/* gfn is aligned to 2MB size */
 		gfn = agfn / PTRS_PER_PMD * PTRS_PER_PMD;
-		apfn = pfn + (agfn - gfn);
-		ret = assign_pfn_to_vm(vmid, gfn, pfn, apfn, PMD_PAGE_NUM);
+		ret = assign_pfn_to_vm(vmid, gfn, pfn, PMD_PAGE_NUM);
 		//if (ret == 1) {
 		//	print_string("\rsplitting pmd to pte\n");
 		//	new_pte += (agfn - gfn) * PAGE_SIZE;
@@ -108,7 +107,7 @@ void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 
 	}
 	else {
 		/* agfn is aligned to 4KB size */
-		ret = assign_pfn_to_vm(vmid, agfn, pfn, pfn, 1UL);
+		ret = assign_pfn_to_vm(vmid, agfn, pfn, 1UL);
 		if (ret == 0) {
 			map_pfn_vm(vmid, fault_addr, new_pte, 3U);
 		}
