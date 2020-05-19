@@ -66,15 +66,17 @@ u32 __hyp_text check_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 pgnum, u64 apfn)
 		} else if (owner == vmid) {
 			/* the page was mapped to another gfn already! */
 			// if gfn == map, it means someone in my VM has mapped it
-			if (gfn == map && count != INVALID_MEM)
-				ret = 2U;
-			else {  // map != gfn
-				print_string("\rgfn\n");
-				printhex_ul(gfn);
-				print_string("\rbase gfn\n");
-				printhex_ul(base_gfn);
-				print_string("\rmap\n");
-				printhex_ul(map);
+			if (gfn == map) {
+				if (count != INVALID_MEM)
+					ret = 2U;
+			} else {  // map != gfn
+				//print_string("\rgfn\n");
+				//printhex_ul(gfn);
+				//print_string("\rbase gfn\n");
+				//printhex_ul(base_gfn);
+				//print_string("\rmap\n");
+				//printhex_ul(map);
+				print_string("\rmap != gfn\n");
 				v_panic();
 			}
 		} else if (owner == COREVISOR) {
@@ -97,12 +99,12 @@ void __hyp_text set_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 pgnum)
 {
     u32 owner;
     while (pgnum > 0UL) {
-	owner = get_pfn_owner(pfn);
-	if (owner == HOSTVISOR) {
+	//owner = get_pfn_owner(pfn);
+	//if (owner == HOSTVISOR) {
 	    set_pfn_owner(pfn, vmid);
 	    clear_pfn_host(pfn);
             set_pfn_map(pfn, gfn);
-	}
+	//}
 	set_pfn_count(pfn, 0U);
 	pfn += 1UL;
         gfn += 1UL;

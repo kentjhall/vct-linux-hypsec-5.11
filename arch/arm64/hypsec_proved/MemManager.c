@@ -94,8 +94,6 @@ void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 	    set_pfn_count(pfn, count + 1U);
 	} else {
 	    if (count == 0) {
-		//print_string("\rsmmu: map to vm\n");
-	        //printhex_ul(pfn);
 		set_pfn_to_vm(vmid, gfn, pfn, 1UL);
 		set_pfn_count(pfn, INVALID_MEM);
 	    }
