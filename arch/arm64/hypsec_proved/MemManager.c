@@ -54,25 +54,8 @@ void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
 u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 apfn, u32 pgnum)
 {
 	u32 ret;
-
 	acquire_lock_s2page();
-	//et = check_pfn_to_vm(vmid, gfn, pfn, pgnum, apfn);
 	ret = check_pfn_to_vm(vmid, gfn, pfn, pgnum, apfn);
-	/* if pfn is new, we simply assign it */
-	//if (ret == 0) {
-	if (ret == 0)
-		set_pfn_to_vm(vmid, gfn, pfn, pgnum);
-	//}
-	/* if pfn is partially overlapped */
-	//else if (ret == 1) {
-	//	u64 agfn = gfn + (apfn - pfn);
-	//	set_pfn_to_vm(vmid, agfn, apfn, 1);
-	/* if pfn is mapped, we neither assign nor map it */
-	//} else if (ret != 2) { 
-	//else {
-	//	print_string("\rpanic in assign_pfn_to_vm\n");
-	//	v_panic();
-	//}
 	release_lock_s2page();
 	return ret;
 }
