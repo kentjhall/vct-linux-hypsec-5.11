@@ -26,8 +26,10 @@ u64 __hyp_text alloc_remap_addr(u64 pgnum)
     remap = get_next_remap_ptr();
     set_next_remap_ptr(remap + pgnum * PAGE_SIZE);
     remap += EL2_REMAP_START;
-    if (remap >= EL2_PAGE_OFFSET)
+    if (remap >= EL2_PAGE_OFFSET) {
+	print_string("\rpanic in remap\n");
         v_panic();
+    }
     release_lock_core();
     return remap;
 }

@@ -48,42 +48,43 @@ void __hyp_text set_pfn_to_vm(u32 vmid, u64 pfn, u64 pgnum)
 u32 __hyp_text check_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 pgnum, u64 apfn)
 {
 	u32 ret = 0U;
+	u64 base_gfn = INVALID64;
+
+	if (pgnum == 512)
+		base_gfn = gfn;
+
 	while (pgnum > 0UL) {
 		u32 owner = get_pfn_owner(pfn);
 		u32 count = get_pfn_count(pfn);
 		u64 map = get_pfn_map(pfn);
 		if (owner == HOSTVISOR) {
-			if (count != 0U)
-				ret = 3U;
+			//pfn is mapped to a hostvisor SMMU table
+			if (count != 0U) {
+				print_string("\rassign pfn used by host smmu device\n");
+				v_panic();
+			}
 		} else if (owner == vmid) {
 			/* the page was mapped to another gfn already! */
-			if (gfn != map) {
+			// if gfn == map, it means someone in my VM has mapped it
+			if (gfn == map && count != INVALID_MEM)
+				ret = 2U;
+			else {  // map != gfn
 				print_string("\rgfn\n");
 				printhex_ul(gfn);
+				print_string("\rbase gfn\n");
+				printhex_ul(base_gfn);
 				print_string("\rmap\n");
 				printhex_ul(map);
-				ret = 3U;
-			} else {
-				/*
-				 * if some page within (pfn, pfn + (PAGE_SIZE * pgnum)) 
-				 * was mapped earlier (e.g. ret = 1) and pfn is now
-				 * owned by VM's device (mapped in cbndx of SMMU), we
-				 * map apfn instead of pfn to VM s2pt.
-				 */
-				if (ret < 2U && count != INVALID_MEM) {
-					if (pfn == apfn)
-						ret = 2U;
-					else
-						ret = 1U;
-				}
-			}	
-		} else {
-			print_string("\rcheck_pfn_to_vm: unknown owner\n");
-			print_string("\rpfn\n");
-			printhex_ul(pfn);
-			print_string("\rowner\n");
-			printhex_ul(owner);
-			ret = 3U;
+				v_panic();
+			}
+		} else if (owner == COREVISOR) {
+			if (map != base_gfn) {
+				print_string("\rgfn in map\n");
+				printhex_ul(map);
+				print_string("\rbase gfn\n");
+				printhex_ul(base_gfn);
+				v_panic();
+			}
 		}
 		pgnum -= 1UL;
 		pfn += 1UL;

@@ -96,11 +96,13 @@ void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 
 		gfn = agfn / PTRS_PER_PMD * PTRS_PER_PMD;
 		apfn = pfn + (agfn - gfn);
 		ret = assign_pfn_to_vm(vmid, gfn, pfn, apfn, PMD_PAGE_NUM);
-		if (ret == 1) {
-			new_pte += (agfn - gfn) * PAGE_SIZE;
-			map_pfn_vm(vmid, fault_addr, new_pte, 3U);
-		}
-		else if (ret == 0) {
+		//if (ret == 1) {
+		//	print_string("\rsplitting pmd to pte\n");
+		//	new_pte += (agfn - gfn) * PAGE_SIZE;
+		//	map_pfn_vm(vmid, fault_addr, new_pte, 3U);
+		//}
+		//else if (ret == 0) {
+		if (ret == 0) {
 			map_pfn_vm(vmid, fault_addr, new_pte, 2U);
 		}
 	}

@@ -30,6 +30,7 @@ void __hyp_text set_vcpu_active(u32 vmid, u32 vcpuid)
         set_vcpu_state(vmid, vcpuid, ACTIVE);
     }
 	else {
+		print_string("\rset vcpu active\n");
 		v_panic();
 	}
     release_lock_vm(vmid);
@@ -44,6 +45,7 @@ void __hyp_text set_vcpu_inactive(u32 vmid, u32 vcpuid)
         set_vcpu_state(vmid, vcpuid, READY);
     }
     else {
+	print_string("\rset vcpu inactive\n");
 	v_panic();
     }
     release_lock_vm(vmid);
@@ -86,6 +88,7 @@ u32 __hyp_text register_vcpu(u32 vmid, u32 vcpuid)
         set_shadow_ctxt(vmid, vcpuid, V_DIRTY, INVALID64);
     }
     else {
+	print_string("\rregister vcpu\n");
 	v_panic(); 
     }
     release_lock_vm(vmid);
@@ -109,6 +112,7 @@ u32 __hyp_text register_kvm()
         set_vm_state(vmid, READY);
     }
     else {
+	print_string("\rregister kvm\n");
 	v_panic();        
     }
     release_lock_vm(vmid);
@@ -163,8 +167,10 @@ void __hyp_text remap_vm_image(u32 vmid, u64 pfn, u32 load_idx)
             }
         }
     }
-    else
+    else {
+	print_string("\remap vm image\n");
         v_panic();
+    }
     release_lock_vm(vmid);
 }
 

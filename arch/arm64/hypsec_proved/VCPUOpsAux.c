@@ -19,6 +19,7 @@ void __hyp_text reset_gp_regs(u32 vmid, u32 vcpuid)
 	reset_fp_regs(vmid, vcpuid);
     }
     else {
+	print_string("\reset gp reg\n");
         v_panic();
     }
 }

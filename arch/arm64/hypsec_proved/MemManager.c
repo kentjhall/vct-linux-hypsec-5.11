@@ -30,6 +30,7 @@ void __hyp_text map_page_host(u64 addr)
 			perm = pgprot_val(PAGE_S2_KERNEL);
 			new_pte = pfn * PAGE_SIZE + perm;
 			mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
+			print_string("\rfaults on host\n");
 			v_panic();
 		}
 	}
@@ -55,20 +56,23 @@ u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 apfn, u32 pgnum)
 	u32 ret;
 
 	acquire_lock_s2page();
+	//et = check_pfn_to_vm(vmid, gfn, pfn, pgnum, apfn);
 	ret = check_pfn_to_vm(vmid, gfn, pfn, pgnum, apfn);
 	/* if pfn is new, we simply assign it */
-	if (ret == 0) {
+	//if (ret == 0) {
+	if (ret == 0)
 		set_pfn_to_vm(vmid, gfn, pfn, pgnum);
-	}
+	//}
 	/* if pfn is partially overlapped */
-	else if (ret == 1) {
-		u64 agfn = gfn + (apfn - pfn);
-		set_pfn_to_vm(vmid, agfn, apfn, 1);
+	//else if (ret == 1) {
+	//	u64 agfn = gfn + (apfn - pfn);
+	//	set_pfn_to_vm(vmid, agfn, apfn, 1);
 	/* if pfn is mapped, we neither assign nor map it */
-	} else if (ret != 2) { 
-		print_string("\rpanic in assign_pfn_to_vm\n");
-		v_panic();
-	}
+	//} else if (ret != 2) { 
+	//else {
+	//	print_string("\rpanic in assign_pfn_to_vm\n");
+	//	v_panic();
+	//}
 	release_lock_s2page();
 	return ret;
 }
@@ -87,7 +91,7 @@ void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 	if (vmid == HOSTVISOR) {
 	    //print_string("\rsmmu: map to host\n");
 	    //printhex_ul(pfn);
-	    set_pfn_count(pfn, 1U);
+	    set_pfn_count(pfn, count + 1U);
 	} else {
 	    if (count == 0) {
 		//print_string("\rsmmu: map to vm\n");
@@ -104,9 +108,16 @@ void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 		v_panic();
 	    }
 	}
-    } else if (owner != INVALID_MEM && owner != vmid) {
-        print_string("\rpanic in assign_pfn_to_smmu: owner != vmid\n");
-	v_panic();
+    } else if (owner == vmid) {
+	if (gfn != map) {
+        	print_string("\rpanic in assign_pfn_to_smmu: owner != vmid\n");
+		v_panic();
+	}
+    } else if (owner == COREVISOR) {
+	if (map == 0) {
+		print_string("\rpanic in assign_pfn_to_smmu: owner = core\n");
+		v_panic();
+	}
     }
     release_lock_s2page();
 }
