@@ -89,6 +89,7 @@ void __hyp_text v_set_pte(u32 vmid, u64 pmd, u64 addr, u64 pte)
     	pt_store(vmid, pmd_pa + pte_idx * 8UL, pte);
 }
 
+/*
 u64 __hyp_text walk_smmu_pgd(u64 ttbr, u64 addr, u32 alloc)
 {
     u64 ttbr_pa = phys_page(ttbr);
@@ -148,3 +149,4 @@ void __hyp_text set_smmu_pte(u64 pmd, u64 addr, u64 pte)
     smmu_pt_store(pmd_pa + pte_idx * 8UL, pte);
     //__dma_map_area(__el2_va(pmd_pa + pte_idx * 8UL), sizeof(u64), 1);
 }
+*/

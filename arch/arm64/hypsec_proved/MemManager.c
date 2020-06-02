@@ -51,15 +51,44 @@ void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
     release_lock_s2page();
 }
 
-u32 __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u32 pgnum)
+void __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
 {
-	u32 ret;
+	u64 map;
+	u32 owner, count;
+
 	acquire_lock_s2page();
-	ret = check_pfn_to_vm(vmid, gfn, pfn, pgnum);
+	//ret = check_pfn_to_vm(vmid, gfn, pfn, pgnum);
+
+	owner = get_pfn_owner(pfn);
+	count = get_pfn_count(pfn);
+	if (owner == HOSTVISOR) {
+		if (count == 0U) {
+			set_pfn_owner(pfn, vmid);
+			clear_pfn_host(pfn);
+			set_pfn_map(pfn, gfn);	
+		} else {
+			//pfn is mapped to a hostvisor SMMU table
+			print_string("\rassign pfn used by host smmu device\n");
+			v_panic();
+		}
+	} else if (owner == vmid) {
+		map = get_pfn_map(pfn);
+		/* the page was mapped to another gfn already! */
+		// if gfn == map, it means someone in my VM has mapped it
+		if (gfn == map) {
+ 			if (count == INVALID_MEM) {
+				set_pfn_count(pfn, 0U);
+			}
+		} else {
+			print_string("\rmap != gfn || count != INVALID_MEM\n");
+			v_panic();
+		}
+	}
+
 	release_lock_s2page();
-	return ret;
 }
 
+/*
 void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 {
     u32 owner, count;
@@ -102,6 +131,7 @@ void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
     }
     release_lock_s2page();
 }
+*/
 
 extern void t_mmap_s2pt(phys_addr_t addr, u64 desc, int level, u32 vmid);
 void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
@@ -119,6 +149,23 @@ void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 		pte = paddr + perm;
 	}
 	mmap_s2pt(vmid, addr, level, pte);
+}
+
+
+void __hyp_text __kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa)
+{
+	u64 pte;
+	u32 owner;
+	u64 paddr = phys_page(pte);
+
+	pte = pa + (pgprot_val(PAGE_S2_DEVICE) | S2_RDWR);
+
+	acquire_lock_s2page();
+	owner = get_pfn_owner(paddr >> PAGE_SHIFT);
+	// check if pfn is truly within an I/O area
+	if (owner == INVALID_MEM) 
+		mmap_s2pt(vmid, gpa, 3U, pte);
+	release_lock_s2page();
 }
 
 void __hyp_text grant_vm_page(u32 vmid, u64 pfn)
@@ -146,4 +193,75 @@ void __hyp_text revoke_vm_page(u32 vmid, u64 pfn)
         }
     }
     release_lock_s2page();
+}
+
+void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
+{
+	u64 map;
+	u32 owner, count;
+
+	acquire_lock_s2page();
+	owner = get_pfn_owner(pfn);
+	count = get_pfn_count(pfn);
+	map = get_pfn_map(pfn);
+	if (owner == HOSTVISOR) {
+		if (count == 0) {
+			clear_pfn_host(pfn);
+			set_pfn_owner(pfn, vmid);
+			set_pfn_map(pfn, gfn);
+			set_pfn_count(pfn, INVALID);
+		}
+		else {
+			v_panic();
+		}
+	} else if (owner == vmid)
+	{
+		if (gfn != map) {
+			v_panic();
+		}
+	} else {
+		v_panic();
+	}
+	release_lock_s2page();
+}
+
+void __hyp_text update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
+{
+	u64 pfn, gfn;
+	u32 owner, count, map;
+
+	acquire_lock_s2page();
+	pfn = phys_page(pte) / PAGE_SIZE;
+	gfn = iova / PAGE_SIZE;
+	owner = get_pfn_owner(pfn);
+	map = get_pfn_map(pfn);
+	if (owner == HOSTVISOR) {
+		count = get_pfn_count(pfn);
+		//if (count < EL2_SMMU_CFG_SIZE) {
+			set_pfn_count(pfn, count + 1U);
+		//}
+		//map += SMMU_HOST_OFFSET;
+	}
+	if (vmid == owner && gfn == map) {
+		map_spt(cbndx, index, iova, pte);
+	}
+	release_lock_s2page();
+}
+
+void __hyp_text unmap_smmu_page(u32 cbndx, u32 index, u64 iova)
+{
+	u64 pte, pfn; 
+	u32 owner, count;
+
+	acquire_lock_s2page();
+	pte = unmap_spt(cbndx, index, iova);
+	pfn = phys_page(pte) / PAGE_SIZE;
+	owner = get_pfn_owner(pfn);
+	if (owner == HOSTVISOR) {
+		count = get_pfn_count(pfn);
+		if (count > 0U) {
+			set_pfn_count(pfn, count - 1U);
+		}
+	}
+	release_lock_s2page();
 }

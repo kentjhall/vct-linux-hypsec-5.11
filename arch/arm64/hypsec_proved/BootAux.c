@@ -21,9 +21,10 @@ void __hyp_text unmap_and_load_vm_image(u32 vmid, u64 target_addr, u64 remap_add
 			v_panic();
 		} else {
 			//TODO: call to prot_and_map_vm_s2pt
-			ret = assign_pfn_to_vm(vmid, gfn, pfn, 512);
-			if (ret == 0UL)
-				map_pfn_vm(vmid, start, pa, 2U);
+			//ret = assign_pfn_to_vm(vmid, gfn, pfn, 512);
+			//if (ret == 0UL)
+			//	map_pfn_vm(vmid, start, pa, 2U);
+			prot_and_map_vm_s2pt(vmid, gfn * PAGE_SIZE, pfn * PAGE_SIZE, 2U);
 		}
 		start += PMD_SIZE;
 		remap_addr = remap_addr + (start - target_addr);

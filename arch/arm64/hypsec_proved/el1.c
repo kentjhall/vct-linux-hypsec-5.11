@@ -170,6 +170,7 @@ void init_el2_data_page(void)
 	el2_data->el2_pt_lock.lock = 0;
 	el2_data->console_lock.lock = 0;
 	el2_data->smmu_lock.lock = 0;
+	el2_data->spt_lock.lock = 0;
 
 	memset(&el2_data->arch, 0, sizeof(struct s2_cpu_arch));
 

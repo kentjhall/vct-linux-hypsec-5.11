@@ -31,6 +31,16 @@ void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 	}
 }
 
+void __hyp_text clear_vm_range(u32 vmid, u64 pfn, u64 num)
+{
+	while (num > 0UL)
+	{
+		clear_vm_page(vmid, pfn);
+		pfn += 1UL;
+		num -= 1UL;
+	}
+}
+
 /*
 void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 {
@@ -50,67 +60,46 @@ void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
 */
 
 #define PMD_PAGE_NUM	512
-/* old code */
-/*
-void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 level, u32 iabt)
-{
-	u64 target_addr = phys_page(new_pte);
-	u64 target_pfn = target_addr / PAGE_SIZE;
-	u32 ret;
-
-	if (new_pte == 0)
-		return;
-
-	if (level == 2) {
-		u64 target_addr_off = fault_addr & (PMD_SIZE - 1);
-		u64 apfn = target_pfn + (target_addr_off >> PAGE_SHIFT);
-		ret = assign_pfn_to_vm(vmid, target_pfn, apfn, PMD_PAGE_NUM);
-                // partially overlap
-		if (ret == 1) {
-			new_pte += target_addr_off;
-			level = 3;
-			ret = 0;
-		}
-	} else {
-		ret = assign_pfn_to_vm(vmid, target_pfn, target_pfn, 1);
-	}
-
-	if (!ret)
-		map_pfn_vm(vmid, fault_addr, new_pte, level);
-}
-*/
-
 void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 level)
 {
-	u64 pfn, gfn, agfn;
-	u32 ret;
+	u64 pfn, gfn, num;
 	u64 target_addr = phys_page(new_pte);
 	pfn = target_addr / PAGE_SIZE;
-	agfn = fault_addr / PAGE_SIZE;
+	gfn = fault_addr / PAGE_SIZE;
 
 	if (new_pte == 0)
 		return;
 
 	if (level == 2U) {
 		/* gfn is aligned to 2MB size */
-		gfn = agfn / PTRS_PER_PMD * PTRS_PER_PMD;
-		ret = assign_pfn_to_vm(vmid, gfn, pfn, PMD_PAGE_NUM);
+		gfn = gfn / PTRS_PER_PMD * PTRS_PER_PMD;
+		num = PMD_PAGE_NUM;
+		//ret = assign_pfn_to_vm(vmid, gfn, pfn, PMD_PAGE_NUM);
 		//if (ret == 1) {
 		//	print_string("\rsplitting pmd to pte\n");
 		//	new_pte += (agfn - gfn) * PAGE_SIZE;
 		//	map_pfn_vm(vmid, fault_addr, new_pte, 3U);
 		//}
 		//else if (ret == 0) {
-		if (ret == 0) {
-			map_pfn_vm(vmid, fault_addr, new_pte, 2U);
-		}
+		//if (ret == 0) {
+			//map_pfn_vm(vmid, fault_addr, new_pte, 2U);
+		//}
 	}
 	else {
 		/* agfn is aligned to 4KB size */
-		ret = assign_pfn_to_vm(vmid, agfn, pfn, 1UL);
-		if (ret == 0) {
-			map_pfn_vm(vmid, fault_addr, new_pte, 3U);
-		}
+		//ret = assign_pfn_to_vm(vmid, agfn, pfn, 1UL);
+		//if (ret == 0) {
+		//	map_pfn_vm(vmid, fault_addr, new_pte, 3U);
+		//}
+		num = 1UL;
+		level = 3U;
+	}
+
+	while (num > 0UL) {
+		assign_pfn_to_vm(vmid, gfn, pfn);
+		gfn += 1UL;
+		pfn += 1UL;
+		num -= 1UL;
 	}
 }
 
@@ -169,18 +158,4 @@ void __hyp_text v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
         addr += PAGE_SIZE;
         len -= 1UL;
     }
-}
-
-//FIXME: 1. Add check if owner == INVALID 2. Add check if vmstate == READY
-void __hyp_text __kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size)
-{
-	u64 pte; 
-	u32 i = 0;
-	while (i < size) {
-		pte = pa + (pgprot_val(PAGE_S2_DEVICE) | S2_RDWR);
-		mmap_s2pt(vmid, gpa, 3U, pte);
-		i += PAGE_SIZE;
-		gpa += PAGE_SIZE;
-		pa += PAGE_SIZE;
-	}
 }

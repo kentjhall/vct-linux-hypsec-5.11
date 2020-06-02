@@ -671,6 +671,16 @@ static u64 inline get_phys_mem_start_pfn(void)
 	return el2_data->phys_mem_start >> PAGE_SHIFT;
 }
 
+static void inline acquire_lock_spt(void) {
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+    stage2_spin_lock(&el2_data->spt_lock);
+};
+
+static void inline release_lock_spt(void) {
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+    stage2_spin_unlock(&el2_data->spt_lock);
+};
+
 /*
  * PTAlloc
  */
@@ -678,8 +688,8 @@ static u64 inline get_phys_mem_start_pfn(void)
 u64 alloc_s2pt_pgd(u32 vmid);
 u64 alloc_s2pt_pud(u32 vmid);
 u64 alloc_s2pt_pmd(u32 vmid);
-u64 alloc_smmu_pgd_page(void);
-u64 alloc_smmu_pmd_page(void);
+//u64 alloc_smmu_pgd_page(void);
+//u64 alloc_smmu_pmd_page(void);
 
 /*
  * PTWalk
@@ -761,12 +771,15 @@ void set_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 pgnum);
 
 void map_page_host(u64 addr);
 void clear_vm_page(u32 vmid, u64 pfn);
-u32 assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u32 pgnum);
+void assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn);
 void assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn);
 void map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level);
 void grant_vm_page(u32 vmid, u64 pfn);
 void revoke_vm_page(u32 vmid, u64 pfn);
 void clear_phys_page(unsigned long pfn);
+void update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte);
+void unmap_smmu_page(u32 cbndx, u32 index, u64 iova);
+
 /*
  * MemoryOps
  */
@@ -775,7 +788,8 @@ void __clear_vm_stage2_range(u32 vmid, u64 start, u64 size);
 void prot_and_map_vm_s2pt(u32 vmid, u64 fault_addr, u64 new_pte, u32 level);
 //void grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
 //void revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
-void __kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
+void __kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa);
+void clear_vm_range(u32 vmid, u64 pfn, u64 num);
 
 /*
  * BootCore
@@ -804,6 +818,13 @@ u32 register_kvm(void);
 u32 set_boot_info(u32 vmid, u64 load_addr, u64 size);
 void remap_vm_image(u32 vmid, u64 pfn, u32 load_idx);
 void verify_and_load_images(u32 vmid);
+
+void alloc_smmu(u32 vmid, u32 cbndx, u32 index); 
+void assign_smmu(u32 vmid, u32 pfn, u32 gfn); 
+void map_smmu(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte);
+void clear_smmu(u32 vmid, u32 cbndx, u32 index, u64 iova);
+void map_io(u32 vmid, u64 gpa, u64 pa);
+
 
 /*
  * VCPUOpsAux
@@ -838,7 +859,10 @@ void   __el2_free_smmu_pgd(u32 cbndx, u32 index);
 void   __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index);
 void  __el2_arm_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index);
 u64 __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index);
-void __hyp_text __el2_arm_lpae_clear(u64 iova, u32 cbndx, u32 index);
+void __el2_arm_lpae_clear(u64 iova, u32 cbndx, u32 index);
+void smmu_assign_page(u32 cbndx, u32 index, u64 pfn, u64 gfn);
+void smmu_map_page(u32 cbndx, u32 index, u64 iova, u64 pte);
+u64 el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index);
 
 /*
  * MmioOpsAux
@@ -866,6 +890,41 @@ void __handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len);
 u64 host_get_mmio_data(u32 hsr);
 u64 smmu_init_pte(u64 prot, u64 paddr);
 u64 smmu_get_cbndx(u64 offset);
- 
-#endif //HYPSEC_HYPSEC_H
 
+/*
+ * MemHandler
+ */
+u64 v_el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index);
+void v_el2_arm_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index);
+void v_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
+
+/*
+ * MmioPTAlloc
+ */
+u64 alloc_smmu_pgd_page(void);
+u64 alloc_smmu_pmd_page(void);
+
+/*
+ * MmioSPTOps
+ */
+void init_spt(u32 cbndx, u32 index);
+u64 walk_spt(u32 cbndx, u32 index, u64 addr);
+void map_spt(u32 cbndx, u32 index, u64 addr, u64 pte);
+u64 unmap_spt(u32 cbndx, u32 index, u64 addr); 
+
+/*
+ * MmioPTWalk
+ */
+u64 walk_smmu_pgd(u64 ttbr, u64 addr, u32 alloc);
+u64 walk_smmu_pmd(u64 pgd, u64 addr, u32 alloc);
+u64 walk_smmu_pte(u64 pmd, u64 addr);
+void set_smmu_pte(u64 pmd, u64 addr, u64 pte);
+
+/*
+ * MmioSPTWalk
+ */
+void clear_smmu_pt(u32 cbndx, u32 index);
+u64 v_walk_smmu_pt(u32 cbndx, u32 index, u64 addr);
+void v_set_smmu_pt(u32 cbndx, u32 index, u64 addr, u64 pte);
+u64 unmap_smmu_pt(u32 cbndx, u32 index, u64 addr);
+#endif //HYPSEC_HYPSEC_H

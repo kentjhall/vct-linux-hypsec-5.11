@@ -4,6 +4,7 @@
  * NPTOps
  */
 
+//FIXME: Why we removed this from the code?
 void __hyp_text init_s2pt(u32 vmid)
 {
     acquire_lock_pt(vmid);

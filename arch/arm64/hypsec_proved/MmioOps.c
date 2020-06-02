@@ -16,23 +16,22 @@ u64 __hyp_text emulate_mmio(u64 addr, u32 hsr)
 /* TODO: how do we make sure it's ok to free now? */
 void __hyp_text  __el2_free_smmu_pgd(u32 cbndx, u32 index)
 {
-	u32 vmid;
+	u32 vmid, power;
 	acquire_lock_smmu();
 
 	vmid = get_smmu_cfg_vmid(cbndx, index);
-	if (HOSTVISOR < vmid && vmid < COREVISOR) {
-		u32 power = get_vm_poweron(vmid);
-		if (power == 1)
-			v_panic();
-	}
-	set_smmu_cfg_vmid(cbndx, index, 0);
+	power = get_vm_poweron(vmid);
+	if (power == 0)
+		set_smmu_cfg_vmid(cbndx, index, 0);
+	else
+		v_panic();
 	release_lock_smmu();
 
 }
 
 void __hyp_text  __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index)
 {
-	u32 target_vmid, num_context_banks, state;
+	u32 target_vmid, num_context_banks;
 
 	acquire_lock_smmu();
 
@@ -41,33 +40,27 @@ void __hyp_text  __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index)
 		print_string("\rsmmu pgd alloc panic\n");
 		v_panic();
 	} else {
-		
 		target_vmid = get_smmu_cfg_vmid(cbndx, index);
-		if (target_vmid == 0) {
-			if (HOSTVISOR < vmid && vmid < COREVISOR) {
-				//print_string("\ralloc smmu pgd\n");
-				//printhex_ul(index);
-				//printhex_ul(cbndx);
-				acquire_lock_vm(vmid);
-				state = get_vm_state(state);
-				if (state <= READY) {
-					set_smmu_cfg_vmid(cbndx, index, vmid);
-					init_smmu_pt(cbndx, index);
-				} else {
-					print_string("\ralloc_smmu_pgd: VM is not READY\n");
-					v_panic();
-				}
-				release_lock_vm(vmid);	
-			} else {
-				print_string("\ralloc_smmu_pgd: dev assigned to non-VM\n");
-				v_panic();
-			}
+		if (target_vmid == V_INVALID) {
+			set_smmu_cfg_vmid(cbndx, index, vmid);
+			init_smmu_pt(cbndx, index);
 		}
 	}
 
 	release_lock_smmu();
 }
 
+void __hyp_text smmu_assign_page(u32 cbndx, u32 index, u64 pfn, u64 gfn)
+{
+	u32 vmid;
+
+	acquire_lock_smmu();
+	vmid = get_smmu_cfg_vmid(cbndx, index);
+	assign_smmu(vmid, pfn, gfn);
+	release_lock_smmu();
+}
+
+/*
 void __hyp_text __el2_arm_lpae_map(u64 iova, u64 paddr,
 				   u64 prot, u32 cbndx, u32 index)
 {
@@ -111,21 +104,34 @@ u64 __hyp_text __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index)
 	else
 		return (phys_page(pte) | (iova & (PAGE_SIZE - 1)));
 }
+*/
+
+void __hyp_text smmu_map_page(u32 cbndx, u32 index, u64 iova, u64 pte)
+{
+	u32 vmid;
+
+	acquire_lock_smmu();
+	vmid = get_smmu_cfg_vmid(cbndx, index);
+	map_smmu(vmid, cbndx, index, iova, pte);
+	release_lock_smmu();
+}
+
+u64 __hyp_text __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index)
+{
+	u64 pte, ret;
+
+	pte = walk_spt(cbndx, index, iova);
+	ret = phys_page(pte) + (iova % PAGE_SIZE);
+	return ret;
+}
 
 /* FIXME: apply changes in XP's upstream code */
 void __hyp_text __el2_arm_lpae_clear(u64 iova, u32 cbndx, u32 index)
 {
-	u32 vmid, power;
+	u32 vmid;
 	
 	acquire_lock_smmu();
-
 	vmid = get_smmu_cfg_vmid(cbndx, index);
-	power = get_vm_poweron(vmid);
-	if (power == 1) {
-		print_string("\rclear SMMU pt when VM power is on\n");
-		v_panic();
-	} else
-		set_smmu_pt(cbndx, index, iova, 0UL);
-
+	clear_smmu(vmid, cbndx, index, iova);
 	release_lock_smmu();	
 }

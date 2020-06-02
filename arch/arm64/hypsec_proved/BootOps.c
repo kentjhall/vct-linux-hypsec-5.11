@@ -191,7 +191,7 @@ void __hyp_text verify_and_load_images(u32 vmid)
             mapped = get_vm_mapped_pages(vmid, load_idx);
 	    unmap_and_load_vm_image(vmid, load_addr, remap_addr, mapped);
             valid = verify_image(vmid, load_idx, remap_addr);
-            if (valid != 1U) {
+            if (valid == 0U) {
 		v_panic();
             }
             load_idx += 1U;
@@ -202,3 +202,90 @@ void __hyp_text verify_and_load_images(u32 vmid)
 	v_panic();
     release_lock_vm(vmid);
 }
+
+//NEW SMMU CODE
+/////////////////////////////////////////////////////////////////////////////
+void __hyp_text alloc_smmu(u32 vmid, u32 cbndx, u32 index) 
+{
+	u32 state;
+
+	acquire_lock_vm(vmid);
+	if (HOSTVISOR < vmid && vmid < COREVISOR) 
+	{
+		state = get_vm_state(vmid);
+		if (state != READY) 
+		{
+			v_panic();
+		}
+	}
+	//FIXME: WHERE IS THE FOLLOWING FUNCTION?
+	//init_smmu_spt(cbndx, index);
+	release_lock_vm(vmid);
+}
+
+void __hyp_text assign_smmu(u32 vmid, u32 pfn, u32 gfn) 
+{
+	u32 state;
+
+	acquire_lock_vm(vmid);
+	if (HOSTVISOR < vmid && vmid < COREVISOR) 
+	{
+		state = get_vm_state(vmid);
+		if (state != READY) 
+		{
+			v_panic();
+		}
+		assign_pfn_to_smmu(vmid, gfn, pfn);
+	}
+	release_lock_vm(vmid);
+}
+
+void __hyp_text map_smmu(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
+{
+	u32 state;
+	acquire_lock_vm(vmid);
+	if (HOSTVISOR < vmid && vmid < COREVISOR) 
+	{
+		state = get_vm_state(vmid);
+		if (state != READY) 
+		{
+			v_panic();
+		}
+	}
+	update_smmu_page(vmid, cbndx, index, iova, pte);
+	release_lock_vm(vmid);
+}
+
+void __hyp_text clear_smmu(u32 vmid, u32 cbndx, u32 index, u64 iova) 
+{
+	u32 state;
+
+	acquire_lock_vm(vmid);
+	if (HOSTVISOR < vmid && vmid < COREVISOR) 
+	{
+		state = get_vm_state(vmid);
+		if (state != READY) 
+		{
+			v_panic();
+		}
+	}
+	unmap_smmu_page(cbndx, index, iova);
+	release_lock_vm(vmid);
+}
+
+void __hyp_text map_io(u32 vmid, u64 gpa, u64 pa)
+{
+	u32 state;
+
+	acquire_lock_vm(vmid);
+	state = get_vm_state(vmid);
+	if (state == READY) 
+	{
+		__kvm_phys_addr_ioremap(vmid, gpa, pa);
+	}
+	else
+	{
+		v_panic();
+	}
+	release_lock_vm(vmid);
+} 

@@ -102,6 +102,7 @@ struct el2_data {
 	b_arch_spinlock_t el2_pt_lock;
 	b_arch_spinlock_t console_lock;
 	b_arch_spinlock_t smmu_lock;
+	b_arch_spinlock_t spt_lock;
 
 	kvm_pfn_t ram_start_pfn;
 	struct s2_page s2_pages[S2_PFN_SIZE];
