@@ -437,7 +437,7 @@ static void inline set_next_vmid(u32 vmid) {
 
 static u64 inline get_next_remap_ptr(void) {
     struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-    return el2_data->last_remap_ptr;
+    return el2_data->last_remap_ptr + EL2_REMAP_START;
 }
 
 static void inline set_next_remap_ptr(u64 remap) {
