@@ -194,6 +194,7 @@ void init_el2_data_page(void)
 			pool_start + (STAGE2_VM_POOL_SIZE * (i - 1));
 		el2_data->vm_info[i].used_pages = 0;
 		memset(__va(el2_data->vm_info[i].page_pool_start), 0, STAGE2_VM_POOL_SIZE);
+		//FIXME: init vm_info[i].vttbr here, or VMID
 	}
 
 	el2_data->vm_info[HOSTVISOR].page_pool_start =

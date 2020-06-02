@@ -266,6 +266,7 @@ void __hyp_text clear_smmu(u32 vmid, u32 cbndx, u32 index, u64 iova)
 		state = get_vm_state(vmid);
 		if (state != READY) 
 		{
+			print_string("\rpanic: clear_smmu\n");
 			v_panic();
 		}
 	}
@@ -279,13 +280,16 @@ void __hyp_text map_io(u32 vmid, u64 gpa, u64 pa)
 
 	acquire_lock_vm(vmid);
 	state = get_vm_state(vmid);
-	if (state == READY) 
-	{
+	print_string("\rmap_io\n");
+	printhex_ul(state);
+	//if (state == READY) 
+	//{
 		__kvm_phys_addr_ioremap(vmid, gpa, pa);
-	}
-	else
-	{
-		v_panic();
-	}
+	//}
+	//else
+	//{
+	//	print_string("\rpanic: map_io\n");
+	//	v_panic();
+	//}
 	release_lock_vm(vmid);
 } 

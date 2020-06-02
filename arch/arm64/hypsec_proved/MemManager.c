@@ -156,12 +156,11 @@ void __hyp_text __kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa)
 {
 	u64 pte;
 	u32 owner;
-	u64 paddr = phys_page(pte);
 
 	pte = pa + (pgprot_val(PAGE_S2_DEVICE) | S2_RDWR);
 
 	acquire_lock_s2page();
-	owner = get_pfn_owner(paddr >> PAGE_SHIFT);
+	owner = get_pfn_owner(pa >> PAGE_SHIFT);
 	// check if pfn is truly within an I/O area
 	if (owner == INVALID_MEM) 
 		mmap_s2pt(vmid, gpa, 3U, pte);

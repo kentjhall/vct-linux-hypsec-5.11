@@ -172,6 +172,7 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 	case HVC_PHYS_ADDR_IOREMAP:
 		//FIXME: We need to call to the new map_io function...
 		//__kvm_phys_addr_ioremap((u32)hr->regs[1], hr->regs[2], hr->regs[3], hr->regs[4]);
+		v_kvm_phys_addr_ioremap((u32)hr->regs[1], hr->regs[2], hr->regs[3], hr->regs[4]);
 		break;
 	default:
 		print_string("\rno support hvc:\n");
