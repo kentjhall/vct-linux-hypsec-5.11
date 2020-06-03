@@ -241,6 +241,7 @@ void __hyp_text update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 p
 	acquire_lock_s2page();
 	pfn = phys_page(pte) / PAGE_SIZE;
 	gfn = iova / PAGE_SIZE;
+
 	owner = get_pfn_owner(pfn);
 	map = get_pfn_map(pfn);
 	if (owner == HOSTVISOR) {
@@ -251,7 +252,7 @@ void __hyp_text update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 p
 		map = pfn + SMMU_HOST_OFFSET;
 	}
 
-	if (vmid == owner && gfn == map) {
+	if (owner == INVALID_MEM || (vmid == owner && gfn == map)) {
 		map_spt(cbndx, index, iova, pte);
 	}
 	release_lock_s2page();

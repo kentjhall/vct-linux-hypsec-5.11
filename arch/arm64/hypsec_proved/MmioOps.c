@@ -122,7 +122,11 @@ u64 __hyp_text __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index)
 	u64 pte, ret;
 
 	pte = walk_spt(cbndx, index, iova);
-	ret = phys_page(pte) + (iova % PAGE_SIZE);
+	if (pte == 0)
+		ret = 0;
+	else
+		ret = phys_page(pte) | (iova % PAGE_SIZE);
+
 	return ret;
 }
 
