@@ -238,6 +238,7 @@ void init_el2_data_page(void)
 
 	for (i = 0; i < EL2_SMMU_CFG_SIZE; i++) {
 		el2_data->smmu_cfg[i].hw_ttbr = host_alloc_stage2_page(2);
+		el2_data->smmu_cfg[i].vmid = V_INVALID;
 	}
 
 	return;

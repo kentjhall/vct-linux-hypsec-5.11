@@ -213,8 +213,9 @@ void __hyp_text alloc_smmu(u32 vmid, u32 cbndx, u32 index)
 	if (HOSTVISOR < vmid && vmid < COREVISOR) 
 	{
 		state = get_vm_state(vmid);
-		if (state != READY) 
+		if (state == VERIFIED) 
 		{
+			print_string("\rpanic: alloc_smmu\n");
 			v_panic();
 		}
 	}
@@ -231,8 +232,9 @@ void __hyp_text assign_smmu(u32 vmid, u32 pfn, u32 gfn)
 	if (HOSTVISOR < vmid && vmid < COREVISOR) 
 	{
 		state = get_vm_state(vmid);
-		if (state != READY) 
+		if (state == VERIFIED) 
 		{
+			print_string("\rpanic: assign_smmu\n");
 			v_panic();
 		}
 		assign_pfn_to_smmu(vmid, gfn, pfn);
@@ -247,8 +249,9 @@ void __hyp_text map_smmu(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
 	if (HOSTVISOR < vmid && vmid < COREVISOR) 
 	{
 		state = get_vm_state(vmid);
-		if (state != READY) 
+		if (state == VERIFIED) 
 		{
+			print_string("\rpanic: map_smmu\n");
 			v_panic();
 		}
 	}
@@ -263,12 +266,14 @@ void __hyp_text clear_smmu(u32 vmid, u32 cbndx, u32 index, u64 iova)
 	acquire_lock_vm(vmid);
 	if (HOSTVISOR < vmid && vmid < COREVISOR) 
 	{
+		/*
 		state = get_vm_state(vmid);
-		if (state != READY) 
+		if (state == VERIFIED) 
 		{
 			print_string("\rpanic: clear_smmu\n");
 			v_panic();
 		}
+		*/
 	}
 	unmap_smmu_page(cbndx, index, iova);
 	release_lock_vm(vmid);
@@ -280,8 +285,6 @@ void __hyp_text map_io(u32 vmid, u64 gpa, u64 pa)
 
 	acquire_lock_vm(vmid);
 	state = get_vm_state(vmid);
-	print_string("\rmap_io\n");
-	printhex_ul(state);
 	//if (state == READY) 
 	//{
 		__kvm_phys_addr_ioremap(vmid, gpa, pa);

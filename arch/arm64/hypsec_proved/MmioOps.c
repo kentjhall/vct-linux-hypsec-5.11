@@ -22,11 +22,10 @@ void __hyp_text  __el2_free_smmu_pgd(u32 cbndx, u32 index)
 	vmid = get_smmu_cfg_vmid(cbndx, index);
 	power = get_vm_poweron(vmid);
 	if (power == 0)
-		set_smmu_cfg_vmid(cbndx, index, 0);
+		set_smmu_cfg_vmid(cbndx, index, V_INVALID);
 	else
 		v_panic();
 	release_lock_smmu();
-
 }
 
 void __hyp_text  __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index)
@@ -42,6 +41,8 @@ void __hyp_text  __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index)
 	} else {
 		target_vmid = get_smmu_cfg_vmid(cbndx, index);
 		if (target_vmid == V_INVALID) {
+			print_string("\ralloc_smmu_pgd\n");
+			printhex_ul(vmid);
 			set_smmu_cfg_vmid(cbndx, index, vmid);
 			init_smmu_pt(cbndx, index);
 		}

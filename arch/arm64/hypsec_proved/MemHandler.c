@@ -19,7 +19,7 @@ void __hyp_text v_el2_arm_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32
 	gfn = iova / PAGE_SIZE;
 	pte = smmu_init_pte(prot, paddr);
 	/* FIXME: where is this guy below? */
-	//smmu_unmap_page(cbndx, index, pfn, gfn);
+	smmu_assign_page(cbndx, index, pfn, gfn);
 	smmu_map_page(cbndx, index, iova, pte);
 }
 
