@@ -1,6 +1,7 @@
 #include "hypsec.h"
 #include "MmioOps.h"
 
+//FIXME: why am I here?
 u32 __hyp_text check_smmu_pfn(u64 pfn, u32 vmid)
 {
 	u32 owner;
@@ -68,6 +69,7 @@ void __hyp_text handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 {
 	u64 offset = fault_ipa & ARM_SMMU_OFFSET_MASK;
 
+	//FIXME: strange code
 	if (offset < ARM_SMMU_GLOBAL_BASE) {
 	    __handle_smmu_read(hsr, fault_ipa, len);
 	} else {

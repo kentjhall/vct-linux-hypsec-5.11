@@ -4,6 +4,7 @@
  * MmioPTWalk
  */
 
+//TODO: this file is unsynchronized
 u64 __hyp_text walk_smmu_pgd(u64 ttbr, u64 addr, u32 alloc)
 {
 	u64 ttbr_pa, ret, pgd_idx, pgd, pgd_pa;

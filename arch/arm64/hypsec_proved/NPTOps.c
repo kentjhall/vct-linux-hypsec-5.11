@@ -12,6 +12,7 @@ void __hyp_text init_s2pt(u32 vmid)
     release_lock_pt(vmid);
 }
 
+//FIXME: Why we removed this from the code?
 u64 __hyp_text get_vm_vttbr(u32 vmid)
 {
     u64 vttbr;

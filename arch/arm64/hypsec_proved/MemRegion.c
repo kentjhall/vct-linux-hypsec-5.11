@@ -4,6 +4,7 @@
  * MemRegion
  */
 
+//TODO: need to clean this up
 u32 __hyp_text mem_region_search(u64 addr)
 {
 	u32 total_regions = get_mem_region_cnt();

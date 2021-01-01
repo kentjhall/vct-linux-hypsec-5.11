@@ -18,6 +18,7 @@ u64 __hyp_text is_smmu_range(u64 addr)
 	return res;
 }
 
+//FIXME: handle_host_mmio(u64 addr, u32 index, u32 hsr)
 void __hyp_text handle_host_mmio(u64 index, u32 hsr)
 {
 	u64 base_addr;

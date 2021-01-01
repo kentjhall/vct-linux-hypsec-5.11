@@ -4,37 +4,12 @@
  * MemoryOps
  */
 
+// Xupeng has this in the spec: void clear_vm_range(u32 vmid, u64 pfn, u64 num)
 void __hyp_text __clear_vm_range(u32 vmid, u64 start, u64 size)
 {
 	u64 pfn = start >> PAGE_SHIFT;
 	u64 num = size / PAGE_SIZE;
 	while (num > 0UL)  {
-		clear_vm_page(vmid, pfn);
-		pfn += 1UL;
-		num -= 1UL;
-	}
-}
-
-void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
-{
-	u32 poweron = get_vm_poweron(vmid);
-	if (size == KVM_PHYS_SIZE && poweron == 0U) {
-		u32 n = get_mem_region_cnt(), i = 0U;
-		while (i < n) {
-			u64 base = get_mem_region_base(i);
-			u64 sz = get_mem_region_size(i);
-			u64 flags = get_mem_region_flag(i);
-			if ((flags & MEMBLOCK_NOMAP) == 0) 
-				__clear_vm_range(vmid, base, sz);
-			i++;
-		}
-	}
-}
-
-void __hyp_text clear_vm_range(u32 vmid, u64 pfn, u64 num)
-{
-	while (num > 0UL)
-	{
 		clear_vm_page(vmid, pfn);
 		pfn += 1UL;
 		num -= 1UL;
@@ -116,6 +91,7 @@ void __hyp_text v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
         u64 pte = walk_s2pt(vmid, addr);
 	u32 level = 0;
         u64 pte_pa = phys_page(pte);
+	//FIXME: Xupeng did "level = get_level_s2pt(vmid, addr);"
 	if (pte & PMD_MARK)
 		level = 2;
 	else if (pte & PTE_MARK)
@@ -145,6 +121,7 @@ void __hyp_text v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
         u64 pte = walk_s2pt(vmid, addr);
 	u32 level = 0;
         u64 pte_pa = phys_page(pte);
+	//FIXME: Xupeng did "level = get_level_s2pt(vmid, addr);"
 	if (pte & PMD_MARK)
 		level = 2;
 	else if (pte & PTE_MARK)
@@ -160,4 +137,32 @@ void __hyp_text v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
         addr += PAGE_SIZE;
         len -= 1UL;
     }
+}
+
+// FIXME: Xupeng does not have this
+void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
+{
+	u32 poweron = get_vm_poweron(vmid);
+	if (size == KVM_PHYS_SIZE && poweron == 0U) {
+		u32 n = get_mem_region_cnt(), i = 0U;
+		while (i < n) {
+			u64 base = get_mem_region_base(i);
+			u64 sz = get_mem_region_size(i);
+			u64 flags = get_mem_region_flag(i);
+			if ((flags & MEMBLOCK_NOMAP) == 0) 
+				__clear_vm_range(vmid, base, sz);
+			i++;
+		}
+	}
+}
+
+// FIXME: Xupeng does not have this
+void __hyp_text clear_vm_range(u32 vmid, u64 pfn, u64 num)
+{
+	while (num > 0UL)
+	{
+		clear_vm_page(vmid, pfn);
+		pfn += 1UL;
+		num -= 1UL;
+	}
 }

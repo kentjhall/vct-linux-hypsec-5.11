@@ -20,6 +20,7 @@ u64 __hyp_text v_walk_smmu_pt(u32 cbndx, u32 index, u64 addr)
 	return ret;
 }
 
+//TODO: this is not in here in Xupeng's code
 void __hyp_text v_set_smmu_pt(u32 cbndx, u32 index, u64 addr, u64 pte)
 {
 	u64 ttbr, pgd, pmd;
@@ -30,6 +31,7 @@ void __hyp_text v_set_smmu_pt(u32 cbndx, u32 index, u64 addr, u64 pte)
 	set_smmu_pte(pmd, addr, pte);
 }
 
+//TODO: this is not in here in Xupeng's code
 u64 __hyp_text unmap_smmu_pt(u32 cbndx, u32 index, u64 addr) 
 {
 	u64 ttbr, pgd, pmd, pte;
@@ -44,3 +46,5 @@ u64 __hyp_text unmap_smmu_pt(u32 cbndx, u32 index, u64 addr)
 	}
 	return pte;
 }
+
+//Xupeng has dev_load_ref, dev_store_ref

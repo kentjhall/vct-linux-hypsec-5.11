@@ -28,6 +28,7 @@ void __hyp_text  __el2_free_smmu_pgd(u32 cbndx, u32 index)
 	release_lock_smmu();
 }
 
+//FIXME: need to fix this
 void __hyp_text  __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index)
 {
 	u32 target_vmid, num_context_banks;
@@ -51,13 +52,15 @@ void __hyp_text  __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index)
 	release_lock_smmu();
 }
 
+//FIXME: need to fix this
 void __hyp_text smmu_assign_page(u32 cbndx, u32 index, u64 pfn, u64 gfn)
 {
 	u32 vmid;
 
 	acquire_lock_smmu();
 	vmid = get_smmu_cfg_vmid(cbndx, index);
-	assign_smmu(vmid, pfn, gfn);
+	if (vmid != INVALID)
+		assign_smmu(vmid, pfn, gfn);
 	release_lock_smmu();
 }
 
@@ -113,20 +116,18 @@ void __hyp_text smmu_map_page(u32 cbndx, u32 index, u64 iova, u64 pte)
 
 	acquire_lock_smmu();
 	vmid = get_smmu_cfg_vmid(cbndx, index);
-	map_smmu(vmid, cbndx, index, iova, pte);
+	if (vmid != INVALID)
+		map_smmu(vmid, cbndx, index, iova, pte);
 	release_lock_smmu();
 }
 
+//why not lock?
 u64 __hyp_text __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index)
 {
 	u64 pte, ret;
 
 	pte = walk_spt(cbndx, index, iova);
-	if (pte == 0)
-		ret = 0;
-	else
-		ret = phys_page(pte) | (iova % PAGE_SIZE);
-
+	ret = phys_page(pte) | (iova % PAGE_SIZE);
 	return ret;
 }
 

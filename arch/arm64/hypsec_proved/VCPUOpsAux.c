@@ -24,6 +24,7 @@ void __hyp_text reset_gp_regs(u32 vmid, u32 vcpuid)
     }
 }
 
+//Embed this function in reset_sys_regs
 static u64 __hyp_text el2_reset_mpidr(u32 vcpu_id)
 {
 	u64 mpidr;
@@ -121,6 +122,7 @@ void __hyp_text prep_hvc(u32 vmid, u32 vcpuid)
     }
 }
 
+//synchronized
 void __hyp_text prep_abort(u32 vmid, u32 vcpuid)
 {
     u64 esr = get_int_esr(vmid, vcpuid);
@@ -152,6 +154,7 @@ void __hyp_text prep_abort(u32 vmid, u32 vcpuid)
     }
 }
 
+//where is this in the proof?
 void __hyp_text v_hypsec_inject_undef(u32 vmid, u32 vcpuid)
 {
     set_shadow_dirty_bit(vmid, vcpuid, PENDING_UNDEF_INJECT);

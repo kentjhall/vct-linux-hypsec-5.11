@@ -66,6 +66,7 @@ u32 __hyp_text handle_smmu_cb_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smm
 		ret = 2U;
 	} else if (cb_offset == ARM_SMMU_CB_CONTEXTIDR) {
 		ret = 0U;
+	//TODO: this case is not implemented in the verified code
 	} else if (cb_offset == ARM_SMMU_CB_TTBCR) {
 		ret = 3U;
 	} else {
@@ -84,7 +85,7 @@ u32 __hyp_text handle_smmu_cb_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smm
 	return ret;
 }
 
-
+//FIXME: do we need to use MMIO in the following?
 void __hyp_text __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u32 write_val)
 {
 	void __iomem *base = (void*)fault_ipa;

@@ -4,6 +4,7 @@
  * PageManager
  */
 
+//Synchronized
 u32 __hyp_text get_pfn_owner(u64 pfn)
 {
 	u64 index = get_s2_page_index(pfn * PAGE_SIZE);

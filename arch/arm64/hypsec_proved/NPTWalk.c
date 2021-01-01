@@ -4,6 +4,7 @@
  * NPTWalk
  */
 
+//TODO: the following is not in Xupeng's codd
 void __hyp_text init_npt(u32 vmid)
 {
 	u64 vttbr, vttbr_pa, vmid64, next;
@@ -79,6 +80,7 @@ void __hyp_text set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 
 	if (level == 2U)
 	{
+		// TODO: we don't check this in the verified code
 		pmd = walk_pmd(vmid, pud, addr, 0U);
 		if (v_pmd_table(pmd) == PMD_TYPE_TABLE) {
 			print_string("\rset existing npt: pmd\n");
@@ -98,6 +100,7 @@ void __hyp_text set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 	}
 }
 
+//TODO: where are the following?
 //3 Level PT walk in SMMU
 void __hyp_text init_smmu_pt(u32 cbndx, u32 num)
 {

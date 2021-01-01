@@ -4,21 +4,28 @@
  * BootOps
  */
 
-u32 __hyp_text vm_is_inc_exe(u32 vmid)
+u64 __hyp_text v_search_load_info(u32 vmid, u64 addr)
 {
-    u32 inc_exe;
+    u32 load_info_cnt, load_idx;
+    u64 ret; 
     acquire_lock_vm(vmid);
-    inc_exe = get_vm_inc_exe(vmid);
+    load_info_cnt = get_vm_next_load_idx(vmid);
+    load_idx = 0U;
+    ret = 0UL;
+    while (load_idx < load_info_cnt)
+    {
+        u64 base = get_vm_load_addr(vmid, load_idx);
+        u64 size = get_vm_load_size(vmid, load_idx);
+        u64 remap_addr = get_vm_remap_addr(vmid, load_idx);
+        if (addr >= base && addr < base + size)
+        {
+            ret = (addr - base) + remap_addr;
+        }
+        load_idx += 1U;
+    }
     release_lock_vm(vmid);
-    return inc_exe;
-}
-
-void __hyp_text boot_from_inc_exe(u32 vmid)
-{
-    acquire_lock_vm(vmid);
-    set_vm_inc_exe(vmid, 1U);
-    release_lock_vm(vmid);
-}
+    return ret;
+} 
 
 void __hyp_text set_vcpu_active(u32 vmid, u32 vcpuid)
 {
@@ -50,29 +57,6 @@ void __hyp_text set_vcpu_inactive(u32 vmid, u32 vcpuid)
     }
     release_lock_vm(vmid);
 }
-
-u64 __hyp_text v_search_load_info(u32 vmid, u64 addr)
-{
-    u32 load_info_cnt, load_idx;
-    u64 ret; 
-    acquire_lock_vm(vmid);
-    load_info_cnt = get_vm_next_load_idx(vmid);
-    load_idx = 0U;
-    ret = 0UL;
-    while (load_idx < load_info_cnt)
-    {
-        u64 base = get_vm_load_addr(vmid, load_idx);
-        u64 size = get_vm_load_size(vmid, load_idx);
-        u64 remap_addr = get_vm_remap_addr(vmid, load_idx);
-        if (addr >= base && addr < base + size)
-        {
-            ret = (addr - base) + remap_addr;
-        }
-        load_idx += 1U;
-    }
-    release_lock_vm(vmid);
-    return ret;
-} 
 
 u32 __hyp_text register_vcpu(u32 vmid, u32 vcpuid)
 {
@@ -295,4 +279,25 @@ void __hyp_text map_io(u32 vmid, u64 gpa, u64 pa)
 	//	v_panic();
 	//}
 	release_lock_vm(vmid);
-} 
+}
+
+ u32 __hyp_text vm_is_inc_exe(u32 vmid)
+{
+    u32 inc_exe;
+    acquire_lock_vm(vmid);
+    inc_exe = get_vm_inc_exe(vmid);
+    release_lock_vm(vmid);
+    return inc_exe;
+}
+
+//FIXME: do we need this?
+void __hyp_text boot_from_inc_exe(u32 vmid)
+{
+    acquire_lock_vm(vmid);
+    set_vm_inc_exe(vmid, 1U);
+    release_lock_vm(vmid);
+}
+
+//TODO: add save_encrypted_vcpu, load_encrypted_vcpu, save_encrypt_buf, load_decrypt_buf
+
+

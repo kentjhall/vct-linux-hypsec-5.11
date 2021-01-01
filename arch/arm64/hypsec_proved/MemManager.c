@@ -151,22 +151,6 @@ void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 	mmap_s2pt(vmid, addr, level, pte);
 }
 
-
-void __hyp_text __kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa)
-{
-	u64 pte;
-	u32 owner;
-
-	pte = pa + (pgprot_val(PAGE_S2_DEVICE) | S2_RDWR);
-
-	acquire_lock_s2page();
-	owner = get_pfn_owner(pa >> PAGE_SHIFT);
-	// check if pfn is truly within an I/O area
-	if (owner == INVALID_MEM) 
-		mmap_s2pt(vmid, gpa, 3U, pte);
-	release_lock_s2page();
-}
-
 void __hyp_text grant_vm_page(u32 vmid, u64 pfn)
 {
     u32 owner, count;
@@ -275,3 +259,21 @@ void __hyp_text unmap_smmu_page(u32 cbndx, u32 index, u64 iova)
 	}
 	release_lock_s2page();
 }
+
+//TODO: where it is?
+void __hyp_text __kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa)
+{
+	u64 pte;
+	u32 owner;
+
+	pte = pa + (pgprot_val(PAGE_S2_DEVICE) | S2_RDWR);
+
+	acquire_lock_s2page();
+	owner = get_pfn_owner(pa >> PAGE_SHIFT);
+	// check if pfn is truly within an I/O area
+	if (owner == INVALID_MEM) 
+		mmap_s2pt(vmid, gpa, 3U, pte);
+	release_lock_s2page();
+}
+
+

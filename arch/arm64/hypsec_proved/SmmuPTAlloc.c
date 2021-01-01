@@ -13,6 +13,7 @@ u64 __hyp_text alloc_smmu_pgd_page(void)
 	end = smmu_pgd_end();
 	if (next + PAGE_SIZE <= end)
 	{
+		//FIXME: why we use set_smmu_pgd_nex(1) but not "next + PAGE_SIZE"?
 		//set_smmu_pgd_next(next + PAGE_SIZE);
 		set_smmu_pgd_next(1);
 	}
@@ -34,6 +35,7 @@ u64 __hyp_text alloc_smmu_pmd_page(void)
 
 	if (next + PAGE_SIZE <= end)
 	{
+		//FIXME: why we use set_smmu_pmd_nex(1) but not "next + PAGE_SIZE"?
 		//set_smmu_pmd_next(next + PAGE_SIZE);
 		set_smmu_pmd_next(1);
 	}
