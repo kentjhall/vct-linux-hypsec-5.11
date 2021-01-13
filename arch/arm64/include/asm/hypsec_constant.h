@@ -111,4 +111,5 @@
 #define v_pmd_table(pmd)	(pmd & PMD_TYPE_MASK)
 #define writable(pte) (((pte) >> 2UL) & 1UL)
 
+#define SMMU_HOST_OFFSET 1000000000UL
 #endif //HYPSEC_CONSTANTS_H

@@ -65,6 +65,11 @@ static u64 inline get_sys_reg_desc_val(u32 index) {
     return el2_data->s2_sys_reg_descs[index].val;
 }
 
+static void inline fetch_from_doracle(u32 vmid, u64 pfn, u64 pgnum) {
+	return;
+};
+
+
 /*
 void    acquire_lock_pt(u32 vmid);
 void    release_lock_pt(u32 vmid);

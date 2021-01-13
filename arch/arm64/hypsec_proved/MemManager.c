@@ -61,13 +61,17 @@ void __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
 		if (count == 0U) {
 			set_pfn_owner(pfn, vmid);
 			clear_pfn_host(pfn);
-			set_pfn_map(pfn, gfn);	
-		} else {
+			set_pfn_map(pfn, gfn);
+			fetch_from_doracle(vmid, pfn, 1UL);
+		}
+		else {
 			//pfn is mapped to a hostvisor SMMU table
 			print_string("\rassign pfn used by host smmu device\n");
 			v_panic();
 		}
-	} else if (owner == vmid) {
+	} 
+	else if (owner == vmid) {
+		//TODO: why is Xupeng doing things differently?
 		map = get_pfn_map(pfn);
 		/* the page was mapped to another gfn already! */
 		// if gfn == map, it means someone in my VM has mapped it
@@ -84,67 +88,23 @@ void __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
 	release_lock_s2page();
 }
 
-/*
-void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
-{
-    u32 owner, count;
-    u64 map;
-
-    acquire_lock_s2page();
-    owner = get_pfn_owner(pfn);
-    count = get_pfn_count(pfn);
-    map = get_pfn_map(pfn);
-
-    if (owner == HOSTVISOR) {
-	if (vmid == HOSTVISOR) {
-	    //print_string("\rsmmu: map to host\n");
-	    //printhex_ul(pfn);
-	    set_pfn_count(pfn, count + 1U);
-	} else {
-	    if (count == 0) {
-		set_pfn_to_vm(vmid, gfn, pfn, 1UL);
-		set_pfn_count(pfn, INVALID_MEM);
-	    }
-	    else {
-                print_string("\rpanic in assign_pfn_to_smmu: count is invalid\n");
-		print_string("\rpfn\n");
-                printhex_ul(pfn);
-		print_string("\rcount\n");
-		printhex_ul(count);
-		v_panic();
-	    }
-	}
-    } else if (owner == vmid) {
-	if (gfn != map) {
-        	print_string("\rpanic in assign_pfn_to_smmu: owner != vmid\n");
-		v_panic();
-	}
-    } else if (owner == COREVISOR) {
-	if (map == 0) {
-		print_string("\rpanic in assign_pfn_to_smmu: owner = core\n");
-		v_panic();
-	}
-    }
-    release_lock_s2page();
-}
-*/
-
-extern void t_mmap_s2pt(phys_addr_t addr, u64 desc, int level, u32 vmid);
 void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 {
-	u64 paddr = phys_page(pte);
+	u64 paddr, perm;
 
+	paddr = phys_page(pte);
 	/* We give the VM RWX permission now. */
-	u64 perm = pgprot_val(PAGE_S2_KERNEL);
+	perm = pgprot_val(PAGE_S2_KERNEL);
 
 	if (level == 2U) {
-		/* FIXME: verified code has pte = paddr | perm; */
+		/* TODO: FIXME: verified code has pte = paddr | perm; */
 		pte = paddr + perm;
 		pte &= ~PMD_TABLE_BIT;
+		mmap_s2pt(vmid, addr, 2U, pte);
 	} else if (level == 3U) {
 		pte = paddr + perm;
+		mmap_s2pt(vmid, addr, 3U, pte);
 	}
-	mmap_s2pt(vmid, addr, level, pte);
 }
 
 void __hyp_text map_vm_io(u32 vmid, u64 gpa, u64 pa)
@@ -187,12 +147,12 @@ void __hyp_text revoke_vm_page(u32 vmid, u64 pfn)
         set_pfn_count(pfn, count - 1U);
         if (count == 1U) {
             clear_pfn_host(pfn);
+	    fetch_from_doracle(vmid, pfn, 1UL);
         }
     }
     release_lock_s2page();
 }
 
-#define SMMU_HOST_OFFSET 1000000000UL
 void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 {
 	u64 map;
@@ -208,6 +168,7 @@ void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 			clear_pfn_host(pfn);
 			set_pfn_owner(pfn, vmid);
 			set_pfn_map(pfn, gfn);
+			//TODO: we use INVALID in the verified code
 			set_pfn_count(pfn, INVALID_MEM);
 		}
 		else {
@@ -217,6 +178,7 @@ void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 	}
 	else if (owner != vmid)
 	{
+		//TODO: why we check this case here? Xupeng's code does not have it
 		if (owner != INVALID_MEM) { 
 			print_string("\rvmid\n");
 			printhex_ul(vmid);
