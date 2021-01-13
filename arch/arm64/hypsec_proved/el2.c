@@ -166,7 +166,7 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		set_host_regs(0, ret);
 		break;
 	case HVC_REGISTER_VCPU:
-		ret = (int)register_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
+		register_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
 		set_host_regs(0, ret);
 		break;
 	case HVC_PHYS_ADDR_IOREMAP:

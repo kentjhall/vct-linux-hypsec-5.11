@@ -30,6 +30,14 @@ typedef u64 phys_addr_t;
  * AbstractMachine
  */
 
+static u32 inline check(u32 val) {
+	return val;
+};
+
+static u64 inline check64(u64 val) {
+	return val;
+};
+
 void    v_panic(void);
 void    clear_phys_mem(u64 pfn);
 //u64     get_shared_kvm(u32 vmid);
@@ -808,12 +816,12 @@ void unmap_and_load_vm_image(u32 vmid, u64 target_addr, u64 remap_addr, u64 num)
  * BootOps
  */
 
-u32 vm_is_inc_exe(u32 vmid);
+u32 is_inc_exe(u32 vmid);
 void boot_from_inc_exe(u32 vmid);
 u64 v_search_load_info(u32 vmid, u64 addr);
 void set_vcpu_active(u32 vmid, u32 vcpuid);
 void set_vcpu_inactive(u32 vmid, u32 vcpuid);
-u32 register_vcpu(u32 vmid, u32 vcpuid);
+void register_vcpu(u32 vmid, u32 vcpuid);
 u32 register_kvm(void);
 u32 set_boot_info(u32 vmid, u64 load_addr, u64 size);
 void remap_vm_image(u32 vmid, u64 pfn, u32 load_idx);

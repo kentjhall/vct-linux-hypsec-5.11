@@ -619,16 +619,6 @@ static int kvm_vcpu_first_run_init(struct kvm_vcpu *vcpu)
 
 	if (likely(vcpu->arch.has_run_once))
 		return 0;
-#ifdef CONFIG_VERIFIED_KVM
-	spin_lock(&kvm->hypsec_lock);
-	if (!kvm->verified) {
-		ret = el2_verify_and_load_images(kvm->arch.vmid);
-		kvm->verified = true;
-	}
-	spin_unlock(&kvm->hypsec_lock);
-#endif
-
-	vcpu->arch.has_run_once = true;
 
 	if (likely(irqchip_in_kernel(kvm))) {
 		/*
@@ -647,6 +637,17 @@ static int kvm_vcpu_first_run_init(struct kvm_vcpu *vcpu)
 		 */
 		static_branch_inc(&userspace_irqchip_in_use);
 	}
+
+#ifdef CONFIG_VERIFIED_KVM
+	spin_lock(&kvm->hypsec_lock);
+	if (!kvm->verified) {
+		ret = el2_verify_and_load_images(kvm->arch.vmid);
+		kvm->verified = true;
+	}
+	spin_unlock(&kvm->hypsec_lock);
+#endif
+
+	vcpu->arch.has_run_once = true;
 
 	ret = kvm_timer_enable(vcpu);
 	if (ret)
