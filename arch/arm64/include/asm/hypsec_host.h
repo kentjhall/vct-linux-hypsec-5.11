@@ -328,9 +328,6 @@ void __vm_sysreg_save_state_nvhe(u32 vmid, u32 vcpuid);
 void __vm_sysreg_restore_state_nvhe_opt(struct shadow_vcpu_context *ctxt);
 void __vm_sysreg_save_state_nvhe_opt(struct shadow_vcpu_context *ctxt);
 
-void v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
-void v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
-
 void init_hacl_hash(struct el2_data *el2_data);
 uint64_t get_hacl_hash_sha2_constant_k384_512(int i);
 uint32_t get_hacl_hash_sha2_constant_k224_256(int i);

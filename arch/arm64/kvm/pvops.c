@@ -25,10 +25,10 @@ int __hyp_text handle_pvops(u32 vmid, u32 vcpuid)
 
 	switch (call_num) {
 		case KVM_SET_DESC_PFN:
-			v_grant_stage2_sg_gpa(vmid, addr, size);
+			grant_stage2_sg_gpa(vmid, addr, size);
 			break;
 		case KVM_UNSET_DESC_PFN:
-			v_revoke_stage2_sg_gpa(vmid, addr, size);
+			revoke_stage2_sg_gpa(vmid, addr, size);
 			break;
 		//case KVM_SET_BALLOON_PFN:
 		//	set_balloon_pfn(shadow_ctxt);

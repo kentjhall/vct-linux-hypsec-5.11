@@ -46,18 +46,21 @@ void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 addr, u64 pte, u32 level)
 	map_pfn_vm(vmid, addr, pte, level);
 }
 
-void __hyp_text v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
+void __hyp_text grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
 {
-    u64 len = (size & (PAGE_SIZE - 1) ? 1 : 0);
-    if (size >> PAGE_SHIFT)
-	len += size >> PAGE_SHIFT;
+    u32 level;
+    u64 pte, pte_pa, pfn, len;
+    //u64 len = (size & (PAGE_SIZE - 1) ? 1 : 0);
+    //if (size >> PAGE_SHIFT)
+    //	len += size >> PAGE_SHIFT;
 
+    len = (size + 4095) / PAGE_SIZE;
     while (len > 0UL)
     {
-        u64 pte = walk_s2pt(vmid, addr);
-	u32 level = 0;
-        u64 pte_pa = phys_page(pte);
-	//FIXME: Xupeng did "level = get_level_s2pt(vmid, addr);"
+        pte = walk_s2pt(vmid, addr);
+	level = 0;
+        pte_pa = phys_page(pte);
+	//TODO: FIXME: Xupeng did "level = get_level_s2pt(vmid, addr);"
 	if (pte & PMD_MARK)
 		level = 2;
 	else if (pte & PTE_MARK)
@@ -65,9 +68,11 @@ void __hyp_text v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
 
         if (pte_pa != 0UL)
         {
-            u64 pfn = pte_pa / PAGE_SIZE;
-            if (level == 2U) {
-                pfn += (addr & (PMD_SIZE - 1)) / PAGE_SIZE;
+            pfn = pte_pa / PAGE_SIZE;
+            if (level == 2U)
+	    {
+                //pfn += (addr & (PMD_SIZE - 1)) / PAGE_SIZE;
+                pfn += addr / PAGE_SIZE & 511;
             }
             grant_vm_page(vmid, pfn);
         }
@@ -76,27 +81,33 @@ void __hyp_text v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
     }
 }
 
-void __hyp_text v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
+void __hyp_text revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
 {
-    u64 len = (size & (PAGE_SIZE - 1) ? 1 : 0);
-    if (size >> PAGE_SHIFT)
-	len += size >> PAGE_SHIFT;
+    u32 level;
+    u64 pte, pte_pa, pfn, len;
+    //u64 len = (size & (PAGE_SIZE - 1) ? 1 : 0);
+    //if (size >> PAGE_SHIFT)
+    //	len += size >> PAGE_SHIFT;
 
+    len = (size + 4095) / PAGE_SIZE;
     while (len > 0UL)
     {
-        u64 pte = walk_s2pt(vmid, addr);
-	u32 level = 0;
-        u64 pte_pa = phys_page(pte);
-	//FIXME: Xupeng did "level = get_level_s2pt(vmid, addr);"
+        pte = walk_s2pt(vmid, addr);
+	level = 0;
+        pte_pa = phys_page(pte);
+	//TODO: FIXME: Xupeng did "level = get_level_s2pt(vmid, addr);"
 	if (pte & PMD_MARK)
 		level = 2;
 	else if (pte & PTE_MARK)
 		level = 3;
+
         if (pte_pa != 0UL)
         {
-            u64 pfn = pte_pa / PAGE_SIZE;
-            if (level == 2U) {
-                pfn += (addr & (PMD_SIZE - 1)) / PAGE_SIZE;
+            pfn = pte_pa / PAGE_SIZE;
+            if (level == 2U)
+	    {
+                //pfn += (addr & (PMD_SIZE - 1)) / PAGE_SIZE;
+		pfn += addr / PAGE_SIZE & 511;
             }
             revoke_vm_page(vmid, pfn);
         }
