@@ -736,7 +736,6 @@ void set_smmu_pt(u32 cbndx, u32 num, u64 addr, u64 pte);
  */
 
 void init_s2pt(u32 vmid);
-u64 get_vm_vttbr(u32 vmid);
 u32 get_level_s2pt(u32 vmid, u64 addr);
 u64 walk_s2pt(u32 vmid, u64 addr);
 void mmap_s2pt(u32 vmid, u64 addr, u32 level, u64 pte);

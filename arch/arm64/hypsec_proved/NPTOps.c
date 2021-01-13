@@ -4,22 +4,12 @@
  * NPTOps
  */
 
-//FIXME: Why we removed this from the code?
+//TODO: FIXME: Why we removed this from the code?
 void __hyp_text init_s2pt(u32 vmid)
 {
     acquire_lock_pt(vmid);
     init_npt(vmid);
     release_lock_pt(vmid);
-}
-
-//FIXME: Why we removed this from the code?
-u64 __hyp_text get_vm_vttbr(u32 vmid)
-{
-    u64 vttbr;
-    acquire_lock_pt(vmid);
-    vttbr = get_pt_vttbr(vmid);
-    release_lock_pt(vmid);
-    return vttbr;
 }
 
 u32 __hyp_text get_level_s2pt(u32 vmid, u64 addr)
@@ -56,7 +46,9 @@ void __hyp_text clear_pfn_host(u64 pfn)
 
 	level = get_npt_level(HOSTVISOR, pfn * PAGE_SIZE);
         if (level != 0) {
-		set_npt(HOSTVISOR, pfn * PAGE_SIZE, 3, pgprot_val(PAGE_GUEST));
+		//TODO: why don't we set pte to 0?
+		//set_npt(HOSTVISOR, pfn * PAGE_SIZE, 3, pgprot_val(PAGE_GUEST));
+		set_npt(HOSTVISOR, pfn * PAGE_SIZE, 3, 0);
 		kvm_tlb_flush_vmid_ipa_host(pfn * PAGE_SIZE);
         }
 
