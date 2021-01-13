@@ -39,6 +39,7 @@ void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
     acquire_lock_s2page();
     owner = get_pfn_owner(pfn);
     if (owner == vmid) {
+	clear_pfn_host(pfn);
         set_pfn_owner(pfn, HOSTVISOR);
         set_pfn_count(pfn, 0U);
         set_pfn_map(pfn, 0UL);
@@ -53,7 +54,6 @@ void __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
 	u32 owner, count;
 
 	acquire_lock_s2page();
-	//ret = check_pfn_to_vm(vmid, gfn, pfn, pgnum);
 
 	owner = get_pfn_owner(pfn);
 	count = get_pfn_count(pfn);
