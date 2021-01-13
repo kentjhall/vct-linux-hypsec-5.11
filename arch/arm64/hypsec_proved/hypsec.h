@@ -792,7 +792,7 @@ void unmap_smmu_page(u32 cbndx, u32 index, u64 iova);
  * MemoryOps
  */
 
-void __clear_vm_stage2_range(u32 vmid, u64 start, u64 size);
+void clear_vm_stage2_range(u32 vmid, u64 start, u64 size);
 void prot_and_map_vm_s2pt(u32 vmid, u64 addr, u64 pte, u32 level);
 //void grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
 //void revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
@@ -902,9 +902,9 @@ u64 smmu_get_cbndx(u64 offset);
 /*
  * MemHandler
  */
-u64 v_el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index);
-void v_el2_arm_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index);
-void v_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
+void __hyp_text el2_clear_vm_stage2_range(u32 vmid, u64 start, u64 size);
+void el2_arm_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index);
+void el2_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
 
 /*
  * MmioPTAlloc

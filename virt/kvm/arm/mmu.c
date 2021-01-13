@@ -1274,7 +1274,7 @@ out:
 	mmu_free_memory_cache(&cache);
 	return ret;
 #else
-	el2_kvm_phys_addr_ioremap(kvm->arch.vmid, guest_ipa, pa, size);
+	hypsec_phys_addr_ioremap(kvm->arch.vmid, guest_ipa, pa, size);
 	return 0;
 #endif
 }
