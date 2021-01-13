@@ -193,6 +193,7 @@ void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 	release_lock_s2page();
 }
 
+//TODO: double check this function, very different from LXP's codebase
 void __hyp_text update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
 {
 	u64 pfn, gfn;
@@ -206,9 +207,10 @@ void __hyp_text update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 p
 	map = get_pfn_map(pfn);
 	if (owner == HOSTVISOR) {
 		count = get_pfn_count(pfn);
-		//if (count < EL2_SMMU_CFG_SIZE) {
+		if (count < EL2_SMMU_CFG_SIZE)
+		{
 			set_pfn_count(pfn, count + 1U);
-		//}
+		}
 		map = pfn + SMMU_HOST_OFFSET;
 	}
 
@@ -227,9 +229,11 @@ void __hyp_text unmap_smmu_page(u32 cbndx, u32 index, u64 iova)
 	pte = unmap_spt(cbndx, index, iova);
 	pfn = phys_page(pte) / PAGE_SIZE;
 	owner = get_pfn_owner(pfn);
-	if (owner == HOSTVISOR) {
+	if (owner == HOSTVISOR)
+	{
 		count = get_pfn_count(pfn);
-		if (count > 0U) {
+		if (count > 0U)
+		{
 			set_pfn_count(pfn, count - 1U);
 		}
 	}
