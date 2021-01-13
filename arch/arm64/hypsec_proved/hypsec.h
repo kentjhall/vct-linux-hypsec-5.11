@@ -796,7 +796,7 @@ void clear_vm_stage2_range(u32 vmid, u64 start, u64 size);
 void prot_and_map_vm_s2pt(u32 vmid, u64 addr, u64 pte, u32 level);
 //void grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
 //void revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
-void __kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa);
+void map_vm_io(u32 vmid, u64 gpa, u64 pa);
 void clear_vm_range(u32 vmid, u64 pfn, u64 num);
 
 /*

@@ -4,13 +4,13 @@
  * MemManager
  */
 
-extern void reject_invalid_mem_access(phys_addr_t addr);
-
 void __hyp_text map_page_host(u64 addr)
 {
-	u64 pfn = addr / PAGE_SIZE;
-	u64 new_pte = 0UL, perm;
+	u64 pfn, new_pte, perm;
 	u32 owner, count;
+
+	pfn = addr / PAGE_SIZE;
+	new_pte = 0UL;
 
 	acquire_lock_s2page();
 	owner = get_pfn_owner(pfn);
@@ -18,7 +18,7 @@ void __hyp_text map_page_host(u64 addr)
 	if (owner == INVALID_MEM) {
 		perm = pgprot_val(PAGE_S2_DEVICE);
 		perm |= S2_RDWR;
-		new_pte = (addr & PAGE_MASK) + perm;
+		new_pte = pfn * PAGE_SIZE + perm;
 		mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
 	} else {
 		if (owner == HOSTVISOR || count > 0U) {
@@ -26,10 +26,6 @@ void __hyp_text map_page_host(u64 addr)
 			new_pte = pfn * PAGE_SIZE + perm;
 			mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
 		} else {
-			//reject_invalid_mem_access(addr);
-			perm = pgprot_val(PAGE_S2_KERNEL);
-			new_pte = pfn * PAGE_SIZE + perm;
-			mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
 			print_string("\rfaults on host\n");
 			v_panic();
 		}
@@ -151,6 +147,24 @@ void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 	mmap_s2pt(vmid, addr, level, pte);
 }
 
+void __hyp_text map_vm_io(u32 vmid, u64 gpa, u64 pa)
+{
+	u64 pte, pfn;
+	u32 owner;
+
+	pfn = pa / PAGE_SIZE;
+	pte = pa + (pgprot_val(PAGE_S2_DEVICE) | S2_RDWR);
+
+	acquire_lock_s2page();
+	owner = get_pfn_owner(pfn);
+	// check if pfn is truly within an I/O area
+	if (owner == INVALID_MEM)
+	{ 
+		mmap_s2pt(vmid, gpa, 3U, pte);
+	}
+	release_lock_s2page();
+}
+
 void __hyp_text grant_vm_page(u32 vmid, u64 pfn)
 {
     u32 owner, count;
@@ -259,21 +273,3 @@ void __hyp_text unmap_smmu_page(u32 cbndx, u32 index, u64 iova)
 	}
 	release_lock_s2page();
 }
-
-//TODO: where it is?
-void __hyp_text __kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa)
-{
-	u64 pte;
-	u32 owner;
-
-	pte = pa + (pgprot_val(PAGE_S2_DEVICE) | S2_RDWR);
-
-	acquire_lock_s2page();
-	owner = get_pfn_owner(pa >> PAGE_SHIFT);
-	// check if pfn is truly within an I/O area
-	if (owner == INVALID_MEM) 
-		mmap_s2pt(vmid, gpa, 3U, pte);
-	release_lock_s2page();
-}
-
-

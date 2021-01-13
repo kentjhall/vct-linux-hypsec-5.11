@@ -290,8 +290,7 @@ void __hyp_text map_io(u32 vmid, u64 gpa, u64 pa)
 	state = get_vm_state(vmid);
 	if (state == READY) 
 	{
-		//TODO: Xupeng call the following function map_vm_io
-		__kvm_phys_addr_ioremap(vmid, gpa, pa);
+		map_vm_io(vmid, gpa, pa);
 	}
 	else
 	{
