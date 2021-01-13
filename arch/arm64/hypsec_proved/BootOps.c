@@ -5,7 +5,7 @@
  */
 
 //TODO: change function name to search_load_info
-u64 __hyp_text v_search_load_info(u32 vmid, u64 addr)
+u64 __hyp_text search_load_info(u32 vmid, u64 addr)
 {
 	u32 num, load_idx;
 	u64 ret, base, size, remap_addr; 

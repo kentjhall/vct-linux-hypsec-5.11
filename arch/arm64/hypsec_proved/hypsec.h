@@ -818,7 +818,7 @@ void unmap_and_load_vm_image(u32 vmid, u64 target_addr, u64 remap_addr, u64 num)
 
 u32 is_inc_exe(u32 vmid);
 void boot_from_inc_exe(u32 vmid);
-u64 v_search_load_info(u32 vmid, u64 addr);
+u64 search_load_info(u32 vmid, u64 addr);
 void set_vcpu_active(u32 vmid, u32 vcpuid);
 void set_vcpu_inactive(u32 vmid, u32 vcpuid);
 void register_vcpu(u32 vmid, u32 vcpuid);

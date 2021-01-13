@@ -9,7 +9,7 @@ extern void reset_fp_regs(u32 vmid, int vcpu_id);
 void __hyp_text reset_gp_regs(u32 vmid, u32 vcpuid)
 {
     u64 pc = get_int_pc(vmid, vcpuid), pstate;
-    if (v_search_load_info(vmid, pc))
+    if (search_load_info(vmid, pc))
     {
         clear_shadow_gp_regs(vmid, vcpuid);
         pstate = get_int_pstate(vmid, vcpuid);
