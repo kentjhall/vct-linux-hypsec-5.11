@@ -684,6 +684,12 @@ static u64 inline get_phys_mem_start_pfn(void)
 	return el2_data->phys_mem_start >> PAGE_SHIFT;
 }
 
+static u64 inline get_phys_mem_start(void)
+{
+	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+	return el2_data->phys_mem_start;
+}
+
 static void inline acquire_lock_spt(void) {
     struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     stage2_spin_lock(&el2_data->spt_lock);

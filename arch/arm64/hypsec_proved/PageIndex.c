@@ -4,24 +4,44 @@
  * PageIndex
  */
 
+/*
+*/
+//TODO: UNVERIFIED
 u64 __hyp_text get_s2_page_index(u64 addr)
 {
-	//u32 region_index = mem_region_search(addr);
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	u64 ret = INVALID64;
-	u64 start = el2_data->phys_mem_start;
-	u64 end = el2_data->phys_mem_size + start; 
-	/*if (region_index != INVALID_MEM) {
-		u64 page_index = get_mem_region_index(region_index);
-		if (page_index != INVALID64) {
-			u64 base = get_mem_region_base(region_index);
-			ret = page_index + (addr - base) / PAGE_SIZE;
-		}
-	}*/
-	if (addr >= start && addr < end) {
-		u64 page_index = (addr - start) >> PAGE_SHIFT;
+	u64 ret, start, end, phys_mem_size, page_index;
+
+	start = get_phys_mem_start();
+	phys_mem_size = get_phys_mem_size();
+	end = start + phys_mem_size;
+
+	if (addr >= start && addr < end)
+	{
+		page_index = (addr - start) >> PAGE_SHIFT;
 		ret = page_index;
+	} else
+	{
+		ret = INVALID64;
 	}
 
 	return ret;
+}
+
+u64 __hyp_text get_s2_page_index_old(u64 addr)
+{
+	u64 ret, p_index, base;
+	u32 r_index;
+
+	r_index = mem_region_search(addr);
+	ret = INVALID64;
+	if (r_index != INVALID_MEM)
+	{
+		p_index = get_mem_region_index(r_index);
+		if (p_index != INVALID64)
+		{
+			base = get_mem_region_base(r_index);
+			ret = page_index + (addr - base) / PAGE_SIZE;
+		}
+	}
+	return check64(ret);
 }
