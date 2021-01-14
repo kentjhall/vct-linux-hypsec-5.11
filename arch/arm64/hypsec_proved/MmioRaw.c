@@ -24,6 +24,7 @@ u64 __hyp_text smmu_init_pte(u64 prot, u64 paddr)
 	return val;
 }
 
+//TODO: FIXME: return u32..
 u64 __hyp_text smmu_get_cbndx(u64 offset)
 {
 	u64 cbndx = 0;
