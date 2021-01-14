@@ -134,7 +134,7 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		break;
 	case HVC_SMMU_LPAE_MAP:
 		//print_string("\rsmmu mmap\n");
-		el2_arm_lpae_map(hr->regs[1], hr->regs[2], hr->regs[3], hr->regs[4],
+		__el2_arm_lpae_map(hr->regs[1], hr->regs[2], hr->regs[3], hr->regs[4],
 				   hr->regs[5]);
 		//print_string("\rafter smmu mmap\n");
 		break;
