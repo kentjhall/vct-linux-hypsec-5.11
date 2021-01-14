@@ -710,9 +710,9 @@ u64 alloc_s2pt_pmd(u32 vmid);
 
 u64 walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc);
 u64 walk_pud(u32 vmid, u64 pgd, u64 addr, u32 alloc);
-u64 walk_pmd(u32 vmid, u64 pgd, u64 addr, u32 alloc);
+u64 walk_pmd(u32 vmid, u64 pud, u64 addr, u32 alloc);
 u64 walk_pte(u32 vmid, u64 pmd, u64 addr);
-void v_set_pmd(u32 vmid, u64 pgd, u64 addr, u64 pmd);
+void v_set_pmd(u32 vmid, u64 pud, u64 addr, u64 pmd);
 void v_set_pte(u32 vmid, u64 pmd, u64 addr, u64 pte);
 u64 walk_smmu_pgd(u64 ttbr, u64 addr, u32 alloc);
 u64 walk_smmu_pmd(u64 pgd, u64 addr, u32 alloc);
