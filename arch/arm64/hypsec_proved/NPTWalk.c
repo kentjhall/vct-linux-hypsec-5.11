@@ -4,26 +4,6 @@
  * NPTWalk
  */
 
-//TODO: the following is not in Xupeng's codd
-void __hyp_text init_npt(u32 vmid)
-{
-	u64 vttbr, vttbr_pa, vmid64, next;
-
-	vttbr = get_pt_vttbr(vmid);
-	if (vttbr == 0) {
-		vttbr_pa = pool_start(vmid);
-		vmid64 = ((u64)(vmid & 255U) << VTTBR_VMID_SHIFT);
-		vttbr = vttbr_pa | vmid64;
-		next = get_pt_next(vmid);
-		if (next == vttbr_pa) {
-			set_pt_vttbr(vmid, vttbr);
-			set_pt_next(vmid, 1);
-		}
-		else
-			v_panic();
-	}
-}
-
 u32 __hyp_text get_npt_level(u32 vmid, u64 addr)
 {
 	u64 vttbr, pgd, pud, pmd;u32 ret;

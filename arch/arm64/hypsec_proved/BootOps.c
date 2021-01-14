@@ -99,8 +99,6 @@ u32 __hyp_text register_kvm()
 		set_vm_kvm(vmid, kvm);
 		set_vm_state(vmid, READY);
 		//TODO: can we remove the following?
-		init_s2pt(vmid);
-		//TODO: can we remove the following?
 		set_vm_public_key(vmid);
 		//TODO: can we remove the following?
 	}

@@ -4,14 +4,6 @@
  * NPTOps
  */
 
-//TODO: FIXME: Why we removed this from the code?
-void __hyp_text init_s2pt(u32 vmid)
-{
-    acquire_lock_pt(vmid);
-    init_npt(vmid);
-    release_lock_pt(vmid);
-}
-
 u32 __hyp_text get_level_s2pt(u32 vmid, u64 addr)
 {
     u32 ret;

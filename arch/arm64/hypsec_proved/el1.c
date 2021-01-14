@@ -130,7 +130,7 @@ void init_el2_data_page(void)
 	int i = 0, index = 0;
 	struct el2_data *el2_data;
 	struct memblock_region *r;
-	u64 pool_start;
+	u64 pool_start, vmid64, vttbr;
 
 	WARN_ON(sizeof(struct el2_data) >= CORE_DATA_SIZE);
 
@@ -194,7 +194,12 @@ void init_el2_data_page(void)
 			pool_start + (STAGE2_VM_POOL_SIZE * (i - 1));
 		el2_data->vm_info[i].used_pages = 0;
 		memset(__va(el2_data->vm_info[i].page_pool_start), 0, STAGE2_VM_POOL_SIZE);
+
 		//FIXME: init vm_info[i].vttbr here, or VMID
+		vmid64 = (u64)i;
+		vmid64 = vmid64 << VTTBR_VMID_SHIFT;
+		vttbr = el2_data->vm_info[i].page_pool_start;
+		el2_data->vm_info[i].vttbr = (vttbr | vmid64);
 	}
 
 	el2_data->vm_info[HOSTVISOR].page_pool_start =
