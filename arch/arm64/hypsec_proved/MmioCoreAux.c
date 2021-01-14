@@ -86,14 +86,17 @@ u32 __hyp_text handle_smmu_cb_access(u64 offset)
 		/* We write hw_ttbr to CB_TTBR0 */
 		ret = 2U;
 	}
-	else if (cb_offset == ARM_SMMU_CB_CONTEXTIDR) {
+	else if (cb_offset == ARM_SMMU_CB_CONTEXTIDR)
+	{
 		ret = 0U;
 	}
-	else if (cb_offset == ARM_SMMU_CB_TTBCR) {
+	else if (cb_offset == ARM_SMMU_CB_TTBCR)
+	{
 		//TODO: this case is not implemented in the verified code, can we remove it?
 		ret = 3U;
 	}
-	else {
+	else
+	{
 		/* let accesses to other registers and TLB flushes just
 		 * happen since they don't affect our guarantees.
 		 */
@@ -107,19 +110,27 @@ u32 __hyp_text handle_smmu_cb_access(u64 offset)
 void __hyp_text __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u32 write_val)
 {
 	void __iomem *base = (void*)fault_ipa;
-	u64 data = host_get_mmio_data(hsr);
+	u64 data;
 
-	if (len == 8) {
-		if (write_val == 0) {
+	if (len == 8U)
+	{
+		if (write_val == 0U)
+		{
+			data = host_get_mmio_data(hsr);
 			writeq_relaxed(data, base);
-		} else {
+		}
+		else
+		{
 			writeq_relaxed(val, base);
 		}
-	} else if(len == 4) {
-		u32 val;
-		el2_memcpy(&val, &data, sizeof(u32));
-		writel_relaxed(val, base);
-	} else {
+	}
+	else if(len == 4)
+	{
+		data = host_get_mmio_data(hsr);
+		writel_relaxed((u32)data, base);
+	}
+	else
+	{
 		print_string("\rhandle smmu write panic\n");
 		printhex_ul(len);
 		v_panic();
@@ -128,20 +139,23 @@ void __hyp_text __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u3
 
 void __hyp_text __handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len)
 {
-	//the following is a macro
-	u32 rt = host_dabt_get_rd(hsr);
-	u64 data_64, val;
-	u32 data_32;
+	//TODO: We do not use vcpuid here
+	u32 rt;
+	u64 data;
 
-	if (len == 8) {
-		data_64 = readq_relaxed((void *)fault_ipa);
-		set_host_regs(rt, data_64);
-	} else if (len == 4) {
-		data_32 = readl_relaxed((void *)fault_ipa);
-		val = get_host_regs(rt);
-		el2_memcpy(&val, &data_32, sizeof(u32));
-		set_host_regs(rt, val);
-	} else {
+	rt = host_dabt_get_rd(hsr);
+	if (len == 8)
+	{
+		data = readq_relaxed((void *)fault_ipa);
+		set_host_regs(rt, data);
+	}
+	else if (len == 4)
+	{
+		data = (u64)readl_relaxed((void *)fault_ipa);
+		set_host_regs(rt, data);
+	}
+	else
+	{
 		/* We don't handle cases which len is smaller than 4 bytes */
 		print_string("\rhandle smmu read panic\n");
 		printhex_ul(len);
