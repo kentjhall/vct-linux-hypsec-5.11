@@ -284,19 +284,6 @@ void __hyp_text hypsec_set_vcpu_state(u32 vmid, int vcpu_id, int state)
 	stage2_spin_unlock(&vm_info->vm_lock);
 }
 
-void __hyp_text reset_fp_regs(u32 vmid, int vcpu_id)
-{
-	struct shadow_vcpu_context *shadow_ctxt = NULL;
-	struct kvm_vcpu *vcpu = vcpu;
-	struct kvm_regs *kvm_regs;
-
-	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
-	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
-	kvm_regs = &vcpu->arch.ctxt.gp_regs;
-	el2_memcpy(&shadow_ctxt->fp_regs, &kvm_regs->fp_regs,
-					sizeof(struct user_fpsimd_state));
-}
-
 /*
 void __hyp_text map_vgic_to_vm(u32 vmid)
 {

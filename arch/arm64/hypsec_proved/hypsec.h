@@ -68,6 +68,7 @@ static u64 inline get_sys_reg_desc_val(u32 index) {
 static void inline fetch_from_doracle(u32 vmid, u64 pfn, u64 pgnum) {
 	return;
 };
+extern void reset_fp_regs(u32 vmid, int vcpu_id);
 
 
 /*
@@ -856,7 +857,7 @@ void prep_hvc(u32 vmid, u32 vcpuid);
 void prep_abort(u32 vmid, u32 vcpuid);
 void v_hypsec_inject_undef(u32 vmid, u32 vcpuid);
 void v_update_exception_gp_regs(u32 vmid, u32 vcpuid);
-void post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid);
+void post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid, u64 addr);
 
 
 /*

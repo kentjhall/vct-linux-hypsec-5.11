@@ -221,3 +221,16 @@ void __hyp_text smmu_pt_clear(u32 cbndx, u32 num) {
 	va = __el2_va(el2_data->smmu_cfg[index].hw_ttbr); 
 	el2_memset((void *)va, 0, PAGE_SIZE * 2);
 };
+
+void __hyp_text reset_fp_regs(u32 vmid, int vcpu_id)
+{
+	struct shadow_vcpu_context *shadow_ctxt = NULL;
+	struct kvm_vcpu *vcpu = vcpu;
+	struct kvm_regs *kvm_regs;
+
+	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
+	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
+	kvm_regs = &vcpu->arch.ctxt.gp_regs;
+	el2_memcpy(&shadow_ctxt->fp_regs, &kvm_regs->fp_regs,
+					sizeof(struct user_fpsimd_state));
+}
