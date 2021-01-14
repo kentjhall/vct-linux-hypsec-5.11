@@ -37,7 +37,6 @@ u64 __hyp_text unmap_spt(u32 cbndx, u32 index, u64 addr)
 	if (ret != 0UL)
 	{
 		set_smmu_pt(cbndx, index, addr, 0UL);
-		//ret = unmap_smmu_pt(cbndx, index, addr);
 	}
 	release_lock_spt();
 	return check64(ret);

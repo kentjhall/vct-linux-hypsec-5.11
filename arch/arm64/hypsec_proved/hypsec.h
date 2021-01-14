@@ -734,8 +734,6 @@ u32 get_npt_level(u32 vmid, u64 addr);
 u64 walk_npt(u32 vmid, u64 addr);
 void set_npt(u32 vmid, u64 addr, u32 level, u64 pte);
 void init_smmu_pt(u32 cbndx, u32 num);
-u64 walk_smmu_pt(u32 cbndx, u32 num, u64 addr);
-void set_smmu_pt(u32 cbndx, u32 num, u64 addr, u64 pte);
 
 /*
  * NPTOps
@@ -940,7 +938,7 @@ void set_smmu_pte(u64 pmd, u64 addr, u64 pte);
  * MmioSPTWalk
  */
 void clear_smmu_pt(u32 cbndx, u32 index);
-u64 v_walk_smmu_pt(u32 cbndx, u32 index, u64 addr);
-void v_set_smmu_pt(u32 cbndx, u32 index, u64 addr, u64 pte);
 u64 unmap_smmu_pt(u32 cbndx, u32 index, u64 addr);
+u64 walk_smmu_pt(u32 cbndx, u32 num, u64 addr);
+void set_smmu_pt(u32 cbndx, u32 num, u64 addr, u64 pte);
 #endif //HYPSEC_HYPSEC_H
