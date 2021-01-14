@@ -80,28 +80,31 @@ void __hyp_text smmu_map_page(u32 cbndx, u32 index, u64 iova, u64 pte)
 
 	acquire_lock_smmu();
 	vmid = get_smmu_cfg_vmid(cbndx, index);
-	if (vmid != INVALID)
+	if (vmid != V_INVALID)
+	{
 		map_smmu(vmid, cbndx, index, iova, pte);
+	}
 	release_lock_smmu();
 }
 
-//why not lock?
 u64 __hyp_text __el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index)
 {
 	u64 pte, ret;
 
 	pte = walk_spt(cbndx, index, iova);
-	ret = phys_page(pte) | (iova % PAGE_SIZE);
+	ret = phys_page(pte) + (iova & (PAGE_SIZE - 1));
 	return ret;
 }
 
-/* FIXME: apply changes in XP's upstream code */
 void __hyp_text __el2_arm_lpae_clear(u64 iova, u32 cbndx, u32 index)
 {
 	u32 vmid;
-	
+
 	acquire_lock_smmu();
 	vmid = get_smmu_cfg_vmid(cbndx, index);
-	clear_smmu(vmid, cbndx, index, iova);
+	if (vmid != V_INVALID)
+	{
+		clear_smmu(vmid, cbndx, index, iova);
+	}
 	release_lock_smmu();	
 }
