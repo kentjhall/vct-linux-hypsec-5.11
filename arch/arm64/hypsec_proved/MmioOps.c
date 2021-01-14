@@ -50,7 +50,7 @@ void __hyp_text  __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index)
 		if (target_vmid == V_INVALID)
 		{
 			set_smmu_cfg_vmid(cbndx, index, vmid);
-			init_smmu_pt(cbndx, index);
+			alloc_smmu(vmid, cbndx, index);
 		}
 	}
 	else
