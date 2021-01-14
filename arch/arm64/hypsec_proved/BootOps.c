@@ -222,8 +222,7 @@ void __hyp_text alloc_smmu(u32 vmid, u32 cbndx, u32 index)
 			v_panic();
 		}
 	}
-	//FIXME: WHERE IS THE FOLLOWING FUNCTION?
-	//init_smmu_spt(cbndx, index);
+	init_spt(cbndx, index);
 	release_lock_vm(vmid);
 }
 
