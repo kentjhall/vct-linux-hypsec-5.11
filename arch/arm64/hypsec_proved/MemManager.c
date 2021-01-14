@@ -176,19 +176,17 @@ void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 			v_panic();
 		}
 	}
-	else if (owner != vmid)
+	//TODO: LXP checks owner != vmid, why? this does not work 
+	else if (owner != INVALID_MEM)
 	{
-		//TODO: why we check this case here? Xupeng's code does not have it
-		if (owner != INVALID_MEM) { 
-			print_string("\rvmid\n");
-			printhex_ul(vmid);
-			print_string("\rowner\n");
-			printhex_ul(owner);
-			print_string("\rpfn\n");
-			printhex_ul(pfn);
-			print_string("\rassign_to_smmu: owner unknown\n");
-			v_panic();
-		}
+		print_string("\rvmid\n");
+		printhex_ul(vmid);
+		print_string("\rowner\n");
+		printhex_ul(owner);
+		print_string("\rpfn\n");
+		printhex_ul(pfn);
+		print_string("\rassign_to_smmu: owner unknown\n");
+		v_panic();
 	}
 	release_lock_s2page();
 }
