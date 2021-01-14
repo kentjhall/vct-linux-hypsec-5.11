@@ -200,20 +200,35 @@ void __hyp_text update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 p
 	acquire_lock_s2page();
 	pfn = phys_page(pte) / PAGE_SIZE;
 	gfn = iova / PAGE_SIZE;
-
 	owner = get_pfn_owner(pfn);
 	map = get_pfn_map(pfn);
-	if (owner == HOSTVISOR) {
-		count = get_pfn_count(pfn);
-		if (count < EL2_SMMU_CFG_SIZE)
-		{
-			set_pfn_count(pfn, count + 1U);
-		}
-		map = pfn + SMMU_HOST_OFFSET;
-	}
-
-	if (owner == INVALID_MEM || (vmid == owner && gfn == map)) {
+	//TODO: sync with LXP, we map the page in two cases
+	//1. if the pfn is a device IO (owner is INVALID) or 
+	//2. vmid == owner && gfn == map
+	if ((owner == INVALID_MEM) || (vmid == owner && gfn == map))
+	{
 		map_spt(cbndx, index, iova, pte);
+		if (owner == HOSTVISOR)
+		{
+			count = get_pfn_count(pfn);
+			if (count < EL2_SMMU_CFG_SIZE)
+			{
+				set_pfn_count(pfn, count + 1U);
+			}
+		}
+	}
+	else
+	{
+		v_panic();
+		print_string("\rbug in update_smmu_page\n");
+		print_string("\rvmid\n");
+		printhex_ul(vmid);
+		print_string("\rowner\n");
+		printhex_ul(owner);
+		print_string("\rgfn\n");
+		printhex_ul(gfn);
+		print_string("\rmap\n");
+		printhex_ul(map);
 	}
 	release_lock_s2page();
 }
