@@ -898,8 +898,8 @@ void handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len);
 /*
  * MmioCoreAux
  */
-u32 handle_smmu_global_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smmu_index);
-u32 handle_smmu_cb_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smmu_index);
+u32 handle_smmu_global_access(u32 hsr, u64 offset, u32 smmu_index);
+u32 handle_smmu_cb_access(u64 offset);
 void __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u32 write_val);
 void __handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len);
 
