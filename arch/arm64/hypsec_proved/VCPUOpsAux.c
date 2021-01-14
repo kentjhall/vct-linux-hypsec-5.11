@@ -173,7 +173,7 @@ void __hyp_text v_update_exception_gp_regs(u32 vmid, u32 vcpuid)
     set_shadow_ctxt(vmid, vcpuid, V_ESR_EL1, esr);
 }
 
-void __hyp_text v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid)
+void __hyp_text post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid)
 {
     u64 hpfar = get_shadow_ctxt(vmid, vcpuid, V_HPFAR_EL2);
     u64 addr = (hpfar & HPFAR_MASK) * 256UL;
