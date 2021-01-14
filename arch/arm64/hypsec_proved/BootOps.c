@@ -272,7 +272,7 @@ void __hyp_text clear_smmu(u32 vmid, u32 cbndx, u32 index, u64 iova)
 	if (HOSTVISOR < vmid && vmid < COREVISOR) 
 	{
 		state = get_vm_state(vmid);
-		if (state == VERIFIED) 
+		if (state == VERIFIED && get_vm_power(vmid))
 		{
 			print_string("\rpanic: clear_smmu\n");
 			v_panic();
