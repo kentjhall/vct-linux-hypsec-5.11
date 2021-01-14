@@ -9,6 +9,7 @@ u64 __hyp_text host_get_mmio_data(u32 hsr)
 	return get_host_regs(rt);
 }
 
+//TODO: Xupeng why is this so simplified?
 u64 __hyp_text smmu_init_pte(u64 prot, u64 paddr)
 {
 	u64 val;
