@@ -892,9 +892,8 @@ u64 is_smmu_range(u64 addr);
  */
 void mmap_smmu(u32 vmid, u64 ttbr, u64 addr, u64 pte);
 u64 walk_smmu(u32 vmid, u64 ttbr, u64 addr);
-u32 check_smmu_pfn(u64 pfn, u32 vmid);
 void handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index);
-void handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len, u32 index);
+void handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len);
 
 /*
  * MmioCoreAux

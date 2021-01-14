@@ -40,7 +40,7 @@ void __hyp_text handle_host_mmio(u64 index, u32 hsr)
 	} else {
 		//print_string("\rhandle_host_mmuio read\n");
 		//printhex_ul(fault_ipa);
-		handle_smmu_read(hsr, fault_ipa, len, index);
+		handle_smmu_read(hsr, fault_ipa, len);
 		//print_string("\rafter handle_host_mmuio read\n");
 	}
 	host_skip_instr();

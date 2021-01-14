@@ -1,35 +1,29 @@
 #include "hypsec.h"
 #include "MmioOps.h"
 
-//FIXME: why am I here?
-u32 __hyp_text check_smmu_pfn(u64 pfn, u32 vmid)
-{
-	u32 owner;
-	owner = get_pfn_owner(pfn);
-	if (owner != INVALID_MEM && owner && owner != vmid)
-		return 0;
-
-	return 1;
-}
-
 void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 {
-	u32 ret;
-	//u64 offset = fault_ipa & ARM_SMMU_OFFSET_MASK;
-	u64 offset = read_sysreg_el2(far) & ARM_SMMU_OFFSET_MASK;
-	u32 write_val = 0;
+	u64 offset, val;
+	u32 ret, write_val;
+
+	offset = read_sysreg_el2(far) & ARM_SMMU_OFFSET_MASK;
+	write_val = 0U;
 
 	//if (offset < ARM_SMMU_GLOBAL_BASE) {
 	if (offset < (get_smmu_size(index) >> 1)) {
 		ret = handle_smmu_global_access(hsr, fault_ipa, 
 						offset, index);
-		if (ret == 0) {
+		if (ret == 0)
+		{
 			print_string("\rsmmu invalid write: global access\n");
 			v_panic();
-		} else {
+		}
+		else
+		{
 			__handle_smmu_write(hsr, fault_ipa, len, 0UL, write_val);
 		}
-	} else {
+	}
+	else {
 		ret = handle_smmu_cb_access(hsr, fault_ipa,
 					    offset, index);
 		if (ret == 0) {
@@ -38,8 +32,8 @@ void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 		} else {
 			if (ret == 2) {
 				u64 cbndx = smmu_get_cbndx(offset);
-				u64 val = get_smmu_cfg_hw_ttbr(cbndx, index);
 				u64 data = host_get_mmio_data(hsr);
+				val = get_smmu_cfg_hw_ttbr(cbndx, index);
 				write_val = 1;
 				__handle_smmu_write(hsr, fault_ipa, len, val, write_val);
 				print_string("\rwrite TTBR0\n");
@@ -65,14 +59,17 @@ void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 	}
 }
 
-void __hyp_text handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len, u32 index)
+void __hyp_text handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len)
 {
-	u64 offset = fault_ipa & ARM_SMMU_OFFSET_MASK;
+	u64 offset;
 
-	//FIXME: strange code
-	if (offset < ARM_SMMU_GLOBAL_BASE) {
-	    __handle_smmu_read(hsr, fault_ipa, len);
-	} else {
-	    __handle_smmu_read(hsr, fault_ipa, len);
+	offset = fault_ipa & ARM_SMMU_OFFSET_MASK;
+	if (offset < ARM_SMMU_GLOBAL_BASE)
+	{
+		__handle_smmu_read(hsr, fault_ipa, len);
+	}
+	else
+	{
+		__handle_smmu_read(hsr, fault_ipa, len);
 	}	
 }
