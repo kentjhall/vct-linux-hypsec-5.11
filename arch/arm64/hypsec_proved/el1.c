@@ -217,9 +217,10 @@ void init_el2_data_page(void)
 	el2_data->vm_info[0].vttbr = el2_data->host_vttbr;
 
 	/* FIXME: hardcode this for now */
-	el2_data->smmu_page_pool_start = el2_data->vm_info[EL2_VM_INFO_SIZE - 3].page_pool_start;
-	el2_data->smmu_pgd_used_pages = 0;
-	el2_data->smmu_pmd_used_pages = 0;
+	el2_data->smmu_page_pool_start =
+		el2_data->vm_info[EL2_VM_INFO_SIZE - 3].page_pool_start;
+	el2_data->smmu_pgd_pool = el2_data->smmu_page_pool_start;
+	el2_data->smmu_pmd_pool = el2_data->smmu_page_pool_start + SMMU_PMD_BASE;
 
 	for (i = 0; i < SHADOW_SYS_REGS_DESC_SIZE; i++)
 		el2_data->s2_sys_reg_descs[i] = host_sys_reg_descs[i];

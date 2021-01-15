@@ -134,8 +134,8 @@ struct el2_data {
 	uint8_t key[16];
 
 	unsigned long smmu_page_pool_start;
-	unsigned long smmu_pgd_used_pages;
-	unsigned long smmu_pmd_used_pages;
+	unsigned long smmu_pgd_pool;
+	unsigned long smmu_pmd_pool;
 
 	u64 phys_mem_start;
 	u64 phys_mem_size;

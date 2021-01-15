@@ -4,18 +4,16 @@
  * MmioPTAlloc
  */
 
+//TODO: To Xupeng, please sync the code to use end
 u64 __hyp_text alloc_smmu_pgd_page(void)
 {
 	u64 next, end;
 
 	next = get_smmu_pgd_next();
-	//end = SMMU_PMD_START;
 	end = smmu_pgd_end();
 	if (next + PAGE_SIZE <= end)
 	{
-		//FIXME: why we use set_smmu_pgd_nex(1) but not "next + PAGE_SIZE"?
-		//set_smmu_pgd_next(next + PAGE_SIZE);
-		set_smmu_pgd_next(1);
+		set_smmu_pgd_next(next + PAGE_SIZE);
 	}
 	else
 	{
@@ -30,14 +28,11 @@ u64 __hyp_text alloc_smmu_pmd_page(void)
 	u64 next, end;
 
 	next = get_smmu_pmd_next();
-	//end = SMMU_POOL_END;
 	end = smmu_pmd_end();
 
 	if (next + PAGE_SIZE <= end)
 	{
-		//FIXME: why we use set_smmu_pmd_nex(1) but not "next + PAGE_SIZE"?
-		//set_smmu_pmd_next(next + PAGE_SIZE);
-		set_smmu_pmd_next(1);
+		set_smmu_pmd_next(next + PAGE_SIZE);
 	}
 	else
 	{
