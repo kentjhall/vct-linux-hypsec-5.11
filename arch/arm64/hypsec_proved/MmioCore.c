@@ -9,8 +9,8 @@ void __hyp_text handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index)
 	offset = read_sysreg_el2(far) & ARM_SMMU_OFFSET_MASK;
 	write_val = 0U;
 
-	//if (offset < ARM_SMMU_GLOBAL_BASE) {
-	if (offset < (get_smmu_size(index) >> 1)) {
+	if (offset < ARM_SMMU_GLOBAL_BASE)
+	{
 		ret = handle_smmu_global_access(hsr, offset, index);
 		if (ret == 0U)
 		{
