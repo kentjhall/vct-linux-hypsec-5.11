@@ -19,7 +19,8 @@ u64 __hyp_text get_s2_page_index(u64 addr)
 	{
 		page_index = (addr - start) >> PAGE_SHIFT;
 		ret = page_index;
-	} else
+	}
+	else
 	{
 		ret = INVALID64;
 	}
@@ -40,7 +41,7 @@ u64 __hyp_text get_s2_page_index_old(u64 addr)
 		if (p_index != INVALID64)
 		{
 			base = get_mem_region_base(r_index);
-			ret = page_index + (addr - base) / PAGE_SIZE;
+			ret = p_index + (addr - base) / PAGE_SIZE;
 		}
 	}
 	return check64(ret);

@@ -27,8 +27,11 @@ u64 __hyp_text alloc_remap_addr(u64 pgnum)
 	acquire_lock_core();
 	remap = get_next_remap_ptr(); 
 	if (remap + pgnum * PAGE_SIZE < EL2_REMAP_END)
+	{
 		set_next_remap_ptr(remap + pgnum * PAGE_SIZE);
-	else {
+	}
+	else
+	{
 		print_string("\rpanic in alloc_remap_addr\n");
 		v_panic();
 	}

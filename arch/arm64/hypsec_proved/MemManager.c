@@ -15,17 +15,23 @@ void __hyp_text map_page_host(u64 addr)
 	acquire_lock_s2page();
 	owner = get_pfn_owner(pfn);
 	count = get_pfn_count(pfn);
-	if (owner == INVALID_MEM) {
+	if (owner == INVALID_MEM)
+	{
 		perm = pgprot_val(PAGE_S2_DEVICE);
 		perm |= S2_RDWR;
 		new_pte = pfn * PAGE_SIZE + perm;
 		mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
-	} else {
-		if (owner == HOSTVISOR || count > 0U) {
+	}
+	else
+	{
+		if (owner == HOSTVISOR || count > 0U)
+		{
 			perm = pgprot_val(PAGE_S2_KERNEL);
 			new_pte = pfn * PAGE_SIZE + perm;
 			mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
-		} else {
+		}
+		else
+		{
 			print_string("\rfaults on host\n");
 			v_panic();
 		}
@@ -35,17 +41,19 @@ void __hyp_text map_page_host(u64 addr)
 
 void __hyp_text clear_vm_page(u32 vmid, u64 pfn)
 {
-    u32 owner;
-    acquire_lock_s2page();
-    owner = get_pfn_owner(pfn);
-    if (owner == vmid) {
-	clear_pfn_host(pfn);
-        set_pfn_owner(pfn, HOSTVISOR);
-        set_pfn_count(pfn, 0U);
-        set_pfn_map(pfn, 0UL);
-	clear_phys_page(pfn);
-    }
-    release_lock_s2page();
+	u32 owner;
+
+	acquire_lock_s2page();
+	owner = get_pfn_owner(pfn);
+	if (owner == vmid)
+	{
+		clear_pfn_host(pfn);
+		set_pfn_owner(pfn, HOSTVISOR);
+		set_pfn_count(pfn, 0U);
+		set_pfn_map(pfn, 0UL);
+		clear_phys_page(pfn);
+	}
+	release_lock_s2page();
 }
 
 void __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
@@ -57,29 +65,36 @@ void __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
 
 	owner = get_pfn_owner(pfn);
 	count = get_pfn_count(pfn);
-	if (owner == HOSTVISOR) {
-		if (count == 0U) {
+	if (owner == HOSTVISOR)
+	{
+		if (count == 0U)
+		{
 			set_pfn_owner(pfn, vmid);
 			clear_pfn_host(pfn);
 			set_pfn_map(pfn, gfn);
 			fetch_from_doracle(vmid, pfn, 1UL);
 		}
-		else {
+		else
+		{
 			//pfn is mapped to a hostvisor SMMU table
 			print_string("\rassign pfn used by host smmu device\n");
 			v_panic();
 		}
 	} 
-	else if (owner == vmid) {
+	else if (owner == vmid)
+	{
 		//TODO: why is Xupeng doing things differently?
 		map = get_pfn_map(pfn);
 		/* the page was mapped to another gfn already! */
 		// if gfn == map, it means someone in my VM has mapped it
-		if (gfn == map) {
- 			if (count == INVALID_MEM) {
+		if (gfn == map)
+		{
+ 			if (count == INVALID_MEM)
+			{
 				set_pfn_count(pfn, 0U);
 			}
-		} else {
+		} else
+		{
 			print_string("\rmap != gfn || count != INVALID_MEM\n");
 			v_panic();
 		}
@@ -96,12 +111,15 @@ void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 	/* We give the VM RWX permission now. */
 	perm = pgprot_val(PAGE_S2_KERNEL);
 
-	if (level == 2U) {
+	if (level == 2U)
+	{
 		/* TODO: FIXME: verified code has pte = paddr | perm; */
 		pte = paddr + perm;
 		pte &= ~PMD_TABLE_BIT;
 		mmap_s2pt(vmid, addr, 2U, pte);
-	} else if (level == 3U) {
+	}
+	else if (level == 3U)
+	{
 		pte = paddr + perm;
 		mmap_s2pt(vmid, addr, 3U, pte);
 	}
@@ -127,30 +145,33 @@ void __hyp_text map_vm_io(u32 vmid, u64 gpa, u64 pa)
 
 void __hyp_text grant_vm_page(u32 vmid, u64 pfn)
 {
-    u32 owner, count;
-    acquire_lock_s2page();
-    owner = get_pfn_owner(pfn);
-    count = get_pfn_count(pfn);
-    if (owner == vmid && count < MAX_SHARE_COUNT) {
-        set_pfn_count(pfn, count + 1U);
-    }
-    release_lock_s2page();
+	u32 owner, count;
+	acquire_lock_s2page();
+	owner = get_pfn_owner(pfn);
+	count = get_pfn_count(pfn);
+	if (owner == vmid && count < MAX_SHARE_COUNT)
+	{
+		set_pfn_count(pfn, count + 1U);
+	}
+	release_lock_s2page();
 }
 
 void __hyp_text revoke_vm_page(u32 vmid, u64 pfn)
 {
-    u32 owner, count;
-    acquire_lock_s2page();
-    owner = get_pfn_owner(pfn);
-    count = get_pfn_count(pfn);
-    if (owner == vmid && count > 0U) {
-        set_pfn_count(pfn, count - 1U);
-        if (count == 1U) {
-            clear_pfn_host(pfn);
-	    fetch_from_doracle(vmid, pfn, 1UL);
-        }
-    }
-    release_lock_s2page();
+	u32 owner, count;
+	acquire_lock_s2page();
+	owner = get_pfn_owner(pfn);
+	count = get_pfn_count(pfn);
+	if (owner == vmid && count > 0U)
+	{
+		set_pfn_count(pfn, count - 1U);
+		if (count == 1U)
+		{
+			clear_pfn_host(pfn);
+			fetch_from_doracle(vmid, pfn, 1UL);
+		}
+	}
+	release_lock_s2page();
 }
 
 void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
@@ -163,8 +184,10 @@ void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 	count = get_pfn_count(pfn);
 	map = get_pfn_map(pfn);
 
-	if (owner == HOSTVISOR) {
-		if (count == 0) {
+	if (owner == HOSTVISOR)
+	{
+		if (count == 0)
+		{
 			clear_pfn_host(pfn);
 			set_pfn_owner(pfn, vmid);
 			set_pfn_map(pfn, gfn);

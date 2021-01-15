@@ -71,7 +71,8 @@ void __hyp_text sync_dirty_to_shadow(u32 vmid, u32 vcpuid)
 	u64 dirty = get_shadow_dirty_bit(vmid, vcpuid);
 	while (i < 31U)
 	{
-		if (dirty & (1U << i)) {
+		if (dirty & (1U << i))
+		{
 			u64 reg = get_int_gpr(vmid, vcpuid, i);
 			set_shadow_ctxt(vmid, vcpuid, i, reg);
 		}

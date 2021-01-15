@@ -41,7 +41,8 @@ u32 __hyp_text get_pfn_count(u64 pfn)
 	if (index != INVALID64)
 	{
 		ret = get_s2_page_count(index);
-	} else
+	}
+	else
 	{
 		ret = INVALID_MEM;
 	}

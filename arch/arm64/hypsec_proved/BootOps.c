@@ -38,7 +38,8 @@ void __hyp_text set_vcpu_active(u32 vmid, u32 vcpuid)
 	if (vm_state == VERIFIED && vcpu_state == READY)
 	{
 		set_vcpu_state(vmid, vcpuid, ACTIVE);
-	} else
+	}
+	else
 	{
 		print_string("\rset vcpu active\n");
 		v_panic();
@@ -55,7 +56,8 @@ void __hyp_text set_vcpu_inactive(u32 vmid, u32 vcpuid)
 	{
 		set_vcpu_state(vmid, vcpuid, READY);
 	}
-	else {
+	else
+	{
 		print_string("\rset vcpu inactive\n");
 		v_panic();
 	}
@@ -76,7 +78,8 @@ void __hyp_text register_vcpu(u32 vmid, u32 vcpuid)
 		set_vcpu_state(vmid, vcpuid, READY);
 		set_shadow_ctxt(vmid, vcpuid, V_DIRTY, INVALID64);
 	}
-	else {
+	else
+	{
 		print_string("\rregister vcpu\n");
 		v_panic(); 
 	}
@@ -161,12 +164,14 @@ void __hyp_text remap_vm_image(u32 vmid, u64 pfn, u32 load_idx)
 			target = remap_addr + mapped * PAGE_SIZE;
 			if (mapped < page_count)
 			{
-				mmap_s2pt(COREVISOR, target, 3UL, pfn * PAGE_SIZE + pgprot_val(PAGE_HYP));
+				mmap_s2pt(COREVISOR, target, 3UL,
+					pfn * PAGE_SIZE + pgprot_val(PAGE_HYP));
 				set_vm_mapped_pages(vmid, load_idx, mapped + 1UL);
 			}
 		}
 	}
-	else {
+	else
+	{
 		print_string("\remap vm image\n");
 		v_panic();
 	}
@@ -191,7 +196,8 @@ void __hyp_text verify_and_load_images(u32 vmid)
 			mapped = get_vm_mapped_pages(vmid, load_idx);
 			unmap_and_load_vm_image(vmid, load_addr, remap_addr, mapped);
 			valid = verify_image(vmid, load_idx, remap_addr);
-			if (valid == 0U) {
+			if (valid == 0U)
+			{
 				v_panic();
 			}
 			load_idx += 1U;

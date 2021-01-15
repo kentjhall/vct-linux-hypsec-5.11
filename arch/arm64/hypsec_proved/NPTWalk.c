@@ -13,7 +13,7 @@ u32 __hyp_text get_npt_level(u32 vmid, u64 addr)
 	pud = walk_pud(vmid, pgd, addr, 0U);
 	pmd = walk_pmd(vmid, pud, addr, 0U);
 
-    	if (v_pmd_table(pmd) == PMD_TYPE_TABLE) {
+	if (v_pmd_table(pmd) == PMD_TYPE_TABLE) {
 		u64 pte = walk_pte(vmid, pmd, addr);
 		if (phys_page(pte) == 0UL)
 			ret = 0U;
@@ -40,11 +40,11 @@ u64 __hyp_text walk_npt(u32 vmid, u64 addr)
 	pmd = walk_pmd(vmid, pud, addr, 0U);
 
 	if (v_pmd_table(pmd) == PMD_TYPE_TABLE) {
-        	pte = walk_pte(vmid, pmd, addr);
-        	ret = pte;
-    	}
-    	else {
-        	ret = pmd;
+		pte = walk_pte(vmid, pmd, addr);
+		ret = pte;
+	}
+	else {
+		ret = pmd;
 	}
 
 	return check64(ret);
@@ -62,18 +62,23 @@ void __hyp_text set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 	{
 		pmd = walk_pmd(vmid, pud, addr, 0U);
 		//TODO: Xupeng, why we don't check this in the verified code
-		if (v_pmd_table(pmd) == PMD_TYPE_TABLE) {
+		if (v_pmd_table(pmd) == PMD_TYPE_TABLE)
+		{
 			print_string("\rset existing npt: pmd\n");
 			v_panic();
-		} else
-	   		v_set_pmd(vmid, pud, addr, pte);
+		}
+		else
+			v_set_pmd(vmid, pud, addr, pte);
 	}
 	else
 	{
 		pmd = walk_pmd(vmid, pud, addr, 1U);
 		if (v_pmd_table(pmd) == PMD_TYPE_TABLE)
+		{
 			v_set_pte(vmid, pmd, addr, pte);
-		else {
+		}
+		else
+		{
 			print_string("\rset existing npt: pte\n");
 			v_panic();
 		}
