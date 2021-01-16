@@ -134,7 +134,7 @@ static void inline pt_store(u32 vmid, u64 addr, u64 value) {
 };
 
 /* for split PT pool */
-#define PGD_BASE PAGE_SIZE
+#define PGD_BASE (PAGE_SIZE * 2)
 #define PUD_BASE (PGD_BASE + (PAGE_SIZE * 16))
 #define PMD_BASE SZ_2M
 static u64 inline get_pgd_next(u32 vmid) {

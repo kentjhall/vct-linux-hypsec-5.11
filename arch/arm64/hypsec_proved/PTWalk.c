@@ -12,7 +12,15 @@ u64 __hyp_text walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc)
 	ret = 0UL;
 	vttbr_pa = phys_page(vttbr);
 
-	pgd_idx = pgd_index(addr);
+	if (vmid == COREVISOR)
+	{
+		pgd_idx = pgd_index(addr);
+	}
+	else
+	{
+		pgd_idx = pgd_idx(addr);
+	}
+
 	//TODO: why we did + but not |?
 	pgd = pt_load(vmid, vttbr_pa + pgd_idx * 8UL);
 	if (pgd == 0UL && alloc == 1U)
