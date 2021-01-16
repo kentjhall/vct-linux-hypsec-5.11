@@ -66,8 +66,8 @@ struct el2_vm_info {
 	bool inc_exe;
 	enum hypsec_init_state state;
 	struct el2_load_info load_info[HYPSEC_MAX_LOAD_IMG];
-	b_arch_spinlock_t shadow_pt_lock;
-	b_arch_spinlock_t vm_lock;
+	arch_spinlock_t shadow_pt_lock;
+	arch_spinlock_t vm_lock;
 	struct kvm *kvm;
 	struct int_vcpu int_vcpus[HYPSEC_MAX_VCPUS];
 	struct shadow_vcpu_context *shadow_ctxt[HYPSEC_MAX_VCPUS];
@@ -97,12 +97,12 @@ struct el2_data {
 	unsigned long pl011_base;
 	unsigned long uart_8250_base;
 
-	b_arch_spinlock_t s2pages_lock;
-	b_arch_spinlock_t abs_lock;
-	b_arch_spinlock_t el2_pt_lock;
-	b_arch_spinlock_t console_lock;
-	b_arch_spinlock_t smmu_lock;
-	b_arch_spinlock_t spt_lock;
+	arch_spinlock_t s2pages_lock;
+	arch_spinlock_t abs_lock;
+	arch_spinlock_t el2_pt_lock;
+	arch_spinlock_t console_lock;
+	arch_spinlock_t smmu_lock;
+	arch_spinlock_t spt_lock;
 
 	kvm_pfn_t ram_start_pfn;
 	struct s2_page s2_pages[S2_PFN_SIZE];
@@ -166,14 +166,14 @@ static inline void _arch_spin_unlock(b_arch_spinlock_t *lock)
 	: "=Q" (lock->lock) : "r" (0) : "memory");
 }
 
-static inline void stage2_spin_lock(b_arch_spinlock_t *lock)
+static inline void stage2_spin_lock(arch_spinlock_t *lock)
 {	
-	_arch_spin_lock(lock);
+	arch_spin_lock(lock);
 }
 
-static inline void stage2_spin_unlock(b_arch_spinlock_t *lock)
+static inline void stage2_spin_unlock(arch_spinlock_t *lock)
 {
-	_arch_spin_unlock(lock);
+	arch_spin_unlock(lock);
 }
 
 static inline void el2_init_vgic_cpu_base(phys_addr_t base)
