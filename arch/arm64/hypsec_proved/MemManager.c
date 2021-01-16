@@ -15,6 +15,8 @@ void __hyp_text map_page_host(u64 addr)
 	acquire_lock_s2page();
 	owner = get_pfn_owner(pfn);
 	count = get_pfn_count(pfn);
+	//uncomment the following for m400
+	//if (!(addr >= 0x4000000000 && addr < 0x5000000000)) {
 	if (owner == INVALID_MEM)
 	{
 		perm = pgprot_val(PAGE_S2_DEVICE);
