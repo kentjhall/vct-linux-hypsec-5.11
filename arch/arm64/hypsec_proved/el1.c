@@ -156,7 +156,7 @@ void init_el2_data_page(void)
 		i++;
 	}
 	el2_data->regions_cnt = i;
-	el2_data->phys_mem_start += el2_data->regions[0].base; 
+	el2_data->phys_mem_start = el2_data->regions[0].base;
 
 	printk("EL2 system phys mem start %llx end %llx\n",
 		el2_data->phys_mem_start, el2_data->phys_mem_size);
@@ -186,16 +186,12 @@ void init_el2_data_page(void)
 		sizeof(struct el2_vm_info) * EL2_VM_INFO_SIZE);
 	el2_data->last_remap_ptr = 0;
 
-	el2_data->vm_info[0].shadow_pt_lock.lock = 0;
-
 	pool_start = el2_data->page_pool_start + STAGE2_CORE_PAGES_SIZE + STAGE2_HOST_POOL_SIZE;
 	for (i = 1; i < EL2_VM_INFO_SIZE - 1; i++) {
 		el2_data->vm_info[i].page_pool_start =
 			pool_start + (STAGE2_VM_POOL_SIZE * (i - 1));
-		el2_data->vm_info[i].used_pages = 0;
 		memset(__va(el2_data->vm_info[i].page_pool_start), 0, STAGE2_VM_POOL_SIZE);
 
-		//FIXME: init vm_info[i].vttbr here, or VMID
 		vmid64 = (u64)i;
 		vmid64 = vmid64 << VTTBR_VMID_SHIFT;
 		vttbr = el2_data->vm_info[i].page_pool_start;
@@ -204,17 +200,13 @@ void init_el2_data_page(void)
 
 	el2_data->vm_info[HOSTVISOR].page_pool_start =
 		el2_data->page_pool_start + STAGE2_CORE_PAGES_SIZE;
-	el2_data->vm_info[HOSTVISOR].used_pages = 0;
+	el2_data->host_vttbr = el2_data->vm_info[HOSTVISOR].page_pool_start;
+	el2_data->vm_info[HOSTVISOR].vttbr = el2_data->host_vttbr;
 
 	/* CORE POOL -> HOSTVISOR POOL -> VM POOL */
 	el2_data->vm_info[COREVISOR].page_pool_start =
 		el2_data->page_pool_start + CORE_PGD_START;
 	el2_data->vm_info[COREVISOR].used_pages = 0;
-
-
-	el2_data->host_vttbr = el2_data->vm_info[0].page_pool_start;
-	el2_data->vm_info[0].used_pages = 1;
-	el2_data->vm_info[0].vttbr = el2_data->host_vttbr;
 
 	/* FIXME: hardcode this for now */
 	el2_data->smmu_page_pool_start =
@@ -332,13 +324,21 @@ phys_addr_t host_alloc_pgd(unsigned int num)
 	struct el2_data *el2_data;
 
 	el2_data = kvm_ksym_ref(el2_data_start);
-	stage2_spin_lock(&el2_data->abs_lock);
+	stage2_spin_lock(&el2_data->abs_lock);	
 
 	/* Start allocating memory from the normal page pool */
 	start = el2_data->vm_info[COREVISOR].page_pool_start;
 	p_addr = (u64)start;
 
 	stage2_spin_unlock(&el2_data->abs_lock);
+	if (p_addr >= (start + CORE_PUD_BASE)) {
+		printk("BUG: pgd [start %lx paddr %lx pgd_pool_end %lx\n",
+			(unsigned long)el2_data->vm_info[COREVISOR].page_pool_start,
+			(unsigned long)p_addr, (unsigned long)(start + CORE_PUD_BASE)
+			);
+		BUG();
+	}
+
 	return (phys_addr_t)p_addr;
 }
 
@@ -358,6 +358,14 @@ phys_addr_t host_alloc_pud(unsigned int num)
 	el2_data->vm_info[COREVISOR].pud_used_pages += num;
 
 	stage2_spin_unlock(&el2_data->abs_lock);
+	if (p_addr >= (start + CORE_PMD_BASE)) {
+		printk("BUG: pud [start %lx paddr %lx pud_pool_end %lx\n",
+			(unsigned long)el2_data->vm_info[COREVISOR].page_pool_start,
+			(unsigned long)p_addr, (unsigned long)(start + CORE_PMD_BASE)
+			);
+		BUG();
+	}
+
 	return (phys_addr_t)p_addr;
 }
 
@@ -378,6 +386,14 @@ phys_addr_t host_alloc_pmd(unsigned int num)
 	el2_data->vm_info[COREVISOR].pmd_used_pages += num;
 
 	stage2_spin_unlock(&el2_data->abs_lock);
+	if (p_addr >= (start + CORE_PTE_BASE)) {
+		printk("BUG: pmd [start %lx paddr %lx pmd_pool_end %lx\n",
+			(unsigned long)el2_data->vm_info[COREVISOR].page_pool_start,
+			(unsigned long)p_addr, (unsigned long)(start + CORE_PTE_BASE)
+			);
+		BUG();
+	}
+
 	return (phys_addr_t)p_addr;
 }
 
@@ -397,6 +413,14 @@ phys_addr_t host_alloc_pte(unsigned int num)
 	el2_data->vm_info[COREVISOR].pte_used_pages += num;
 
 	stage2_spin_unlock(&el2_data->abs_lock);
+	if (p_addr >= el2_data->host_vttbr) {
+		printk("BUG: pte [start %lx paddr %lx host_vttbr %lx\n",
+			(unsigned long)el2_data->vm_info[COREVISOR].page_pool_start,
+			(unsigned long)p_addr, (unsigned long)el2_data->host_vttbr
+			);
+		BUG();
+	}	
+
 	return (phys_addr_t)p_addr;
 }
 
