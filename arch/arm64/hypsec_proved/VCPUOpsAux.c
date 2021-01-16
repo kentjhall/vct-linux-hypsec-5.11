@@ -122,7 +122,8 @@ void __hyp_text prep_abort(u32 vmid, u32 vcpuid)
 	Rd = (u32)((esr / 65536UL) % 32UL);
 	fault_ipa = (get_shadow_ctxt(vmid, vcpuid, V_HPFAR_EL2) / 16UL) * 4096UL;
 
-	if (fault_ipa < MAX_MMIO_ADDR)
+	//TODO: sync with verified code to support QEMU 3.0
+	if (fault_ipa < MAX_MMIO_ADDR || fault_ipa >= 0x4000000000)
 	{
 		/*if (fault_ipa > 0xc000000 && fault_ipa < 0xe000000) {
 		  u64 flags = get_shadow_ctxt(vmid, vcpuid, V_FLAGS);
