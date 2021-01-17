@@ -247,7 +247,7 @@ SECTIONS
 	stage2_pgs_end = .;
 
 	stage2_tmp_pgs_start = .;
-	. += STAGE2_TMP_PAGES_SIZE;
+	. += PAGE_SIZE;
 	stage2_tmp_pgs_end = .;
 
 	. = ALIGN(PAGE_SIZE);

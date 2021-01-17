@@ -149,18 +149,18 @@ void __hyp_text handle_host_hvc(struct s2_host_regs *hr)
 		__el2_arm_lpae_clear(hr->regs[1], hr->regs[2], hr->regs[3]);
 		//print_string("\rafter smmu clear\n");
 		break;
-	/*case HVC_BOOT_FROM_SAVED_VM:
-		__el2_boot_from_inc_exe((u32)hr->regs[1]);
-		break;
 	case HVC_ENCRYPT_BUF:
-		__el2_encrypt_buf((u32)hr->regs[1], (void*)hr->regs[2], (uint32_t)hr->regs[3]);
+		__el2_encrypt_buf((u32)hr->regs[1], hr->regs[2], hr->regs[3]);
 		break;
 	case HVC_DECRYPT_BUF:
 		__el2_decrypt_buf((u32)hr->regs[1], (void*)hr->regs[2], (uint32_t)hr->regs[3]);
 		break;
 	case HVC_SAVE_CRYPT_VCPU:
 		__save_encrypted_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
-		break;*/
+		break;
+	case HVC_LOAD_CRYPT_VCPU:
+                __load_encrypted_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
+                break;
 	case HVC_REGISTER_KVM:
 		ret = (int)register_kvm();
 		set_host_regs(0, ret);
@@ -213,6 +213,9 @@ int __hyp_text hypsec_set_vcpu_active(u32 vmid, int vcpu_id)
 		ret = 0;
 		goto out;
 	}
+
+	if (get_vcpu_first_run(vmid, vcpu_id) == 0)
+		set_vcpu_first_run(vmid, vcpu_id, 1);
 
 	int_vcpu = vcpu_id_to_int_vcpu(vm_info, vcpu_id);
 	if (int_vcpu->state == READY)

@@ -17,7 +17,7 @@ static void __hyp_text __vm_sysreg_save_common_state(struct shadow_vcpu_context 
 	 * The host arm64 Linux uses sp_el0 to point to 'current' and it must
 	 * therefore be saved/restored on every entry/exit to/from the guest.
 	 */
-	ctxt->regs[V_SP] = read_sysreg(sp_el0);
+	ctxt->gp_regs.regs.sp = read_sysreg(sp_el0);
 }
 
 static void __hyp_text __vm_sysreg_save_user_state(struct shadow_vcpu_context *ctxt)
@@ -48,15 +48,15 @@ static void __hyp_text __vm_sysreg_save_el1_state(struct shadow_vcpu_context *ct
 	ctxt->sys_regs[PAR_EL1] = read_sysreg(par_el1);
 	ctxt->sys_regs[TPIDR_EL1] = read_sysreg(tpidr_el1);
 
-	ctxt->regs[V_SP_EL1] = read_sysreg(sp_el1);
-	ctxt->regs[V_ELR_EL1] = read_sysreg_el1(elr);
-	ctxt->regs[V_SPSR_EL1] = read_sysreg_el1(spsr);
+	ctxt->gp_regs.sp_el1 = read_sysreg(sp_el1);
+	ctxt->gp_regs.elr_el1 = read_sysreg_el1(elr);
+	ctxt->gp_regs.spsr[0] = read_sysreg_el1(spsr);	
 }
 
 static void __hyp_text __vm_sysreg_save_el2_return_state(struct shadow_vcpu_context *ctxt)
 {
-	ctxt->regs[V_PC] = read_sysreg_el2(elr);
-	ctxt->regs[V_PSTATE] = read_sysreg_el2(spsr);
+	ctxt->gp_regs.regs.pc = read_sysreg_el2(elr);
+	ctxt->gp_regs.regs.pstate = read_sysreg_el2(spsr);
 }
 
 static void __hyp_text __vm_sysreg_restore_el1_state(struct shadow_vcpu_context *ctxt)
@@ -81,9 +81,9 @@ static void __hyp_text __vm_sysreg_restore_el1_state(struct shadow_vcpu_context 
 	write_sysreg(ctxt->sys_regs[PAR_EL1], par_el1);
 	write_sysreg(ctxt->sys_regs[TPIDR_EL1],	tpidr_el1);
 
-	write_sysreg(ctxt->regs[V_SP_EL1], sp_el1);
-	write_sysreg_el1(ctxt->regs[V_ELR_EL1],	elr);
-	write_sysreg_el1(ctxt->regs[V_SPSR_EL1], spsr);
+	write_sysreg(ctxt->gp_regs.sp_el1, sp_el1);
+	write_sysreg_el1(ctxt->gp_regs.elr_el1,	elr);
+	write_sysreg_el1(ctxt->gp_regs.spsr[0], spsr);
 }
 
 static void __hyp_text __vm_sysreg_restore_common_state(struct shadow_vcpu_context *ctxt)
@@ -94,14 +94,14 @@ static void __hyp_text __vm_sysreg_restore_common_state(struct shadow_vcpu_conte
 	 * The host arm64 Linux uses sp_el0 to point to 'current' and it must
 	 * therefore be saved/restored on every entry/exit to/from the guest.
 	 */
-	write_sysreg(ctxt->regs[V_SP], sp_el0);
+	write_sysreg(ctxt->gp_regs.regs.sp, sp_el0);
 }
 
 static void __hyp_text
 __vm_sysreg_restore_el2_return_state(struct shadow_vcpu_context *ctxt)
 {
-	write_sysreg_el2(ctxt->regs[V_PC], elr);
-	write_sysreg_el2(ctxt->regs[V_PSTATE], spsr);
+	write_sysreg_el2(ctxt->gp_regs.regs.pc, elr);
+	write_sysreg_el2(ctxt->gp_regs.regs.pstate, spsr);
 }
 
 static void __hyp_text

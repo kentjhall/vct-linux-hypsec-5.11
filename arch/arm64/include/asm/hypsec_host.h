@@ -56,6 +56,7 @@ struct int_vcpu {
 	int vcpu_pg_cnt;
 	enum hypsec_init_state state;
 	u32 ctxtid;
+	u32 first_run;
 };
 
 struct el2_vm_info {
@@ -71,8 +72,6 @@ struct el2_vm_info {
 	struct kvm *kvm;
 	struct int_vcpu int_vcpus[HYPSEC_MAX_VCPUS];
 	struct shadow_vcpu_context *shadow_ctxt[HYPSEC_MAX_VCPUS];
-	uint8_t key[16];
-	uint8_t iv[16];
 	uint8_t public_key[32];
 	bool powered_on;
 	/* For VM private pool */
@@ -132,6 +131,7 @@ struct el2_data {
         uint32_t hacl_hash0[64U];
 
 	uint8_t key[16];
+	uint8_t iv[16];
 
 	unsigned long smmu_page_pool_start;
 	unsigned long smmu_pgd_pool;
@@ -202,9 +202,6 @@ extern phys_addr_t el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 num);
 extern void el2_smmu_clear(u64 iova, u32 cbndx, u32 num);
 extern void hypsec_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
 
-void encrypt_buf(u32 vmid, void *buf, uint32_t len);
-void decrypt_buf(u32 vmid, void *buf, uint32_t len);
-
 extern void el2_boot_from_inc_exe(u32 vmid);
 extern bool el2_use_inc_exe(u32 vmid);
 
@@ -212,6 +209,7 @@ extern int el2_alloc_vm_info(struct kvm *kvm);
 
 int handle_pvops(u32 vmid, u32 vcpuid);
 void save_encrypted_vcpu(struct kvm_vcpu *vcpu);
+void load_encrypted_vcpu(u32 vmid, u32 vcpu_id);
 
 //extern void set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,
 //				unsigned long pgnum, u32 vmid);
@@ -268,8 +266,28 @@ static u64 inline get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index)
         struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	u64 val;
-	if (index < V_FAR_EL2)
-		val = el2_data->shadow_vcpu_ctxt[offset].regs[index]; 
+	if (index < 31)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.regs[index];
+	else if (index == V_SP)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.sp;
+	else if (index == V_PC)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.pc;
+	else if (index == V_PSTATE)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.pstate;
+	else if (index == V_SP_EL1)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.sp_el1;
+	else if (index == V_ELR_EL1)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.elr_el1;
+	else if (index == V_SPSR_EL1)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[0];
+	else if (index == V_SPSR_ABT)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[1];
+	else if (index == V_SPSR_UND)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[2];
+	else if (index == V_SPSR_IRQ)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[3];
+	else if (index == V_SPSR_FIQ)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[4];
 	else if (index == V_FAR_EL2)
 		val = el2_data->shadow_vcpu_ctxt[offset].far_el2;
 	else if (index == V_HPFAR_EL2)
@@ -298,8 +316,28 @@ static void inline set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
         struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	//el2_data->shadow_vcpu_ctxt[offset].regs[index] = value;
-	if (index < V_FAR_EL2)
-		el2_data->shadow_vcpu_ctxt[offset].regs[index] = value; 
+	if (index < 31)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.regs[index] = value;
+	else if (index == V_SP)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.sp = value;
+	else if (index == V_PC)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.pc = value;
+	else if (index == V_PSTATE)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.pstate = value;
+	else if (index == V_SP_EL1)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.sp_el1 = value;
+	else if (index == V_ELR_EL1)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.elr_el1 = value;
+	else if (index == V_SPSR_EL1)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[0] = value;
+	else if (index == V_SPSR_ABT)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[1] = value;
+	else if (index == V_SPSR_UND)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[2] = value;
+	else if (index == V_SPSR_IRQ)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[3] = value;
+	else if (index == V_SPSR_FIQ)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[4] = value;
 	else if (index == V_FAR_EL2)
 		el2_data->shadow_vcpu_ctxt[offset].far_el2 = value;
 	else if (index == V_HPFAR_EL2)

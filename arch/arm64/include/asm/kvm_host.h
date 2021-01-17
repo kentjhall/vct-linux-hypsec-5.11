@@ -82,6 +82,9 @@ struct kvm_arch {
 
 	/* Mandated version of PSCI */
 	u32 psci_version;
+#ifdef CONFIG_VERIFIED_KVM
+	bool resume_inc_exe;
+#endif
 };
 
 #define KVM_NR_MEM_OBJS     40
@@ -223,12 +226,12 @@ typedef struct kvm_cpu_context kvm_cpu_context_t;
 #define KVM_REGS_SIZE	7 + sizeof(struct user_pt_regs) / sizeof(u64) 
 
 struct shadow_vcpu_context {
-	/*struct kvm_regs gp_regs;
-	union {
+	struct kvm_regs gp_regs;
+	/*union {
 		u64 sys_regs[NR_SYS_REGS];
 		u32 copro[NR_COPRO_REGS];
 	};*/
-	u64 regs[KVM_REGS_SIZE];
+	//u64 regs[KVM_REGS_SIZE];
 	u64 far_el2;
 	u64 hpfar;
 	u64 hcr_el2;

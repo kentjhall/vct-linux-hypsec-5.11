@@ -311,7 +311,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 	__vm_sysreg_restore_state_nvhe_opt(prot_ctxt);
 
 	__fpsimd_save_state(&host_ctxt->gp_regs.fp_regs);
-	__fpsimd_restore_state(&prot_ctxt->fp_regs);
+	__fpsimd_restore_state(&prot_ctxt->gp_regs.fp_regs);
 
 	do {
 		/* Jump in the fire! */
@@ -336,7 +336,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 
 	__sysreg_restore_state_nvhe(host_ctxt);
 
-	__fpsimd_save_state(&prot_ctxt->fp_regs);
+	__fpsimd_save_state(&prot_ctxt->gp_regs.fp_regs);
 	__fpsimd_restore_state(&host_ctxt->gp_regs.fp_regs);
 
 	//__save_shadow_kvm_regs(vcpu, prot_ctxt, exit_code);

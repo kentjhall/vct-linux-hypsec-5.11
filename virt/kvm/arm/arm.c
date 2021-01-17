@@ -644,6 +644,9 @@ static int kvm_vcpu_first_run_init(struct kvm_vcpu *vcpu)
 		ret = el2_verify_and_load_images(kvm->arch.vmid);
 		kvm->verified = true;
 	}
+
+	if (kvm->arch.resume_inc_exe)
+		load_encrypted_vcpu(kvm->arch.vmid, vcpu->vcpu_id);
 	spin_unlock(&kvm->hypsec_lock);
 #endif
 
@@ -1345,13 +1348,38 @@ long kvm_arch_vm_ioctl(struct file *filp,
 	case KVM_ARM_ENCRYPT_BUF: {
 		struct page *page[1];
 		int npages;
+		struct kvm_user_encrypt kue;
+		unsigned long out;
 
-		npages = __get_user_pages_fast(arg, 1, 1, page);
-		if (npages == 1)
-			el2_encrypt_buf(kvm->arch.vmid,
-				(void *)(page_to_pfn(page[0]) << PAGE_SHIFT), PAGE_SIZE);
-		else
+		if (copy_from_user(&kue, argp, sizeof(kue))) {
+			printk("ENCRYPT_BUF: cannt copy from user\n");
 			return -EFAULT;
+		}
+
+		out = get_zeroed_page(GFP_KERNEL);
+		if (!out) {
+			printk("ENCRYPT_BUF: cant get zero page\n");
+			return -ENOMEM;
+		}
+
+		npages = __get_user_pages_fast(kue.uva, 1, 1, page);
+		if (npages == 1) {
+			el2_encrypt_buf(kvm->arch.vmid,
+                                (u64)(page_to_pfn(page[0]) << PAGE_SHIFT),
+                                (u64)__pa(out));
+                } else {
+			//printk("ENCRYPT_BUF: cant get user pages %lx\n", (unsigned long)kue.uva);
+			free_page(out);
+			return 0;
+                        //return -EFAULT;
+		}
+
+		if(copy_to_user((void*)kue.out_uva, (void*)out, PAGE_SIZE)) {
+			printk("ENCRYPT_BUF: cannt copy to user\n");
+			return -EFAULT;
+		}
+
+		free_page(out);
 
 		return 0;
 	}
@@ -1371,12 +1399,24 @@ long kvm_arch_vm_ioctl(struct file *filp,
 	}
 
 	case KVM_ARM_RESUME_INC_EXE: {
-		el2_boot_from_inc_exe(kvm->arch.vmid);
+		kvm->arch.resume_inc_exe = true;
 		return 0;
 	}
 	case KVM_ARM_GET_VMID: {
 		return kvm->arch.vmid;
 	}
+	case KVM_ARM_IS_ZERO_PAGE: {
+                struct page *page[1];
+                int npages;
+
+                npages = __get_user_pages_fast(arg, 1, 1, page);
+                if (npages == 1) {
+                        return 0;
+                } else {
+			printk("IS_ZERO_PAGE %lx\n", (unsigned long)arg);
+                        return 2;
+                }
+        }
 #endif
 	default:
 		return -EINVAL;
@@ -1671,6 +1711,14 @@ static int init_hyp_mode(void)
 			PAGE_HYP);
 	if (err) {
 		kvm_err("Cannot map stage 2 data pages\n");
+		goto out_err;
+	}
+
+	err = create_hyp_mappings((void *)kvm_ksym_ref(stage2_tmp_pgs_start),
+			(void *)kvm_ksym_ref(stage2_tmp_pgs_end),
+			PAGE_HYP);
+	if (err) {
+		kvm_err("Cannot map stage 2 tmp pages\n");
 		goto out_err;
 	}
 

@@ -55,7 +55,7 @@ void __hyp_text save_shadow_kvm_regs()
 void __hyp_text restore_shadow_kvm_regs()
 {
 	u64 dirty, ec, pc, addr, hpfar;
-	u32 vmid, vcpuid, inc_exe;
+	u32 vmid, vcpuid;
 
 	vmid = get_cur_vmid();
 	vcpuid = get_cur_vcpu_id();
@@ -64,8 +64,11 @@ void __hyp_text restore_shadow_kvm_regs()
 	if (dirty == INVALID64)
 	{
         	//TODO: fill in for management hvc call
-		reset_gp_regs(vmid, vcpuid);
-		reset_sys_regs(vmid, vcpuid);
+		if (vm_is_inc_exe(vmid) == 0U)
+		{
+			reset_gp_regs(vmid, vcpuid);
+			reset_sys_regs(vmid, vcpuid);
+		}
 
 		set_shadow_dirty_bit(vmid, vcpuid, 0UL);
     	}

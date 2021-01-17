@@ -118,7 +118,7 @@ static inline bool is_mmio_gpa(u64 addr)
 pmd_t *pmd_offset_el2(pud_t *pud, u64 addr);
 pte_t *pte_offset_el2(pmd_t *pmd, u64 addr);
 
-extern void el2_encrypt_buf(u32 vmid, void *buf, uint32_t len);
+extern void el2_encrypt_buf(u32 vmid, u64 buf, u64 out_buf);
 extern void el2_decrypt_buf(u32 vmid, void *buf, uint32_t len);
 
 extern void map_mem_el2(void);
@@ -128,8 +128,6 @@ extern void hypsec_tlb_flush_local_vmid(void);
 int map_el2_mem(unsigned long start, unsigned long end,
 			    unsigned long pfn, pgprot_t prot);
 void  __clear_vm_stage2_range(u32 vmid, phys_addr_t start, u64 size);
-void  __el2_encrypt_buf(u32 vmid, void *buf, uint32_t len);
-void  __el2_decrypt_buf(u32 vmid, void *buf, uint32_t len);
 
 u32 get_hpa_owner(phys_addr_t addr);
 #endif /* __ARM_STAGE2_MMU__ */

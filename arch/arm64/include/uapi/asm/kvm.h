@@ -160,6 +160,11 @@ struct kvm_boot_info {
 	__u8 *data;
 	__u64 addr;
 };
+
+struct kvm_user_encrypt {
+	__u64 uva;
+	__u64 out_uva;
+};
 #endif
 
 /* If you need to interpret the index values, here is the key: */

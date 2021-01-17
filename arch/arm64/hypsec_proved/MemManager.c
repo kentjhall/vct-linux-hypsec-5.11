@@ -90,11 +90,17 @@ void __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
 		map = get_pfn_map(pfn);
 		/* the page was mapped to another gfn already! */
 		// if gfn == map, it means someone in my VM has mapped it
-		if (gfn == map)
+		//if (gfn == map)
+		if (gfn == map || map == INVALID64)
 		{
  			if (count == INVALID_MEM)
 			{
 				set_pfn_count(pfn, 0U);
+			}
+
+			if (map == INVALID64)
+			{
+				set_pfn_map(pfn, gfn);
 			}
 		}
 		else

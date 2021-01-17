@@ -173,10 +173,15 @@ static void inline set_pmd_next(u32 vmid, u64 next) {
 	el2_data->vm_info[vmid].pte_used_pages += next;
 };
 
+#define HOST_PUD_BASE (PGD_BASE + PAGE_SIZE * 128)
+#define HOST_PMD_BASE (SZ_2M * 2)
 static u64 inline pgd_pool_end(u32 vmid) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
-	return pool_start + PUD_BASE;
+	if (vmid == HOSTVISOR)
+		return pool_start + HOST_PUD_BASE;
+	else
+		return pool_start + PUD_BASE;
 }
 
 static u64 inline pud_pool_end(u32 vmid) {
@@ -265,7 +270,7 @@ static void inline set_s2_page_count(u64 index, u32 count) {
     el2_data->s2_pages[index].count = count;
 }
 
-static u32 inline get_s2_page_gfn(u64 index) {
+static u64 inline get_s2_page_gfn(u64 index) {
     struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     return el2_data->s2_pages[index].gfn;
 }
@@ -319,6 +324,16 @@ static u32 inline get_vm_state(u32 vmid) {
 static void inline set_vm_state(u32 vmid, u32 state) {
     struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     el2_data->vm_info[vmid].state = state;
+}
+
+static u32 inline get_vcpu_first_run(u32 vmid, u32 vcpuid) {
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+    return el2_data->vm_info[vmid].int_vcpus[vcpuid].first_run;
+}
+
+static void inline set_vcpu_first_run(u32 vmid, u32 vcpuid, u32 state) {
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+    el2_data->vm_info[vmid].int_vcpus[vcpuid].first_run = state;
 }
 
 static u32 inline get_vcpu_state(u32 vmid, u32 vcpuid) {
@@ -697,6 +712,14 @@ static void inline release_lock_spt(void) {
     stage2_spin_unlock(&el2_data->spt_lock);
 };
 
+void encrypt_buf(u32 vmid, u64 in_buf, u64 out_buf, uint32_t len);
+void decrypt_buf(u32 vmid, u64 in_buf, u64 out_buf, uint32_t len);
+
+static u64 inline get_tmp_buf(void) {
+	u64 ret = (u64)kern_hyp_va((void*)&stage2_tmp_pgs_start);
+	return ret;
+};
+
 /*
  * PTAlloc
  */
@@ -818,7 +841,7 @@ void unmap_and_load_vm_image(u32 vmid, u64 target_addr, u64 remap_addr, u64 num)
  * BootOps
  */
 
-u32 is_inc_exe(u32 vmid);
+u32 vm_is_inc_exe(u32 vmid);
 void boot_from_inc_exe(u32 vmid);
 u64 search_load_info(u32 vmid, u64 addr);
 void set_vcpu_active(u32 vmid, u32 vcpuid);
@@ -859,7 +882,8 @@ void post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid, u64 addr);
 
 void save_shadow_kvm_regs(void);
 void restore_shadow_kvm_regs(void);
-//void save_encrypted_vcpu(u32 vmid, u32 vcpuid);
+void __save_encrypted_vcpu(u32 vmid, u32 vcpu_id);
+void __load_encrypted_vcpu(u32 vmid, u32 vcpu_id);
 
 /*
  * MmioOps
@@ -936,4 +960,14 @@ void clear_smmu_pt(u32 cbndx, u32 index);
 u64 unmap_smmu_pt(u32 cbndx, u32 index, u64 addr);
 u64 walk_smmu_pt(u32 cbndx, u32 num, u64 addr);
 void set_smmu_pt(u32 cbndx, u32 num, u64 addr, u64 pte);
+
+/*
+ * Management
+ */
+void __el2_encrypt_buf(u32 vmid, u64 buf, u64 out_buf);
+void __el2_decrypt_buf(u32 vmid, void *buf, u32 len);
+extern void decrypt_gp_regs(u32 vmid, u32 vcpu_id);
+extern void encrypt_gp_regs(u32 vmid, u32 vcpu_id);
+extern void decrypt_sys_regs(u32 vmid, u32 vcpu_id);
+extern void encrypt_sys_regs(u32 vmid, u32 vcpu_id);
 #endif //HYPSEC_HYPSEC_H

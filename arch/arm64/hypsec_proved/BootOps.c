@@ -303,7 +303,7 @@ void __hyp_text map_io(u32 vmid, u64 gpa, u64 pa)
 	release_lock_vm(vmid);
 }
 
- u32 __hyp_text is_inc_exe(u32 vmid)
+ u32 __hyp_text vm_is_inc_exe(u32 vmid)
 {
 	u32 inc_exe;
 	acquire_lock_vm(vmid);
@@ -312,14 +312,84 @@ void __hyp_text map_io(u32 vmid, u64 gpa, u64 pa)
 	return check(inc_exe);
 }
 
-//FIXME: do we need this?
-/*
-void __hyp_text boot_from_inc_exe(u32 vmid)
+void __hyp_text __save_encrypted_vcpu(u32 vmid, u32 vcpu_id)
 {
-    acquire_lock_vm(vmid);
-    set_vm_inc_exe(vmid, 1U);
-    release_lock_vm(vmid);
+	encrypt_gp_regs(vmid, vcpu_id);
+	encrypt_sys_regs(vmid, vcpu_id);
 }
-*/
 
-//TODO: add save_encrypted_vcpu, load_encrypted_vcpu, save_encrypt_buf, load_decrypt_buf
+void __hyp_text __load_encrypted_vcpu(u32 vmid, u32 vcpu_id)
+{
+	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
+
+	acquire_lock_vm(vmid);
+	if (get_vcpu_first_run(vmid, vcpu_id) != 0)
+	{
+		v_panic();
+	}
+	else
+	{
+		decrypt_gp_regs(vmid, vcpu_id);
+		decrypt_sys_regs(vmid, vcpu_id);
+
+		if (vm_info->inc_exe == false)
+		{
+			vm_info->inc_exe = true;
+		}
+	}
+	release_lock_vm(vmid);
+}
+
+void __hyp_text __el2_encrypt_buf(u32 vmid, u64 buf, u64 out_buf)
+{
+        phys_addr_t hpa = (phys_addr_t)buf;
+	u64 tmp_pa;
+	u64 pfn = (u64)buf >> PAGE_SHIFT;
+	u64 pfn_out = (u64)out_buf >> PAGE_SHIFT;
+
+	acquire_lock_s2page();
+
+	if (get_pfn_owner(pfn) != vmid || get_pfn_owner(pfn_out) != HOSTVISOR)
+	{
+		v_panic();
+	}
+	else
+	{
+		tmp_pa = get_tmp_buf();
+        	encrypt_buf(vmid, (u64)__el2_va(hpa), (u64)tmp_pa, PAGE_SIZE);
+        	el2_memcpy(__el2_va(out_buf), (void*)tmp_pa, PAGE_SIZE);
+	}
+
+	release_lock_s2page();
+}
+
+void __hyp_text __el2_decrypt_buf(u32 vmid, void *buf, u32 len)
+{
+	u64 pfn = (u64)buf >> PAGE_SHIFT;
+        u64 tmp_pa;
+	u32 vm_state;
+
+	acquire_lock_vm(vmid);
+
+	vm_state = get_vm_state(vmid);
+	if (vm_state != READY)
+	{
+		v_panic();
+	}
+	else
+	{
+		acquire_lock_s2page();
+
+		tmp_pa = get_tmp_buf();
+		set_pfn_owner(pfn, vmid);
+		set_pfn_map(pfn, INVALID64);
+		clear_pfn_host(pfn);
+
+		decrypt_buf(vmid, (u64)__el2_va(buf), (u64)tmp_pa, len);
+		el2_memcpy(__el2_va(buf), (void*)tmp_pa, PAGE_SIZE);
+
+		release_lock_s2page();
+	}
+
+	release_lock_vm(vmid);
+}

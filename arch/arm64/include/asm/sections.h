@@ -38,6 +38,8 @@ extern char el2_data_start[];
 extern char el2_data_end[];
 extern char shared_data_start[];
 extern char shared_data_end[];
+extern char stage2_tmp_pgs_start[];
+extern char stage2_tmp_pgs_end[];
 #endif
 
 #endif /* __ASM_SECTIONS_H */
