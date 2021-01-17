@@ -104,9 +104,8 @@
 #define STAGE2_INIT_PGTABLE_LEVELS     3
 
 //use the following for multi-vm
-//#define STAGE2_HOST_POOL_SIZE  SZ_2M * 128
 #define STAGE2_HOST_POOL_SIZE	SZ_2M * 100
-#define STAGE2_VM_POOL_SIZE	SZ_2M * 8
+#define STAGE2_VM_POOL_SIZE	SZ_2M * 4
 #define STAGE2_NORM_PAGES_SIZE 	STAGE2_VM_POOL_SIZE * 64
 //use the following for multi-vm
 //#define STAGE2_CORE_PAGES_SIZE         SZ_2M * 80

@@ -234,8 +234,8 @@ void init_el2_data_page(void)
 		el2_data->per_cpu_data[i].vcpu_id = i;
 	}
 
-	el2_data->core_start = __pa(kvm_ksym_ref(stage2_pgs_start));
-	el2_data->core_end = __pa(kvm_ksym_ref(el2_data_end));
+	el2_data->core_start = __pa_symbol(stage2_pgs_start);
+	el2_data->core_end = __pa_symbol(el2_data_end);
 
 	init_hacl_hash(el2_data);
 	//test_aes(el2_data);
