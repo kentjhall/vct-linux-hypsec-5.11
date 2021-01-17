@@ -187,7 +187,10 @@ static u64 inline pgd_pool_end(u32 vmid) {
 static u64 inline pud_pool_end(u32 vmid) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
 	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
-	return pool_start + PMD_BASE;
+	if (vmid == HOSTVISOR)
+		return pool_start + HOST_PMD_BASE;
+	else
+		return pool_start + PMD_BASE;
 }
 
 static u64 inline pmd_pool_end(u32 vmid) {
