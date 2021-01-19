@@ -32,15 +32,6 @@
 	} while (i < 4);
 }*/
 
-void __hyp_text handle_host_stage2_fault(unsigned long host_lr,
-					struct s2_host_regs *host_regs)
-{
-	phys_addr_t addr = (read_sysreg(hpfar_el2) & HPFAR_MASK) << 8;
-	set_per_cpu_host_regs((u64)host_regs);
-	if (emulate_mmio(addr, read_sysreg(esr_el2)) == INVALID64)
-		map_page_host(addr);
-}
-
 //added by shih-wei
 struct el2_vm_info* __hyp_text vmid_to_vm_info(u32 vmid)
 {

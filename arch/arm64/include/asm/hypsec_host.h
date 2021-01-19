@@ -207,7 +207,7 @@ extern bool el2_use_inc_exe(u32 vmid);
 
 extern int el2_alloc_vm_info(struct kvm *kvm);
 
-int handle_pvops(u32 vmid, u32 vcpuid);
+u32 handle_pvops(u32 vmid, u32 vcpuid);
 void save_encrypted_vcpu(struct kvm_vcpu *vcpu);
 void load_encrypted_vcpu(u32 vmid, u32 vcpu_id);
 
