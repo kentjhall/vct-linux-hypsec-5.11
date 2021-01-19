@@ -35,3 +35,5 @@ obj-y += SmmuPTAlloc.o
 obj-y += SmmuPTOps.o
 obj-y += SmmuPTWalk.o
 obj-y += SmmuSPTWalk.o
+
+obj-y += TrapDispatcher.o
