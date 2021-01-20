@@ -70,6 +70,11 @@ static void inline fetch_from_doracle(u32 vmid, u64 pfn, u64 pgnum) {
 };
 extern void reset_fp_regs(u32 vmid, int vcpu_id);
 
+static u64 inline get_vm_fault_addr(u32 vmid, u32 vcpuid) {
+	u64 hpfar;
+	hpfar = get_shadow_ctxt(vmid, vcpuid, V_HPFAR_EL2);
+	return ((hpfar & HPFAR_MASK) * 256UL);
+}
 
 /*
 void    acquire_lock_pt(u32 vmid);

@@ -54,7 +54,7 @@ void __hyp_text save_shadow_kvm_regs()
 //TODO: Xupeng, please sync
 void __hyp_text restore_shadow_kvm_regs()
 {
-	u64 dirty, ec, pc, addr, hpfar;
+	u64 dirty, ec, pc, addr;
 	u32 vmid, vcpuid;
 
 	vmid = get_cur_vmid();
@@ -94,8 +94,7 @@ void __hyp_text restore_shadow_kvm_regs()
 
 		set_shadow_dirty_bit(vmid, vcpuid, 0UL);
 		set_shadow_ctxt(vmid, vcpuid, V_FAR_EL2, 0UL);
-		hpfar = get_shadow_ctxt(vmid, vcpuid, V_HPFAR_EL2);
-		addr = (hpfar & HPFAR_MASK) * 256UL;
+		addr = get_vm_fault_addr(vmid, vcpuid);
 
 		//TODO: Xupeng did not do exactly the same here...
 		// https://github.com/VeriGu/certikos_columbia/blob/master/hypsec/code/VCPUOps.c
