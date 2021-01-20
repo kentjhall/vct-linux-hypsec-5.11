@@ -769,6 +769,7 @@ u32 get_level_s2pt(u32 vmid, u64 addr);
 u64 walk_s2pt(u32 vmid, u64 addr);
 void mmap_s2pt(u32 vmid, u64 addr, u32 level, u64 pte);
 void clear_pfn_host(u64 pfn);
+extern void kvm_tlb_flush_vmid_ipa_host(phys_addr_t ipa);
 
 /*
  * MemRegion
