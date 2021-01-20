@@ -14,7 +14,6 @@ void __hyp_text clear_vm_range(u32 vmid, u64 pfn, u64 num)
 	}
 }
 
-#define PMD_PAGE_NUM	512
 void __hyp_text prot_and_map_vm_s2pt(u32 vmid, u64 addr, u64 pte, u32 level)
 {
 	u64 pfn, gfn, num, target_addr;
@@ -55,9 +54,6 @@ void __hyp_text grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
 {
 	u32 level;
 	u64 pte, pte_pa, pfn, len;
-	//u64 len = (size & (PAGE_SIZE - 1) ? 1 : 0);
-	//if (size >> PAGE_SHIFT)
-	//	len += size >> PAGE_SHIFT;
 
 	len = (size + 4095) / PAGE_SIZE;
 	while (len > 0UL)
@@ -80,7 +76,6 @@ void __hyp_text grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
 			pfn = pte_pa / PAGE_SIZE;
 			if (level == 2U)
 			{
-				//pfn += (addr & (PMD_SIZE - 1)) / PAGE_SIZE;
 				pfn += addr / PAGE_SIZE & 511;
 			}
 			grant_vm_page(vmid, pfn);
@@ -94,9 +89,6 @@ void __hyp_text revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
 {
 	u32 level;
 	u64 pte, pte_pa, pfn, len;
-	//u64 len = (size & (PAGE_SIZE - 1) ? 1 : 0);
-	//if (size >> PAGE_SHIFT)
-	//	len += size >> PAGE_SHIFT;
 
 	len = (size + 4095) / PAGE_SIZE;
 	while (len > 0UL)
@@ -119,7 +111,6 @@ void __hyp_text revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
 			pfn = pte_pa / PAGE_SIZE;
 			if (level == 2U)
 			{
-				//pfn += (addr & (PMD_SIZE - 1)) / PAGE_SIZE;
 				pfn += addr / PAGE_SIZE & 511;
 			}
 			revoke_vm_page(vmid, pfn);
