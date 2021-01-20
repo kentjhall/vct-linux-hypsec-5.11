@@ -327,7 +327,11 @@ static void unmap_stage2_range(struct kvm *kvm, phys_addr_t start, u64 size)
 	} while (pgd++, addr = next, addr != end);
 
 #ifdef CONFIG_VERIFIED_KVM
-	clear_vm_stage2_range(kvm->arch.vmid, start, size);
+	if (size == KVM_PHYS_SIZE) {
+		size = mach_phys_mem_size;
+		start = mach_phys_mem_start;
+		clear_vm_stage2_range(kvm->arch.vmid, start, size);
+	}
 #endif
 }
 

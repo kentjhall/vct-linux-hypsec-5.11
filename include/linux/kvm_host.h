@@ -1296,4 +1296,9 @@ static inline int kvm_arch_vcpu_run_pid_change(struct kvm_vcpu *vcpu)
 }
 #endif /* CONFIG_HAVE_KVM_VCPU_RUN_PID_CHANGE */
 
+#ifdef CONFIG_VERIFIED_KVM
+extern u64 mach_phys_mem_start;
+extern u64 mach_phys_mem_size;
+#endif
+
 #endif

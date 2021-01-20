@@ -97,7 +97,7 @@ void __hyp_text	handle_host_hvc(struct s2_host_regs *hr)
 	}
 	else if (callno == HVC_CLEAR_VM_S2_RANGE)
 	{
-		__clear_vm_stage2_range((u32)arg1, arg2, arg3);
+		el2_clear_vm_stage2_range((u32)arg1, arg2, arg3);
 	}
 	else if (callno == HVC_SET_BOOT_INFO)
 	{

@@ -128,38 +128,3 @@ void __hyp_text revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size)
 		len -= 1UL;
 	}
 }
-
-//TODO: FIXME: Xupeng does not have this
-void __hyp_text __clear_vm_range(u32 vmid, u64 start, u64 size)
-{
-	u64 pfn = start >> PAGE_SHIFT;
-	u64 num = size / PAGE_SIZE;
-	while (num > 0UL)
-	{
-		clear_vm_page(vmid, pfn);
-		pfn += 1UL;
-		num -= 1UL;
-	}
-}
-
-//TODO: FIXME: Xupeng does not have this
-void __hyp_text __clear_vm_stage2_range(u32 vmid, u64 start, u64 size)
-{
-	u32 poweron = get_vm_poweron(vmid);
-	if (size == KVM_PHYS_SIZE && poweron == 0U)
-	{
-		u32 n = get_mem_region_cnt(), i = 0U;
-		while (i < n)
-		{
-			u64 base = get_mem_region_base(i);
-			u64 sz = get_mem_region_size(i);
-			u64 flags = get_mem_region_flag(i);
-			if ((flags & MEMBLOCK_NOMAP) == 0)
-			{
-				__clear_vm_range(vmid, base, sz);
-			}
-
-			i++;
-		}
-	}
-}

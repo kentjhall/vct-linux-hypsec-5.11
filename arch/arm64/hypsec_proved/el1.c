@@ -20,6 +20,9 @@
 
 #include "hypsec.h"
 
+u64 mach_phys_mem_start;
+u64 mach_phys_mem_size;
+
 //hypsec_host.c
 #define Op0(_x) 	.Op0 = _x
 #define Op1(_x) 	.Op1 = _x
@@ -159,6 +162,11 @@ void init_el2_data_page(void)
 	}
 	el2_data->regions_cnt = i;
 	el2_data->phys_mem_start = el2_data->regions[0].base;
+
+	smp_wmb();
+
+	mach_phys_mem_start = el2_data->phys_mem_start;
+	mach_phys_mem_size = el2_data->phys_mem_size;
 
 	printk("EL2 system phys mem start %llx end %llx\n",
 		el2_data->phys_mem_start, el2_data->phys_mem_size);
