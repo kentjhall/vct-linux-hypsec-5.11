@@ -275,8 +275,7 @@ int __hyp_text __kvm_vcpu_run_nvhe(u32 vmid, int vcpu_id)
 	struct shadow_vcpu_context *prot_ctxt;
 
 	/* check if vm is verified and vcpu is already active. */
-	if (!hypsec_set_vcpu_active(vmid, vcpu_id))
-		return 0;
+	hypsec_set_vcpu_active(vmid, vcpu_id);
 	set_per_cpu(vmid, vcpu_id);
 
 	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);

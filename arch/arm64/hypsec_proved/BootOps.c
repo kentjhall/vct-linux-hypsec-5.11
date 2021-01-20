@@ -317,7 +317,7 @@ void __hyp_text __save_encrypted_vcpu(u32 vmid, u32 vcpu_id)
 
 void __hyp_text __load_encrypted_vcpu(u32 vmid, u32 vcpu_id)
 {
-	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
+	u32 inc_exe;
 
 	acquire_lock_vm(vmid);
 	if (get_vcpu_first_run(vmid, vcpu_id) != 0)
@@ -328,10 +328,10 @@ void __hyp_text __load_encrypted_vcpu(u32 vmid, u32 vcpu_id)
 	{
 		decrypt_gp_regs(vmid, vcpu_id);
 		decrypt_sys_regs(vmid, vcpu_id);
-
-		if (vm_info->inc_exe == false)
+		inc_exe = get_vm_inc_exe(vmid);
+		if (inc_exe == false)
 		{
-			vm_info->inc_exe = true;
+			set_vm_inc_exe(vmid, true);
 		}
 	}
 	release_lock_vm(vmid);

@@ -33,48 +33,42 @@
 }*/
 
 //added by shih-wei
-struct el2_vm_info* __hyp_text vmid_to_vm_info(u32 vmid)
+void __hyp_text hypsec_set_vcpu_active(u32 vmid, int vcpu_id)
 {
-	struct el2_data *el2_data;
+	u32 state, first_run, vcpu_state;
 
-	el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	if (vmid < EL2_MAX_VMID)
-		return &el2_data->vm_info[vmid];
-	else
-		__hyp_panic();
-}
-
-struct int_vcpu* __hyp_text vcpu_id_to_int_vcpu(
-			struct el2_vm_info *vm_info, int vcpu_id)
-{
-	if (vcpu_id < 0 || vcpu_id >= HYPSEC_MAX_VCPUS)
-		return NULL;
-	else
-		return &vm_info->int_vcpus[vcpu_id];
-}
-int __hyp_text hypsec_set_vcpu_active(u32 vmid, int vcpu_id)
-{
-	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
-	struct int_vcpu *int_vcpu;
-	int ret = 1;
-
-	stage2_spin_lock(&vm_info->vm_lock);
-	if (vm_info->state != VERIFIED) {
-		ret = 0;
-		goto out;
+	acquire_lock_vm(vmid);
+	state = get_vm_state(vmid);
+	if (state != VERIFIED)
+	{
+		v_panic();
 	}
-
-	if (get_vcpu_first_run(vmid, vcpu_id) == 0)
-		set_vcpu_first_run(vmid, vcpu_id, 1);
-
-	int_vcpu = vcpu_id_to_int_vcpu(vm_info, vcpu_id);
-	if (int_vcpu->state == READY)
-		int_vcpu->state = ACTIVE;
 	else
-		ret = 0;
-out:
-	stage2_spin_unlock(&vm_info->vm_lock);
-	return ret;
+	{
+		first_run = get_vcpu_first_run(vmid, vcpu_id);
+		if (first_run == 0U)
+		{
+			set_vcpu_first_run(vmid, vcpu_id, 1U);
+		}
+
+		vcpu_state = get_vcpu_state(vmid, vcpu_id);
+		if (vcpu_state == READY)
+		{
+			set_vcpu_state(vmid, vcpu_id, ACTIVE);
+		}
+		else
+		{
+			v_panic();
+		}
+	}
+	release_lock_vm(vmid);
+}
+
+void __hyp_text hypsec_set_vcpu_state(u32 vmid, int vcpu_id, int state)
+{
+	acquire_lock_vm(vmid);
+	set_vcpu_state(vmid, vcpu_id, state);
+	release_lock_vm(vmid);
 }
 
 struct kvm_vcpu* __hyp_text hypsec_vcpu_id_to_vcpu(u32 vmid, int vcpu_id)
@@ -125,28 +119,6 @@ struct shadow_vcpu_context* __hyp_text hypsec_vcpu_id_to_shadow_ctxt(
 	else
 		return shadow_ctxt;
 }
-
-void __hyp_text hypsec_set_vcpu_state(u32 vmid, int vcpu_id, int state)
-{
-	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
-	struct int_vcpu *int_vcpu;
-
-	stage2_spin_lock(&vm_info->vm_lock);
-	int_vcpu = vcpu_id_to_int_vcpu(vm_info, vcpu_id);
-	int_vcpu->state = state;
-	stage2_spin_unlock(&vm_info->vm_lock);
-}
-
-/*
-void __hyp_text map_vgic_to_vm(u32 vmid)
-{
-	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	unsigned long vgic_cpu_gpa = 0x08010000;
-	u64 pte = el2_data->vgic_cpu_base + (pgprot_val(PAGE_S2_DEVICE) | S2_RDWR);
-	mmap_s2pt(vmid, vgic_cpu_gpa, 3U, pte);
-	mmap_s2pt(vmid, vgic_cpu_gpa + PAGE_SIZE, 3U, pte + PAGE_SIZE);
-}
-*/
 
 #define CURRENT_EL_SP_EL0_VECTOR	0x0
 #define CURRENT_EL_SP_ELx_VECTOR	0x200
