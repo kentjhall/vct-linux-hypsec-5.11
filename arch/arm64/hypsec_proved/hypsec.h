@@ -891,7 +891,7 @@ void __load_encrypted_vcpu(u32 vmid, u32 vcpu_id);
 /*
  * MmioOps
  */
-u64 emulate_mmio(u64 addr, u32 hsr);
+u32 emulate_mmio(u64 addr, u32 hsr);
 void   __el2_free_smmu_pgd(u32 cbndx, u32 index);
 void   __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index);
 void  __el2_arm_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index);
@@ -905,7 +905,7 @@ u64 el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index);
  * MmioOpsAux
  */
 void handle_host_mmio(u64 index, u32 hsr);
-u64 is_smmu_range(u64 addr);
+u32 is_smmu_range(u64 addr);
 
 /*
  * MmioCore

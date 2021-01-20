@@ -1,15 +1,14 @@
 #include "hypsec.h"
 #include "MmioOps.h"
 
-//TODO: change it to return u32
-u64 __hyp_text is_smmu_range(u64 addr)
+u32 __hyp_text is_smmu_range(u64 addr)
 {
-	u32 total_smmu, i;
-	u64 res, base, size;
+	u32 total_smmu, i, res;
+	u64 base, size;
 
 	total_smmu = get_smmu_num();
 	i = 0U;
-	res = INVALID64;
+	res = V_INVALID;
 
 	while (i < total_smmu)
 	{

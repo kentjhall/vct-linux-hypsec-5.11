@@ -2,13 +2,13 @@
 #include "MmioOps.h"
 
 //TODO: update to deal with u32 in ret here
-u64 __hyp_text emulate_mmio(u64 addr, u32 hsr)
+u32 __hyp_text emulate_mmio(u64 addr, u32 hsr)
 {
-	u64 ret;
+	u32 ret;
 
 	acquire_lock_smmu();
 	ret = is_smmu_range(addr);
-	if (ret != INVALID64)
+	if (ret != V_INVALID)
 	{
 		handle_host_mmio(ret, hsr);
 	}
