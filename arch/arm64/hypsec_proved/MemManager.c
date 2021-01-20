@@ -21,7 +21,7 @@ void __hyp_text map_page_host(u64 addr)
 	{
 		perm = pgprot_val(PAGE_S2_DEVICE);
 		perm |= S2_RDWR;
-		new_pte = pfn * PAGE_SIZE + perm;
+		new_pte = (pfn * PAGE_SIZE) | perm;
 		mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
 	}
 	else
@@ -29,7 +29,7 @@ void __hyp_text map_page_host(u64 addr)
 		if (owner == HOSTVISOR || count > 0U)
 		{
 			perm = pgprot_val(PAGE_S2_KERNEL);
-			new_pte = pfn * PAGE_SIZE + perm;
+			new_pte = (pfn * PAGE_SIZE) | perm;
 			mmap_s2pt(HOSTVISOR, addr, 3U, new_pte);
 		}
 		else
@@ -86,11 +86,9 @@ void __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
 	} 
 	else if (owner == vmid)
 	{
-		//TODO: why is Xupeng doing things differently?
 		map = get_pfn_map(pfn);
 		/* the page was mapped to another gfn already! */
 		// if gfn == map, it means someone in my VM has mapped it
-		//if (gfn == map)
 		if (gfn == map || map == INVALID64)
 		{
  			if (count == INVALID_MEM)
@@ -124,13 +122,13 @@ void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 	if (level == 2U)
 	{
 		/* TODO: FIXME: verified code has pte = paddr | perm; */
-		pte = paddr + perm;
+		pte = paddr | perm;
 		pte &= ~PMD_TABLE_BIT;
 		mmap_s2pt(vmid, addr, 2U, pte);
 	}
 	else if (level == 3U)
 	{
-		pte = paddr + perm;
+		pte = paddr | perm;
 		mmap_s2pt(vmid, addr, 3U, pte);
 	}
 }
