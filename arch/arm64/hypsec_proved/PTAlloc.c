@@ -11,8 +11,9 @@ u64 __hyp_text alloc_s2pt_pgd(u32 vmid)
 	next = get_pgd_next(vmid);
 	end = pgd_pool_end(vmid);
 
-	if (next + PAGE_SIZE <= end) {
-		set_pgd_next(vmid, 1);
+	if (next + PAGE_SIZE <= end)
+	{
+		set_pgd_next(vmid, next + PAGE_SIZE);
 	}
 	else
 	{
@@ -31,8 +32,9 @@ u64 __hyp_text alloc_s2pt_pud(u32 vmid)
 	next = get_pud_next(vmid);
 	end = pud_pool_end(vmid);
 
-	if (next + PAGE_SIZE <= end) {
-		set_pud_next(vmid, 1);
+	if (next + PAGE_SIZE <= end)
+	{
+		set_pud_next(vmid, next + PAGE_SIZE);
 	}
 	else
 	{
@@ -53,7 +55,7 @@ u64 __hyp_text alloc_s2pt_pmd(u32 vmid)
 
 	if (next + PAGE_SIZE <= end)
 	{
-		set_pmd_next(vmid, 1);
+		set_pmd_next(vmid, next + PAGE_SIZE);
 	}
 	else
 	{

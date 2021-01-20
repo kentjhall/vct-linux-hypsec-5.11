@@ -86,8 +86,6 @@ void    acquire_lock_pt(u32 vmid);
 void    release_lock_pt(u32 vmid);
 u64	pool_start(u32 vmid);
 u64	pool_end(u32 vmid);
-u64     get_pt_next(u32 vmid);
-void    set_pt_next(u32 vmid, u64 next);
 u64     pt_load(u32 vmid, u64 addr);
 void    pt_store(u32 vmid, u64 addr, u64 value);
 u64     get_pt_vttbr(u32 vmid);
@@ -102,33 +100,6 @@ static void inline acquire_lock_pt(u32 vmid) {
 static void inline release_lock_pt(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     stage2_spin_unlock(&el2_data->vm_info[vmid].shadow_pt_lock);
-};
-
-static u64 inline pool_start(u32 vmid) {
-        struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
-	return el2_data->vm_info[vmid].page_pool_start;
-}
-
-static u64 inline pool_end(u32 vmid) {
-    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
-	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
-	if (vmid == COREVISOR)
-		return pool_start + STAGE2_CORE_PAGES_SIZE;
-	else if (vmid == HOSTVISOR)
-		return pool_start + STAGE2_CORE_PAGES_SIZE + STAGE2_HOST_POOL_SIZE;
-	return pool_start + PT_POOL_PER_VM;
-}
-
-static u64 inline get_pt_next(u32 vmid) {
-    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
-	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
-	u64 used_pages = el2_data->vm_info[vmid].used_pages;
-	return pool_start + used_pages * PAGE_SIZE;
-};
-
-static void inline set_pt_next(u32 vmid, u64 next) {
-    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
-	el2_data->vm_info[vmid].used_pages += next;
 };
 
 // TODO: make the following work
@@ -149,38 +120,32 @@ static void inline pt_store(u32 vmid, u64 addr, u64 value) {
 #define PMD_BASE SZ_2M
 static u64 inline get_pgd_next(u32 vmid) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
-	u64 used_pages = el2_data->vm_info[vmid].pud_used_pages;
-	return pool_start + (used_pages * PAGE_SIZE) + PGD_BASE;
+	return el2_data->vm_info[vmid].pgd_pool;
 };
 
 static void inline set_pgd_next(u32 vmid, u64 next) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	el2_data->vm_info[vmid].pud_used_pages += next;
+	el2_data->vm_info[vmid].pgd_pool = next;
 };
 
 static u64 inline get_pud_next(u32 vmid) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
-	u64 used_pages = el2_data->vm_info[vmid].pmd_used_pages;
-	return pool_start + (used_pages * PAGE_SIZE) + PUD_BASE;
+	return el2_data->vm_info[vmid].pud_pool;
 };
 
 static void inline set_pud_next(u32 vmid, u64 next) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	el2_data->vm_info[vmid].pmd_used_pages += next;
+	el2_data->vm_info[vmid].pud_pool = next;
 };
 
 static u64 inline get_pmd_next(u32 vmid) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
-	u64 used_pages = el2_data->vm_info[vmid].pte_used_pages;
-	return pool_start + (used_pages * PAGE_SIZE) + PMD_BASE;
+	return el2_data->vm_info[vmid].pmd_pool;
 };
 
 static void inline set_pmd_next(u32 vmid, u64 next) {
 	struct el2_data *el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
-	el2_data->vm_info[vmid].pte_used_pages += next;
+	el2_data->vm_info[vmid].pmd_pool = next;
 };
 
 #define HOST_PUD_BASE (PGD_BASE + PAGE_SIZE * 128)

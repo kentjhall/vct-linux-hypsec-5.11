@@ -76,10 +76,10 @@ struct el2_vm_info {
 	bool powered_on;
 	/* For VM private pool */
 	u64 page_pool_start;
+	u64 pgd_pool;
+	u64 pud_pool;
+	u64 pmd_pool;
 	unsigned long used_pages;
-	unsigned long pmd_used_pages;
-	unsigned long pud_used_pages;
-	unsigned long pte_used_pages;
 };
 
 struct el2_data {
