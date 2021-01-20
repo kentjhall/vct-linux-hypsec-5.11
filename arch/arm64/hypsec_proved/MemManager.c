@@ -125,7 +125,6 @@ void __hyp_text map_pfn_vm(u32 vmid, u64 addr, u64 pte, u32 level)
 
 	if (level == 2U)
 	{
-		/* TODO: FIXME: verified code has pte = paddr | perm; */
 		pte = paddr | perm;
 		pte &= ~PMD_TABLE_BIT;
 		mmap_s2pt(vmid, addr, 2U, pte);
@@ -203,7 +202,6 @@ void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 			clear_pfn_host(pfn);
 			set_pfn_owner(pfn, vmid);
 			set_pfn_map(pfn, gfn);
-			//TODO: we use INVALID in the verified code
 			set_pfn_count(pfn, INVALID_MEM);
 		}
 		else {
@@ -226,7 +224,6 @@ void __hyp_text assign_pfn_to_smmu(u32 vmid, u64 gfn, u64 pfn)
 	release_lock_s2page();
 }
 
-//TODO: double check this function, very different from LXP's codebase
 void __hyp_text update_smmu_page(u32 vmid, u32 cbndx, u32 index, u64 iova, u64 pte)
 {
 	u64 pfn, gfn;
