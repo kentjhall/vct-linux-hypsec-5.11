@@ -107,6 +107,10 @@ void __hyp_text assign_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn)
 			v_panic();
 		}
 	}
+	else
+	{
+		v_panic();
+	}
 	__flush_dcache_area(__el2_va(pfn << PAGE_SHIFT), PAGE_SIZE);
 	release_lock_s2page();
 }
