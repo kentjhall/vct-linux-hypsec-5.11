@@ -37,7 +37,6 @@ void __hyp_text  __el2_free_smmu_pgd(u32 cbndx, u32 index)
 	release_lock_smmu();
 }
 
-//FIXME: need to fix this
 void __hyp_text  __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index)
 {
 	u32 target_vmid, num_context_banks;

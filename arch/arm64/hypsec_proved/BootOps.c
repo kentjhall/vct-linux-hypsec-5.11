@@ -211,9 +211,6 @@ void __hyp_text verify_and_load_images(u32 vmid)
 	release_lock_vm(vmid);
 }
 
-//NEW SMMU CODE
-/////////////////////////////////////////////////////////////////////////////
-//TODO: where is this function?
 void __hyp_text alloc_smmu(u32 vmid, u32 cbndx, u32 index) 
 {
 	u32 state;
