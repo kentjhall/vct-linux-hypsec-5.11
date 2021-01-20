@@ -67,7 +67,7 @@ static u64 inline get_sys_reg_desc_val(u32 index) {
 
 static void inline fetch_from_doracle(u32 vmid, u64 pfn, u64 pgnum) {
 	return;
-};
+}
 extern void reset_fp_regs(u32 vmid, int vcpu_id);
 
 static u64 inline get_vm_fault_addr(u32 vmid, u32 vcpuid) {
@@ -76,6 +76,11 @@ static u64 inline get_vm_fault_addr(u32 vmid, u32 vcpuid) {
 	return ((hpfar & HPFAR_MASK) * 256UL);
 }
 
+static void inline mem_load_raw(u64 gfn, u32 reg) {
+}
+
+static void inline mem_store_raw(u64 gfn, u32 reg) {
+}
 /*
 void    acquire_lock_pt(u32 vmid);
 void    release_lock_pt(u32 vmid);

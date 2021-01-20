@@ -22,18 +22,28 @@ u32 __hyp_text get_npt_level(u32 vmid, u64 addr)
 
 	pmd = walk_pmd(vmid, pud, addr, 0U);
 
-	if (v_pmd_table(pmd) == PMD_TYPE_TABLE) {
+	if (v_pmd_table(pmd) == PMD_TYPE_TABLE)
+	{
 		u64 pte = walk_pte(vmid, pmd, addr);
 		if (phys_page(pte) == 0UL)
+		{
 			ret = 0U;
+		}
 		else
+		{
 			ret = 3U;
+		}
 	}
-	else {
+	else
+	{
 		if (phys_page(pmd) == 0UL)
+		{
 			ret = 0U;
+		}
 		else
+		{
 			ret = 2U;
+		}
 	}
 
 	return check(ret);
@@ -57,11 +67,13 @@ u64 __hyp_text walk_npt(u32 vmid, u64 addr)
 
 	pmd = walk_pmd(vmid, pud, addr, 0U);
 
-	if (v_pmd_table(pmd) == PMD_TYPE_TABLE) {
+	if (v_pmd_table(pmd) == PMD_TYPE_TABLE)
+	{
 		pte = walk_pte(vmid, pmd, addr);
 		ret = pte;
 	}
-	else {
+	else
+	{
 		ret = pmd;
 	}
 
@@ -93,7 +105,9 @@ void __hyp_text set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 			v_panic();
 		}
 		else
+		{
 			v_set_pmd(vmid, pud, addr, pte);
+		}
 	}
 	else
 	{
@@ -108,4 +122,14 @@ void __hyp_text set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 			v_panic();
 		}
 	}
+}
+
+void mem_load_ref(u64 gfn, u32 reg)
+{
+	mem_load_raw(gfn, reg);
+}
+
+void mem_store_ref(u64 gfn, u32 reg)
+{
+	mem_store_raw(gfn, reg);
 }
