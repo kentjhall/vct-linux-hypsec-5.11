@@ -242,9 +242,7 @@ void init_el2_data_page(void)
 	el2_data->vm_info[COREVISOR].used_pages = 0;
 	el2_data->vm_info[COREVISOR].shadow_pt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
-	/* FIXME: hardcode this for now */
-	el2_data->smmu_page_pool_start =
-		el2_data->vm_info[EL2_VM_INFO_SIZE - 3].page_pool_start;
+	el2_data->smmu_page_pool_start = (u64)__pa(smmu_pgs_start);
 	el2_data->smmu_pgd_pool = el2_data->smmu_page_pool_start;
 	el2_data->smmu_pmd_pool = el2_data->smmu_page_pool_start + SMMU_PMD_BASE;
 

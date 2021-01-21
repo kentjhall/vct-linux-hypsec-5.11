@@ -40,6 +40,8 @@ extern char shared_data_start[];
 extern char shared_data_end[];
 extern char stage2_tmp_pgs_start[];
 extern char stage2_tmp_pgs_end[];
+extern char smmu_pgs_start[];
+extern char smmu_pgs_end[];
 #endif
 
 #endif /* __ASM_SECTIONS_H */
