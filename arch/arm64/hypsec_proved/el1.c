@@ -221,9 +221,9 @@ void init_el2_data_page(void)
 	el2_data->vm_info[HOSTVISOR].pgd_pool =
 		el2_data->vm_info[HOSTVISOR].page_pool_start + PGD_BASE;
 	el2_data->vm_info[HOSTVISOR].pud_pool =
-		el2_data->vm_info[HOSTVISOR].page_pool_start + PUD_BASE;
+		el2_data->vm_info[HOSTVISOR].page_pool_start + HOST_PUD_BASE;
 	el2_data->vm_info[HOSTVISOR].pmd_pool =
-		el2_data->vm_info[HOSTVISOR].page_pool_start + PMD_BASE;
+		el2_data->vm_info[HOSTVISOR].page_pool_start + HOST_PMD_BASE;
 
 	el2_data->host_vttbr = el2_data->vm_info[HOSTVISOR].page_pool_start;
 	el2_data->vm_info[HOSTVISOR].vttbr = el2_data->host_vttbr;
