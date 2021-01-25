@@ -354,6 +354,9 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 	struct arm_smmu_cfg *cfg = &smmu_domain->cfg;
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
 	void __iomem *cb_base;
+#ifdef CONFIG_VERIFIED_KVM
+	unsigned long addr;
+#endif
 
 	cb_base = ARM_SMMU_CB(smmu, cfg->cbndx);
 	fsr = readl_relaxed(cb_base + ARM_SMMU_CB_FSR);
@@ -364,9 +367,10 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 	fsynr = readl_relaxed(cb_base + ARM_SMMU_CB_FSYNR0);
 	iova = readq_relaxed(cb_base + ARM_SMMU_CB_FAR);
 
-	
-	unsigned long addr = el2_arm_lpae_iova_to_phys(iova, cfg->cbndx, smmu->index);
-	printk("Fauld IOVA %lx PA %lx\n", iova, addr);
+#ifdef CONFIG_VERIFIED_KVM
+	addr = el2_arm_lpae_iova_to_phys(iova, cfg->cbndx, smmu->index);
+	printk("Fault IOVA %lx PA %lx\n", iova, addr);
+#endif
 
 	dev_err_ratelimited(smmu->dev,
 	"Unhandled context fault: fsr=0x%x, iova=0x%08lx, fsynr=0x%x, cb=%d\n",
@@ -533,7 +537,7 @@ static void arm_smmu_write_context_bank(struct arm_smmu_device *smmu, int idx)
 		writel_relaxed(cb->ttbr[1], cb_base + ARM_SMMU_CB_TTBR1);
 	} else {
 		writeq_relaxed(cb->ttbr[0], cb_base + ARM_SMMU_CB_TTBR0);
-		printk("to write %lx read back %lx\n", cb->ttbr[0], readq_relaxed(cb_base + ARM_SMMU_CB_TTBR0));
+		//printk("to write %lx read back %lx\n", cb->ttbr[0], readq_relaxed(cb_base + ARM_SMMU_CB_TTBR0));
 		if (stage1)
 			writeq_relaxed(cb->ttbr[1], cb_base + ARM_SMMU_CB_TTBR1);
 	}

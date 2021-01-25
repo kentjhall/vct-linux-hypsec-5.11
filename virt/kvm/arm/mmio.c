@@ -132,7 +132,7 @@ static int decode_hsr(struct kvm_vcpu *vcpu, bool *is_write, int *len)
 		kvm_inject_dabt(vcpu, kvm_vcpu_get_hfar(vcpu));
 		return 1;
 #else
-		return 0;
+		BUG();
 #endif
 	}
 

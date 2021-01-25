@@ -62,7 +62,7 @@ void __hyp_text int_to_shadow_fp_regs(u32 vmid, u32 vcpuid) {
 
 void __hyp_text clear_phys_page(unsigned long pfn)
 {
-	unsigned long addr = __el2_va(pfn << PAGE_SHIFT);
+	u64 addr = (u64)__el2_va(pfn << PAGE_SHIFT);
 	el2_memset((void *)addr, 0, PAGE_SIZE);
 }
 
@@ -71,7 +71,6 @@ u32 __hyp_text verify_image(u32 vmid, u32 load_idx, u64 addr) {
     uint8_t* public_key;
     int result = 0;
     u64 size;
-    uint8_t signature1[64], key[32];
 
     size = get_vm_load_size(vmid, load_idx);
     public_key = get_vm_public_key(vmid);
@@ -229,7 +228,7 @@ void __hyp_text smmu_pt_clear(u32 cbndx, u32 num) {
 	u32 index;
 	u64 va;
 	index = SMMU_NUM_CTXT_BANKS * num + cbndx;
-	va = __el2_va(el2_data->smmu_cfg[index].hw_ttbr); 
+	va = (u64)__el2_va(el2_data->smmu_cfg[index].hw_ttbr); 
 	el2_memset((void *)va, 0, PAGE_SIZE * 2);
 };
 
@@ -327,6 +326,7 @@ void __hyp_text encrypt_gp_regs(u32 vmid, u32 vcpu_id)
 	struct shadow_vcpu_context *shadow_ctxt;
 	struct kvm_regs gp_local;
 	int i;
+	uint64_t *p;
 	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
 	el2_memcpy(&gp_local, &shadow_ctxt->gp_regs, sizeof(struct kvm_regs));
 	encrypt_kvm_regs(vmid, &gp_local);
@@ -342,7 +342,7 @@ void __hyp_text encrypt_gp_regs(u32 vmid, u32 vcpu_id)
 	printhex_ul(shadow_ctxt->gp_regs.elr_el1);
 	for (i = 0; i < 5; i++)
 		printhex_ul(shadow_ctxt->gp_regs.spsr[i]);
-	uint64_t *p = (uint64_t *)&vcpu->arch.ctxt.gp_regs.fp_regs;
+	p = (uint64_t *)&vcpu->arch.ctxt.gp_regs.fp_regs;
 	for (i = 0; i < 66; i++)
 		printhex_ul(*p++);
 }
@@ -353,6 +353,7 @@ void __hyp_text decrypt_gp_regs(u32 vmid, u32 vcpu_id)
 	struct shadow_vcpu_context *shadow_ctxt;
 	struct kvm_regs gp_local;
 	int i;
+	uint64_t *p;
 	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
 	el2_memcpy(&gp_local, &vcpu->arch.ctxt.gp_regs, sizeof(struct kvm_regs));
 	decrypt_kvm_regs(vmid, &gp_local);
@@ -369,7 +370,7 @@ void __hyp_text decrypt_gp_regs(u32 vmid, u32 vcpu_id)
 	for (i = 0; i < 5; i++)
 		printhex_ul(shadow_ctxt->gp_regs.spsr[i]);
 
-	uint64_t *p = (uint64_t *)&shadow_ctxt->gp_regs.fp_regs;
+	p = (uint64_t *)&shadow_ctxt->gp_regs.fp_regs;
 	for (i = 0; i < 66; i++)
 		printhex_ul(*p++);
 }

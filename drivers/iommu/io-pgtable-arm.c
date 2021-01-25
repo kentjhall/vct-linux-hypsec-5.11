@@ -1013,7 +1013,7 @@ arm_64_lpae_alloc_pgtable_s2(struct io_pgtable_cfg *cfg, void *cookie)
 
 	/* VTTBR */
 	cfg->arm_lpae_s2_cfg.vttbr = virt_to_phys(data->pgd);
-	printk("SMMU vttbr %lx vttbr_size %d levels %d", cfg->arm_lpae_s2_cfg.vttbr, data->pgd_size, data->levels);
+	//printk("SMMU vttbr %lx vttbr_size %d levels %d", cfg->arm_lpae_s2_cfg.vttbr, data->pgd_size, data->levels);
 	return &data->iop;
 
 out_free_data:

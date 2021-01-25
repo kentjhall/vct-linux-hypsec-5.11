@@ -1550,6 +1550,7 @@ void kvm_arch_mmu_enable_log_dirty_pt_masked(struct kvm *kvm,
 	kvm_mmu_write_protect_pt_masked(kvm, slot, gfn_offset, mask);
 }
 
+#ifndef CONFIG_VERIFIED_KVM
 static void clean_dcache_guest_page(kvm_pfn_t pfn, unsigned long size)
 {
 	__clean_dcache_guest_page(pfn, size);
@@ -1559,6 +1560,7 @@ static void invalidate_icache_guest_page(kvm_pfn_t pfn, unsigned long size)
 {
 	__invalidate_icache_guest_page(pfn, size);
 }
+#endif
 
 static void kvm_send_hwpoison_signal(unsigned long address,
 				     struct vm_area_struct *vma)
