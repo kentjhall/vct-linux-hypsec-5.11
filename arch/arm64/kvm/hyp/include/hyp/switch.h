@@ -462,7 +462,11 @@ static inline bool fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code)
 		valid = kvm_vcpu_trap_get_class(vcpu) == ESR_ELx_EC_DABT_LOW &&
 			kvm_vcpu_trap_get_fault_type(vcpu) == FSC_FAULT &&
 			kvm_vcpu_dabt_isvalid(vcpu) &&
+#ifndef CONFIG_VERIFIED_KVM
 			!kvm_vcpu_abt_issea(vcpu) &&
+#else
+			!kvm_vcpu_abt_issea(vcpu, 0) &&
+#endif
 			!kvm_vcpu_abt_iss1tw(vcpu);
 
 		if (valid) {

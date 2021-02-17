@@ -10,6 +10,13 @@
 #include <asm/kvm_mmu.h>
 #include <asm/hypsec_constant.h>
 
+DECLARE_KVM_NVHE_SYM(stage2_pgs_start);
+DECLARE_KVM_NVHE_SYM(stage2_pgs_end);
+DECLARE_KVM_NVHE_SYM(el2_data_start);
+DECLARE_KVM_NVHE_SYM(el2_data_end);
+DECLARE_KVM_NVHE_SYM(shared_data_start);
+DECLARE_KVM_NVHE_SYM(shared_data_end);
+
 /* Handler for ACTLR_EL1 is not defined */
 #define SHADOW_SYS_REGS_SIZE		(DISR_EL1)
 #define SHADOW_32BIT_REGS_SIZE		3
@@ -56,7 +63,6 @@ struct int_vcpu {
 	int vcpu_pg_cnt;
 	enum hypsec_init_state state;
 	u32 ctxtid;
-	u32 first_run;
 };
 
 struct el2_vm_info {
@@ -67,19 +73,21 @@ struct el2_vm_info {
 	bool inc_exe;
 	enum hypsec_init_state state;
 	struct el2_load_info load_info[HYPSEC_MAX_LOAD_IMG];
-	arch_spinlock_t shadow_pt_lock;
-	arch_spinlock_t vm_lock;
+	b_arch_spinlock_t shadow_pt_lock;
+	b_arch_spinlock_t vm_lock;
 	struct kvm *kvm;
 	struct int_vcpu int_vcpus[HYPSEC_MAX_VCPUS];
 	struct shadow_vcpu_context *shadow_ctxt[HYPSEC_MAX_VCPUS];
+	uint8_t key[16];
+	uint8_t iv[16];
 	uint8_t public_key[32];
 	bool powered_on;
 	/* For VM private pool */
 	u64 page_pool_start;
-	u64 pgd_pool;
-	u64 pud_pool;
-	u64 pmd_pool;
 	unsigned long used_pages;
+	unsigned long pmd_used_pages;
+	unsigned long pud_used_pages;
+	unsigned long pte_used_pages;
 };
 
 struct el2_data {
@@ -96,12 +104,12 @@ struct el2_data {
 	unsigned long pl011_base;
 	unsigned long uart_8250_base;
 
-	arch_spinlock_t s2pages_lock;
-	arch_spinlock_t abs_lock;
-	arch_spinlock_t el2_pt_lock;
-	arch_spinlock_t console_lock;
-	arch_spinlock_t smmu_lock;
-	arch_spinlock_t spt_lock;
+	b_arch_spinlock_t s2pages_lock;
+	b_arch_spinlock_t abs_lock;
+	b_arch_spinlock_t el2_pt_lock;
+	b_arch_spinlock_t console_lock;
+	b_arch_spinlock_t smmu_lock;
+	b_arch_spinlock_t spt_lock;
 
 	kvm_pfn_t ram_start_pfn;
 	struct s2_page s2_pages[S2_PFN_SIZE];
@@ -131,11 +139,10 @@ struct el2_data {
         uint32_t hacl_hash0[64U];
 
 	uint8_t key[16];
-	uint8_t iv[16];
 
 	unsigned long smmu_page_pool_start;
-	unsigned long smmu_pgd_pool;
-	unsigned long smmu_pmd_pool;
+	unsigned long smmu_pgd_used_pages;
+	unsigned long smmu_pmd_used_pages;
 
 	u64 phys_mem_start;
 	u64 phys_mem_size;
@@ -166,19 +173,19 @@ static inline void _arch_spin_unlock(b_arch_spinlock_t *lock)
 	: "=Q" (lock->lock) : "r" (0) : "memory");
 }
 
-static inline void stage2_spin_lock(arch_spinlock_t *lock)
+static inline void stage2_spin_lock(b_arch_spinlock_t *lock)
 {	
-	arch_spin_lock(lock);
+	_arch_spin_lock(lock);
 }
 
-static inline void stage2_spin_unlock(arch_spinlock_t *lock)
+static inline void stage2_spin_unlock(b_arch_spinlock_t *lock)
 {
-	arch_spin_unlock(lock);
+	_arch_spin_unlock(lock);
 }
 
 static inline void el2_init_vgic_cpu_base(phys_addr_t base)
 {
-	struct el2_data *el2_data = (void *)kvm_ksym_ref(el2_data_start);
+	struct el2_data *el2_data = (void *)kvm_ksym_ref_nvhe(el2_data_start);
 	el2_data->vgic_cpu_base = base;
 }
 
@@ -200,16 +207,20 @@ extern void el2_smmu_free_pgd(u32 cbndx, u32 num);
 extern void el2_arm_lpae_map(u64 iova, phys_addr_t paddr, u64 prot, u32 cbndx, u32 num);
 extern phys_addr_t el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 num);
 extern void el2_smmu_clear(u64 iova, u32 cbndx, u32 num);
-extern void hypsec_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
+extern void el2_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
+
+void encrypt_buf(u32 vmid, void *buf, uint32_t len);
+void decrypt_buf(u32 vmid, void *buf, uint32_t len);
 
 extern void el2_boot_from_inc_exe(u32 vmid);
 extern bool el2_use_inc_exe(u32 vmid);
+extern unsigned long search_load_info(u32 vmid, struct el2_data *el2_data,
+				      unsigned long addr);
 
 extern int el2_alloc_vm_info(struct kvm *kvm);
 
-u32 handle_pvops(u32 vmid, u32 vcpuid);
+int handle_pvops(u32 vmid, u32 vcpuid);
 void save_encrypted_vcpu(struct kvm_vcpu *vcpu);
-void load_encrypted_vcpu(u32 vmid, u32 vcpu_id);
 
 //extern void set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,
 //				unsigned long pgnum, u32 vmid);
@@ -266,28 +277,8 @@ static u64 inline get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index)
         struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	u64 val;
-	if (index < 31)
-		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.regs[index];
-	else if (index == V_SP)
-		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.sp;
-	else if (index == V_PC)
-		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.pc;
-	else if (index == V_PSTATE)
-		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.pstate;
-	else if (index == V_SP_EL1)
-		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.sp_el1;
-	else if (index == V_ELR_EL1)
-		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.elr_el1;
-	else if (index == V_SPSR_EL1)
-		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[0];
-	else if (index == V_SPSR_ABT)
-		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[1];
-	else if (index == V_SPSR_UND)
-		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[2];
-	else if (index == V_SPSR_IRQ)
-		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[3];
-	else if (index == V_SPSR_FIQ)
-		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[4];
+	if (index < V_FAR_EL2)
+		val = el2_data->shadow_vcpu_ctxt[offset].regs[index]; 
 	else if (index == V_FAR_EL2)
 		val = el2_data->shadow_vcpu_ctxt[offset].far_el2;
 	else if (index == V_HPFAR_EL2)
@@ -316,28 +307,8 @@ static void inline set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
         struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	//el2_data->shadow_vcpu_ctxt[offset].regs[index] = value;
-	if (index < 31)
-		el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.regs[index] = value;
-	else if (index == V_SP)
-		el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.sp = value;
-	else if (index == V_PC)
-		el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.pc = value;
-	else if (index == V_PSTATE)
-		el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.pstate = value;
-	else if (index == V_SP_EL1)
-		el2_data->shadow_vcpu_ctxt[offset].gp_regs.sp_el1 = value;
-	else if (index == V_ELR_EL1)
-		el2_data->shadow_vcpu_ctxt[offset].gp_regs.elr_el1 = value;
-	else if (index == V_SPSR_EL1)
-		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[0] = value;
-	else if (index == V_SPSR_ABT)
-		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[1] = value;
-	else if (index == V_SPSR_UND)
-		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[2] = value;
-	else if (index == V_SPSR_IRQ)
-		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[3] = value;
-	else if (index == V_SPSR_FIQ)
-		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[4] = value;
+	if (index < V_FAR_EL2)
+		el2_data->shadow_vcpu_ctxt[offset].regs[index] = value; 
 	else if (index == V_FAR_EL2)
 		el2_data->shadow_vcpu_ctxt[offset].far_el2 = value;
 	else if (index == V_HPFAR_EL2)
@@ -365,6 +336,9 @@ void __vm_sysreg_save_state_nvhe(u32 vmid, u32 vcpuid);
 
 void __vm_sysreg_restore_state_nvhe_opt(struct shadow_vcpu_context *ctxt);
 void __vm_sysreg_save_state_nvhe_opt(struct shadow_vcpu_context *ctxt);
+
+void v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
+void v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
 
 void init_hacl_hash(struct el2_data *el2_data);
 uint64_t get_hacl_hash_sha2_constant_k384_512(int i);

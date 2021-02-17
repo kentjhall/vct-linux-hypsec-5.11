@@ -15,6 +15,9 @@
 #include <asm/mmu.h>
 #include <asm/spectre.h>
 
+        .text
+        .pushsection    .hyp.text, "ax"
+
 .macro save_caller_saved_regs_vect
 	/* x0 and x1 were saved in the vector entry */
 	stp	x2, x3,   [sp, #-16]!
@@ -40,7 +43,7 @@
 .endm
 
 #ifdef CONFIG_VERIFIED_KVM
-.macro save_callee_saved_regs
+.macro save_callee_saved_regs_hypsec
 	stp	lr, xzr,   [sp, #-16]!
 	stp	x28, x29, [sp, #-16]!
 	stp	x26, x27, [sp, #-16]!
@@ -59,7 +62,7 @@
 	stp	x0, x1,   [sp, #-16]!
 .endm
 
-.macro restore_callee_saved_regs
+.macro restore_callee_saved_regs_hypsec
 	ldp	x0, x1,   [sp], #16
 	ldp	x2, x3,   [sp], #16
 	ldp	x4, x5,   [sp], #16
@@ -79,11 +82,11 @@
 .endm
 
 .macro  handle_dabt
-	save_callee_saved_regs
+	save_callee_saved_regs_hypsec
 	mov	x1, sp
 	mov	x0, lr
 	bl	handle_host_stage2_fault
-	restore_callee_saved_regs
+	restore_callee_saved_regs_hypsec
 	eret
 .endm
 
@@ -114,73 +117,43 @@ el1_sync:				// Guest trapped into EL2
 	ccmp	x0, #ESR_ELx_EC_HVC32, #4, ne
 #ifndef CONFIG_VERIFIED_KVM
 	b.ne	el1_trap
-
-	/*
-	 * Fastest possible path for ARM_SMCCC_ARCH_WORKAROUND_1.
-	 * The workaround has already been applied on the host,
-	 * so let's quickly get back to the guest. We don't bother
-	 * restoring x1, as it can be clobbered anyway.
-	 */
-	ldr	x1, [sp]				// Guest's x0
-	eor	w1, w1, #ARM_SMCCC_ARCH_WORKAROUND_1
-	cbz	w1, wa_epilogue
-
-	/* ARM_SMCCC_ARCH_WORKAROUND_2 handling */
-	eor	w1, w1, #(ARM_SMCCC_ARCH_WORKAROUND_1 ^ \
-			  ARM_SMCCC_ARCH_WORKAROUND_2)
-	cbnz	w1, el1_trap
 #else
-	b.eq	4f
-	cmp	x0, #ESR_ELx_EC_DABT_LOW
-	b.eq	5f
-	cmp	x0, #ESR_ELx_EC_IABT_LOW
-	b.ne	el1_trap
+        b.eq    4f
+        cmp     x0, #ESR_ELx_EC_DABT_LOW
+        b.eq    5f
+        cmp     x0, #ESR_ELx_EC_IABT_LOW
+        b.ne    el1_trap
 
 5:
-	/* if tpidr_el2 = 0, we know if traps from host kernel! */
-	mrs     x1, tpidr_el2
-	cbnz    x1, el1_trap
-
-	ldp	x0, x1,   [sp], #16
-	handle_dabt
 4:
-	mrs	x1, tpidr_el2
-	cbnz	x1, el1_hvc_guest	// called HVC
-
-	/* Here, we're pretty sure the host called HVC. */
-	ldp	x0, x1, [sp], #16
-
-	cmp	x0, #HVC_GET_VECTORS
-	b.ne	2f
-	mrs	x0, vbar_el2
-	eret
-
+        cmp     x0, #HVC_GET_VECTORS
+        b.ne    2f
+        mrs     x0, vbar_el2
+        eret
 2:
-	/* Check for a stub HVC call */
-	cmp	x0, #HVC_STUB_HCALL_NR
-	b.hs	1f
+#endif
+        /*
+         * Fastest possible path for ARM_SMCCC_ARCH_WORKAROUND_1.
+         * The workaround has already been applied on the host,
+         * so let's quickly get back to the guest. We don't bother
+         * restoring x1, as it can be clobbered anyway.
+         */
+        ldr     x1, [sp]                                // Guest's x0
+        eor     w1, w1, #ARM_SMCCC_ARCH_WORKAROUND_1
+        cbz     w1, wa_epilogue
 
-	/*
-	 * Compute the idmap address of __kvm_handle_stub_hvc and
-	 * jump there. Since we use kimage_voffset, do not use the
-	 * HYP VA for __kvm_handle_stub_hvc, but the kernel VA instead
-	 * (by loading it from the constant pool).
-	 *
-	 * Preserve x0-x4, which may contain stub parameters.
-	 */
-	ldr	x5, =__kvm_handle_stub_hvc
-	ldr_l	x6, kimage_voffset
+#ifdef CONFIG_VERIFIED_KVM
+        save_callee_saved_regs_hypsec
+        mov     x0, sp
+        bl      handle_host_hvc
+        restore_callee_saved_regs_hypsec
+        eret
+#else
 
-	/* x5 = __pa(x5) */
-	sub	x5, x5, x6
-	br	x5
-
-1:
-	save_callee_saved_regs
-	mov	x0, sp
-	bl	handle_host_hvc
-	restore_callee_saved_regs
-	eret
+        /* ARM_SMCCC_ARCH_WORKAROUND_2 handling */
+        eor     w1, w1, #(ARM_SMCCC_ARCH_WORKAROUND_1 ^ \
+                          ARM_SMCCC_ARCH_WORKAROUND_2)
+        cbnz    w1, el1_trap
 #endif
 
 wa_epilogue:

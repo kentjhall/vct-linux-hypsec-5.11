@@ -171,7 +171,11 @@ void kvm_patch_vector_branch(struct alt_instr *alt,
 	/*
 	 * Compute HYP VA by using the same computation as kern_hyp_va()
 	 */
+#ifndef CONFIG_VERIFIED_KVM
 	addr = __early_kern_hyp_va((u64)kvm_ksym_ref(__kvm_hyp_vector));
+#else
+	addr = __early_kern_hyp_va((u64)kvm_ksym_ref(__kvm_nvhe___kvm_hyp_vector));
+#endif
 
 	/* Use PC[10:7] to branch to the same vector in KVM */
 	addr |= ((u64)origptr & GENMASK_ULL(10, 7));

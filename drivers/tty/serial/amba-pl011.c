@@ -2599,7 +2599,7 @@ static int pl011_setup_port(struct device *dev, struct uart_amba_port *uap,
 	void __iomem *base;
 
 #ifdef CONFIG_VERIFIED_KVM
-	struct el2_data *el2_data = kvm_ksym_ref(el2_data_start);
+	struct el2_data *el2_data = kvm_ksym_ref_nvhe(el2_data_start);
 	if (!el2_data->pl011_base)
 		el2_data->pl011_base = mmiobase->start;
 #endif

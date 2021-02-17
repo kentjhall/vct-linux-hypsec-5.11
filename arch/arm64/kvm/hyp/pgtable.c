@@ -9,6 +9,9 @@
 
 #include <linux/bitfield.h>
 #include <asm/kvm_pgtable.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#endif
 
 #define KVM_PGTABLE_MAX_LEVELS		4U
 

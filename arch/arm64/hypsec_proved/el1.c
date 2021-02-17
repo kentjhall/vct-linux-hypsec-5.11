@@ -9,7 +9,7 @@
 #include <asm/cacheflush.h>
 #include <asm/kvm_arm.h>
 #include <asm/kvm_mmu.h>
-#include <asm/kvm_mmio.h>
+#include <asm/kvm_host.h>
 #include <asm/kvm_emulate.h>
 #include <asm/virt.h>
 #include <asm/kernel-pgtable.h>
@@ -17,11 +17,6 @@
 #include <asm/hypsec_constant.h>
 #include <asm/spinlock_types.h>
 #include <linux/serial_reg.h>
-
-#include "hypsec.h"
-
-u64 mach_phys_mem_start;
-u64 mach_phys_mem_size;
 
 //hypsec_host.c
 #define Op0(_x) 	.Op0 = _x
@@ -35,7 +30,7 @@ u64 mach_phys_mem_size;
 	CRn(sys_reg_CRn(reg)), CRm(sys_reg_CRm(reg)),	\
 	Op2(sys_reg_Op2(reg))
 
-static struct s2_sys_reg_desc host_sys_reg_descs[] = {
+static struct s2_sys_reg_desc host_sys_reg_descs[28] = {
 	/* TTBR0_EL1 */
 	{ Op0(0b11), Op1(0b000), CRn(0b0010), CRm(0b0000), Op2(0b000),
 	  TTBR0_EL1, 0x1de7ec7edbadc0deULL },
@@ -118,7 +113,7 @@ void el2_shared_data_init(void)
 {
 	struct el2_shared_data *shared_data;
 
-	shared_data = (void *)kvm_ksym_ref(shared_data_start);
+	shared_data = (void *)kvm_ksym_ref_nvhe(shared_data_start);
 	memset(shared_data, 0, sizeof(struct shared_data));
 	printk("[EL2] cleared %lx byte data size %lx\n",
 		sizeof(struct shared_data), PAGE_SIZE * PAGE_SIZE);
@@ -133,9 +128,7 @@ void init_el2_data_page(void)
 	int i = 0, index = 0;
 	struct el2_data *el2_data;
 	struct memblock_region *r;
-	u64 pool_start, vmid64, vttbr;
-	uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
-	uint8_t iv[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
+	u64 pool_start;
 
 	WARN_ON(sizeof(struct el2_data) >= CORE_DATA_SIZE);
 
@@ -143,14 +136,14 @@ void init_el2_data_page(void)
 		sizeof(struct el2_data), CORE_DATA_SIZE);
 
 
-	memset((void *)kvm_ksym_ref(stage2_pgs_start), 0, STAGE2_PAGES_SIZE);
-	__flush_dcache_area((void *)kvm_ksym_ref(stage2_pgs_start), STAGE2_PAGES_SIZE);
+	memset((void *)kvm_ksym_ref_nvhe(stage2_pgs_start), 0, STAGE2_PAGES_SIZE);
+	__flush_dcache_area((void *)kvm_ksym_ref_nvhe(stage2_pgs_start), STAGE2_PAGES_SIZE);
 
-	el2_data = (void *)kvm_ksym_ref(el2_data_start);
+	el2_data = (void *)kvm_ksym_ref_nvhe(el2_data_start);
 	el2_data->installed = false;
 
 	/* We copied memblock_regions to the EL2 data structure*/
-	for_each_memblock(memory, r) {
+	for_each_mem_region(r) {
 		el2_data->regions[i] = *r;
 		if (!(r->flags & MEMBLOCK_NOMAP)) {
 			el2_data->s2_memblock_info[i].index = index;
@@ -161,26 +154,21 @@ void init_el2_data_page(void)
 		i++;
 	}
 	el2_data->regions_cnt = i;
-	el2_data->phys_mem_start = el2_data->regions[0].base;
-
-	smp_wmb();
-
-	mach_phys_mem_start = el2_data->phys_mem_start;
-	mach_phys_mem_size = el2_data->phys_mem_size;
+	el2_data->phys_mem_start += el2_data->regions[0].base; 
 
 	printk("EL2 system phys mem start %llx end %llx\n",
 		el2_data->phys_mem_start, el2_data->phys_mem_size);
 
 	el2_data->used_pages = 0;
 	el2_data->used_tmp_pages = 0;
-	el2_data->page_pool_start = (u64)__pa(stage2_pgs_start);
+	el2_data->page_pool_start = (u64)__pa(kvm_nvhe_sym(stage2_pgs_start));
 
-	el2_data->s2pages_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->abs_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->el2_pt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->console_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->smmu_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
-	el2_data->spt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->s2pages_lock.lock = 0;
+	el2_data->abs_lock.lock = 0;
+	el2_data->el2_pt_lock.lock = 0;
+	el2_data->console_lock.lock = 0;
+	el2_data->smmu_lock.lock = 0;
+	el2_data->spt_lock.lock = 0;
 
 	memset(&el2_data->arch, 0, sizeof(struct s2_cpu_arch));
 
@@ -196,55 +184,35 @@ void init_el2_data_page(void)
 		sizeof(struct el2_vm_info) * EL2_VM_INFO_SIZE);
 	el2_data->last_remap_ptr = 0;
 
+	el2_data->vm_info[0].shadow_pt_lock.lock = 0;
+
 	pool_start = el2_data->page_pool_start + STAGE2_CORE_PAGES_SIZE + STAGE2_HOST_POOL_SIZE;
 	for (i = 1; i < EL2_VM_INFO_SIZE - 1; i++) {
 		el2_data->vm_info[i].page_pool_start =
 			pool_start + (STAGE2_VM_POOL_SIZE * (i - 1));
-		el2_data->vm_info[i].pgd_pool =
-			el2_data->vm_info[i].page_pool_start + PGD_BASE;
-		el2_data->vm_info[i].pud_pool =
-			el2_data->vm_info[i].page_pool_start + PUD_BASE;
-		el2_data->vm_info[i].pmd_pool =
-			el2_data->vm_info[i].page_pool_start + PMD_BASE;
+		el2_data->vm_info[i].used_pages = 0;
 		memset(__va(el2_data->vm_info[i].page_pool_start), 0, STAGE2_VM_POOL_SIZE);
-
-		vmid64 = (u64)i;
-		vmid64 = vmid64 << VTTBR_VMID_SHIFT;
-		vttbr = el2_data->vm_info[i].page_pool_start;
-		el2_data->vm_info[i].vttbr = (vttbr | vmid64);
-
-		el2_data->vm_info[i].shadow_pt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+		//FIXME: init vm_info[i].vttbr here, or VMID
 	}
 
 	el2_data->vm_info[HOSTVISOR].page_pool_start =
 		el2_data->page_pool_start + STAGE2_CORE_PAGES_SIZE;
-	el2_data->vm_info[HOSTVISOR].pgd_pool =
-		el2_data->vm_info[HOSTVISOR].page_pool_start + PGD_BASE;
-	el2_data->vm_info[HOSTVISOR].pud_pool =
-		el2_data->vm_info[HOSTVISOR].page_pool_start + HOST_PUD_BASE;
-	el2_data->vm_info[HOSTVISOR].pmd_pool =
-		el2_data->vm_info[HOSTVISOR].page_pool_start + HOST_PMD_BASE;
-
-	el2_data->host_vttbr = el2_data->vm_info[HOSTVISOR].page_pool_start;
-	el2_data->vm_info[HOSTVISOR].vttbr = el2_data->host_vttbr;
-	el2_data->vm_info[HOSTVISOR].shadow_pt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+	el2_data->vm_info[HOSTVISOR].used_pages = 0;
 
 	/* CORE POOL -> HOSTVISOR POOL -> VM POOL */
 	el2_data->vm_info[COREVISOR].page_pool_start =
 		el2_data->page_pool_start + CORE_PGD_START;
-	el2_data->vm_info[COREVISOR].pgd_pool =
-		el2_data->vm_info[COREVISOR].page_pool_start + CORE_PUD_BASE;
-	el2_data->vm_info[COREVISOR].pud_pool =
-		el2_data->vm_info[COREVISOR].page_pool_start + CORE_PMD_BASE;
-	el2_data->vm_info[COREVISOR].pmd_pool =
-		el2_data->vm_info[COREVISOR].page_pool_start + CORE_PTE_BASE;
-
 	el2_data->vm_info[COREVISOR].used_pages = 0;
-	el2_data->vm_info[COREVISOR].shadow_pt_lock = (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
-	el2_data->smmu_page_pool_start = (u64)__pa(smmu_pgs_start);
-	el2_data->smmu_pgd_pool = el2_data->smmu_page_pool_start;
-	el2_data->smmu_pmd_pool = el2_data->smmu_page_pool_start + SMMU_PMD_BASE;
+
+	el2_data->host_vttbr = el2_data->vm_info[0].page_pool_start;
+	el2_data->vm_info[0].used_pages = 1;
+	el2_data->vm_info[0].vttbr = el2_data->host_vttbr;
+
+	/* FIXME: hardcode this for now */
+	el2_data->smmu_page_pool_start = el2_data->vm_info[EL2_VM_INFO_SIZE - 3].page_pool_start;
+	el2_data->smmu_pgd_used_pages = 0;
+	el2_data->smmu_pmd_used_pages = 0;
 
 	for (i = 0; i < SHADOW_SYS_REGS_DESC_SIZE; i++)
 		el2_data->s2_sys_reg_descs[i] = host_sys_reg_descs[i];
@@ -260,19 +228,16 @@ void init_el2_data_page(void)
 		el2_data->per_cpu_data[i].vcpu_id = i;
 	}
 
-	el2_data->core_start = __pa_symbol(stage2_pgs_start);
-	el2_data->core_end = __pa_symbol(el2_data_end);
+	el2_data->core_start = __pa(kvm_ksym_ref_nvhe(stage2_pgs_start));
+	el2_data->core_end = __pa(kvm_ksym_ref_nvhe(el2_data_end));
 
-	init_hacl_hash(el2_data);
+	//init_hacl_hash(el2_data);
 	//test_aes(el2_data);
 
 	for (i = 0; i < EL2_SMMU_CFG_SIZE; i++) {
 		el2_data->smmu_cfg[i].hw_ttbr = host_alloc_stage2_page(2);
 		el2_data->smmu_cfg[i].vmid = V_INVALID;
 	}
-
-	el2_memcpy(el2_data->key, key, 16);
-	el2_memcpy(el2_data->iv, iv, 16);
 
 	return;
 }
@@ -283,7 +248,7 @@ void init_hypsec_io(void)
 	struct el2_data *el2_data;
 	struct el2_arm_smmu_device *smmu;
 
-	el2_data = (void *)kvm_ksym_ref(el2_data_start);
+	el2_data = (void *)kvm_ksym_ref_nvhe(el2_data_start);
 
 #ifdef CONFIG_SERIAL_8250_CONSOLE
 	//TODO: Hacky stuff for prints on m400
@@ -327,7 +292,7 @@ phys_addr_t host_alloc_stage2_page(unsigned int num)
 	if (!num)
 		return 0;
 
-	el2_data = kvm_ksym_ref(el2_data_start);
+	el2_data = kvm_ksym_ref_nvhe(el2_data_start);
 	stage2_spin_lock(&el2_data->abs_lock);
 
 	/* Check if we're out of memory in the reserved area */
@@ -355,97 +320,82 @@ phys_addr_t host_alloc_stage2_page(unsigned int num)
 
 phys_addr_t host_alloc_pgd(unsigned int num)
 {
-	u64 p_addr;
+	u64 p_addr, start;
 	struct el2_data *el2_data;
 
-	el2_data = kvm_ksym_ref(el2_data_start);
-	stage2_spin_lock(&el2_data->abs_lock);	
-	p_addr = el2_data->vm_info[COREVISOR].page_pool_start;
-	stage2_spin_unlock(&el2_data->abs_lock);
+	el2_data = kvm_ksym_ref_nvhe(el2_data_start);
+	stage2_spin_lock(&el2_data->abs_lock);
 
+	/* Start allocating memory from the normal page pool */
+	start = el2_data->vm_info[COREVISOR].page_pool_start;
+	p_addr = (u64)start;
+
+	stage2_spin_unlock(&el2_data->abs_lock);
 	return (phys_addr_t)p_addr;
 }
 
 phys_addr_t host_alloc_pud(unsigned int num)
 {
-	u64 p_addr, start;
+	u64 p_addr, start, used_pages;
 	struct el2_data *el2_data;
 
-	el2_data = kvm_ksym_ref(el2_data_start);
+	el2_data = kvm_ksym_ref_nvhe(el2_data_start);
 	stage2_spin_lock(&el2_data->abs_lock);
 
+	/* Start allocating memory from the normal page pool */
 	start = el2_data->vm_info[COREVISOR].page_pool_start;
-	p_addr = el2_data->vm_info[COREVISOR].pgd_pool;
-	smp_wmb();
-	el2_data->vm_info[COREVISOR].pgd_pool += PAGE_SIZE;
+	used_pages = el2_data->vm_info[COREVISOR].pud_used_pages;
+	p_addr = (u64)start + (PAGE_SIZE * used_pages) + CORE_PUD_BASE;
+
+	el2_data->vm_info[COREVISOR].pud_used_pages += num;
 
 	stage2_spin_unlock(&el2_data->abs_lock);
-	if (p_addr >= (start + CORE_PMD_BASE)) {
-		printk("BUG: pud [start %lx paddr %lx pud_pool_end %lx\n",
-			(unsigned long)el2_data->vm_info[COREVISOR].page_pool_start,
-			(unsigned long)p_addr, (unsigned long)(start + CORE_PMD_BASE)
-			);
-		BUG();
-	}
-
 	return (phys_addr_t)p_addr;
 }
 
 
 phys_addr_t host_alloc_pmd(unsigned int num)
 {
-	u64 p_addr, start;
+	u64 p_addr, start, used_pages;
 	struct el2_data *el2_data;
 
-	el2_data = kvm_ksym_ref(el2_data_start);
+	el2_data = kvm_ksym_ref_nvhe(el2_data_start);
 	stage2_spin_lock(&el2_data->abs_lock);
 
+	/* Start allocating memory from the normal page pool */
 	start = el2_data->vm_info[COREVISOR].page_pool_start;
-	p_addr = el2_data->vm_info[COREVISOR].pud_pool;
-	smp_wmb();
-	el2_data->vm_info[COREVISOR].pud_pool += PAGE_SIZE;
+	used_pages = el2_data->vm_info[COREVISOR].pmd_used_pages;
+	p_addr = (u64)start + (PAGE_SIZE * used_pages) + CORE_PMD_BASE;
+
+	el2_data->vm_info[COREVISOR].pmd_used_pages += num;
 
 	stage2_spin_unlock(&el2_data->abs_lock);
-	if (p_addr >= (start + CORE_PTE_BASE)) {
-		printk("BUG: pmd [start %lx paddr %lx pmd_pool_end %lx\n",
-			(unsigned long)el2_data->vm_info[COREVISOR].page_pool_start,
-			(unsigned long)p_addr, (unsigned long)(start + CORE_PTE_BASE)
-			);
-		BUG();
-	}
-
 	return (phys_addr_t)p_addr;
 }
 
 phys_addr_t host_alloc_pte(unsigned int num)
 {
-	u64 p_addr, start;
+	u64 p_addr, start, used_pages;
 	struct el2_data *el2_data;
 
-	el2_data = kvm_ksym_ref(el2_data_start);
+	el2_data = kvm_ksym_ref_nvhe(el2_data_start);
 	stage2_spin_lock(&el2_data->abs_lock);
 
+	/* Start allocating memory from the normal page pool */
 	start = el2_data->vm_info[COREVISOR].page_pool_start;
-	p_addr = el2_data->vm_info[COREVISOR].pmd_pool;
-	smp_wmb();
-	el2_data->vm_info[COREVISOR].pmd_pool += PAGE_SIZE;
+	used_pages = el2_data->vm_info[COREVISOR].pte_used_pages;
+	p_addr = (u64)start + (PAGE_SIZE * used_pages) + CORE_PTE_BASE;
+
+	el2_data->vm_info[COREVISOR].pte_used_pages += num;
 
 	stage2_spin_unlock(&el2_data->abs_lock);
-	if (p_addr >= el2_data->host_vttbr) {
-		printk("BUG: pte [start %lx paddr %lx host_vttbr %lx\n",
-			(unsigned long)el2_data->vm_info[COREVISOR].page_pool_start,
-			(unsigned long)p_addr, (unsigned long)el2_data->host_vttbr
-			);
-		BUG();
-	}	
-
 	return (phys_addr_t)p_addr;
 }
 
 struct kvm* hypsec_alloc_vm(u32 vmid)
 {
 	struct shared_data *shared_data;
-	shared_data = kvm_ksym_ref(shared_data_start);
+	shared_data = kvm_ksym_ref_nvhe(shared_data_start);
 	if (vmid >= EL2_MAX_VMID)
 		BUG();
 	return &shared_data->kvm_pool[vmid];
@@ -455,7 +405,7 @@ struct kvm_vcpu* hypsec_alloc_vcpu(u32 vmid, int vcpu_id)
 {
 	struct shared_data *shared_data;
 	int index;
-	shared_data = kvm_ksym_ref(shared_data_start);
+	shared_data = kvm_ksym_ref_nvhe(shared_data_start);
 	if (vmid >= EL2_MAX_VMID || vcpu_id >= HYPSEC_MAX_VCPUS)
 		BUG();
 	index = (vmid * HYPSEC_MAX_VCPUS) + vcpu_id;
@@ -485,13 +435,8 @@ void el2_boot_from_inc_exe(u32 vmid)
 
 void save_encrypted_vcpu(struct kvm_vcpu *vcpu)
 {
-	kvm_call_core((void *)HVC_SAVE_CRYPT_VCPU,
-			vcpu->kvm->arch.vmid, vcpu->vcpu_id);
-}
-
-void load_encrypted_vcpu(u32 vmid, u32 vcpu_id)
-{
-	kvm_call_core((void *)HVC_LOAD_CRYPT_VCPU, vmid, vcpu_id);
+	kvm_call_core(HVC_SAVE_CRYPT_VCPU,
+			vcpu->kvm->arch.mmu.vmid.vmid, vcpu->vcpu_id);
 }
 
 void clear_vm_stage2_range(u32 vmid, phys_addr_t start, u64 size)
@@ -499,10 +444,9 @@ void clear_vm_stage2_range(u32 vmid, phys_addr_t start, u64 size)
 	kvm_call_core(HVC_CLEAR_VM_S2_RANGE, vmid, start, size);
 }
 
-//void el2_encrypt_buf(u32 vmid, void *buf, uint32_t len)
-void el2_encrypt_buf(u32 vmid, u64 buf, u64 out_buf)
+void el2_encrypt_buf(u32 vmid, void *buf, uint32_t len)
 {
-	kvm_call_core(HVC_ENCRYPT_BUF, vmid, buf, out_buf);
+	kvm_call_core(HVC_ENCRYPT_BUF, vmid, buf, len);
 }
 
 void el2_decrypt_buf(u32 vmid, void *buf, uint32_t len)
@@ -517,7 +461,7 @@ int hypsec_register_kvm(void)
 
 int hypsec_register_vcpu(u32 vmid, int vcpu_id)
 {
-	return kvm_call_core((void *)HVC_REGISTER_VCPU, vmid, vcpu_id);
+	return kvm_call_core(HVC_REGISTER_VCPU, vmid, vcpu_id);
 }
 
 /* DMA Protection */
@@ -546,7 +490,7 @@ void el2_smmu_clear(u64 iova, u32 cbndx, u32 num)
 	kvm_call_core(HVC_SMMU_CLEAR, iova, cbndx, num);
 }
 
-void hypsec_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size)
+void el2_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size)
 {
 	kvm_call_core(HVC_PHYS_ADDR_IOREMAP, vmid, gpa, pa, size);
 }

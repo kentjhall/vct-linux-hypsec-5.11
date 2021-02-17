@@ -146,7 +146,7 @@ struct kvm* hypsec_arch_alloc_vm(void)
 	int vmid = hypsec_register_kvm();
 	BUG_ON(vmid <= 0);
 	kvm = hypsec_alloc_vm(vmid);
-	kvm->arch.vmid = (u32)vmid;
+	kvm->arch.mmu.vmid.vmid = (u32)vmid;
 	return kvm;
 }
 #endif
@@ -370,8 +370,8 @@ int kvm_arch_vcpu_create(struct kvm_vcpu *vcpu)
 #ifndef CONFIG_VERIFIED_KVM
 	return create_hyp_mappings(vcpu, vcpu + 1, PAGE_HYP);
 #else
-	vcpu->arch.vmid = vcpu->kvm->arch.vmid;
-	return hypsec_register_vcpu(vcpu->kvm->arch.vmid, vcpu->vcpu_id);
+	vcpu->arch.vmid = vcpu->kvm->arch.mmu.vmid.vmid;
+	return hypsec_register_vcpu(vcpu->kvm->arch.mmu.vmid.vmid, vcpu->vcpu_id);
 #endif
 }
 
@@ -626,13 +626,19 @@ static int kvm_vcpu_first_run_init(struct kvm_vcpu *vcpu)
 
 	if (likely(vcpu->arch.has_run_once))
 		return 0;
+#ifdef CONFIG_VERIFIED_KVM
+        spin_lock(&kvm->hypsec_lock);
+        if (!kvm->verified) {
+                ret = el2_verify_and_load_images(kvm->arch.mmu.vmid.vmid);
+                kvm->verified = true;
+        }
+        spin_unlock(&kvm->hypsec_lock);
+#endif
 
 	if (!kvm_arm_vcpu_is_finalized(vcpu))
 		return -EPERM;
 
-#ifndef CONFIG_VERIFIED_KVM
 	vcpu->arch.has_run_once = true;
-#endif
 
 	if (likely(irqchip_in_kernel(kvm))) {
 		/*
@@ -649,18 +655,6 @@ static int kvm_vcpu_first_run_init(struct kvm_vcpu *vcpu)
 		 */
 		static_branch_inc(&userspace_irqchip_in_use);
 	}
-
-#ifdef CONFIG_VERIFIED_KVM
-	spin_lock(&kvm->hypsec_lock);
-	if (!kvm->verified) {
-		ret = el2_verify_and_load_images(kvm->arch.vmid);
-		kvm->verified = true;
-	}
-
-	if (kvm->arch.resume_inc_exe)
-		load_encrypted_vcpu(kvm->arch.vmid, vcpu->vcpu_id);
-	spin_unlock(&kvm->hypsec_lock);
-#endif
 
 	vcpu->arch.has_run_once = true;
 
@@ -1414,102 +1408,65 @@ long kvm_arch_vm_ioctl(struct file *filp,
 		return 0;
 	}
 #ifdef CONFIG_VERIFIED_KVM
-	case KVM_ARM_SET_BOOT_INFO: {
-		struct kvm_boot_info info;
-		struct page *page[1];
-		int npages, id;
-		unsigned long start, end, virt_addr;
+        case KVM_ARM_SET_BOOT_INFO: {
+                struct kvm_boot_info info;
+                struct page *page[1];
+                int npages, id;
+                unsigned long start, end, virt_addr;
 
-		if (copy_from_user(&info, argp, sizeof(info)))
-			return -EFAULT;
+                if (copy_from_user(&info, argp, sizeof(info)))
+                        return -EFAULT;
 
-		start = (unsigned long)info.data;
-		end = start + info.datasize;
+                start = (unsigned long)info.data;
+                end = start + info.datasize;
 
-		id = el2_set_boot_info(kvm->arch.vmid, info.addr, info.datasize, 0);
+                id = el2_set_boot_info(kvm->arch.mmu.vmid.vmid, info.addr, info.datasize, 0);
 
-		for (virt_addr = start; virt_addr < end; virt_addr += PAGE_SIZE) {
-			npages = __get_user_pages_fast(virt_addr, 1, 1, page);
-			if (npages == 1)
-				el2_remap_vm_image(kvm->arch.vmid, page_to_pfn(page[0]), id);
-			else
-				return -EFAULT;
-		}
+                for (virt_addr = start; virt_addr < end; virt_addr += PAGE_SIZE) {
+                        npages = get_user_pages_fast(virt_addr, 1, 1, page);
+                        if (npages == 1)
+                                el2_remap_vm_image(kvm->arch.mmu.vmid.vmid, page_to_pfn(page[0]), id);
+                        else
+                                return -EFAULT;
+                }
 
-		return 0;
-	}
+                return 0;
+        }
 
-	case KVM_ARM_ENCRYPT_BUF: {
-		struct page *page[1];
-		int npages;
-		struct kvm_user_encrypt kue;
-		unsigned long out;
-
-		if (copy_from_user(&kue, argp, sizeof(kue))) {
-			printk("ENCRYPT_BUF: cannt copy from user\n");
-			return -EFAULT;
-		}
-
-		out = get_zeroed_page(GFP_KERNEL);
-		if (!out) {
-			printk("ENCRYPT_BUF: cant get zero page\n");
-			return -ENOMEM;
-		}
-
-		npages = __get_user_pages_fast(kue.uva, 1, 1, page);
-		if (npages == 1) {
-			el2_encrypt_buf(kvm->arch.vmid,
-                                (u64)(page_to_pfn(page[0]) << PAGE_SHIFT),
-                                (u64)__pa(out));
-                } else {
-			//printk("ENCRYPT_BUF: cant get user pages %lx\n", (unsigned long)kue.uva);
-			free_page(out);
-			return 0;
-                        //return -EFAULT;
-		}
-
-		if(copy_to_user((void*)kue.out_uva, (void*)out, PAGE_SIZE)) {
-			printk("ENCRYPT_BUF: cannt copy to user\n");
-			return -EFAULT;
-		}
-
-		free_page(out);
-
-		return 0;
-	}
-
-	case KVM_ARM_DECRYPT_BUF: {
-		struct page *page[1];
-		int npages;
-
-		npages = __get_user_pages_fast(arg, 1, 1, page);
-		if (npages == 1)
-			el2_decrypt_buf(kvm->arch.vmid,
-				(void *)(page_to_pfn(page[0]) << PAGE_SHIFT), PAGE_SIZE);
-		else
-			return -EFAULT;
-
-		return 0;
-	}
-
-	case KVM_ARM_RESUME_INC_EXE: {
-		kvm->arch.resume_inc_exe = true;
-		return 0;
-	}
-	case KVM_ARM_GET_VMID: {
-		return kvm->arch.vmid;
-	}
-	case KVM_ARM_IS_ZERO_PAGE: {
+        case KVM_ARM_ENCRYPT_BUF: {
                 struct page *page[1];
                 int npages;
 
-                npages = __get_user_pages_fast(arg, 1, 1, page);
-                if (npages == 1) {
-                        return 0;
-                } else {
-			printk("IS_ZERO_PAGE %lx\n", (unsigned long)arg);
-                        return 2;
-                }
+                npages = get_user_pages_fast(arg, 1, 1, page);
+                if (npages == 1)
+                        el2_encrypt_buf(kvm->arch.mmu.vmid.vmid,
+                                (void *)(page_to_pfn(page[0]) << PAGE_SHIFT), PAGE_SIZE);
+                else
+                        return -EFAULT;
+
+                return 0;
+        }
+
+        case KVM_ARM_DECRYPT_BUF: {
+                struct page *page[1];
+                int npages;
+
+                npages = get_user_pages_fast(arg, 1, 1, page);
+                if (npages == 1)
+                        el2_decrypt_buf(kvm->arch.mmu.vmid.vmid,
+                                (void *)(page_to_pfn(page[0]) << PAGE_SHIFT), PAGE_SIZE);
+                else
+                        return -EFAULT;
+
+                return 0;
+        }
+
+        case KVM_ARM_RESUME_INC_EXE: {
+                el2_boot_from_inc_exe(kvm->arch.mmu.vmid.vmid);
+                return 0;
+        }
+        case KVM_ARM_GET_VMID: {
+                return kvm->arch.mmu.vmid.vmid;
         }
 #endif
 	default:
@@ -1550,17 +1507,29 @@ static int kvm_init_vector_slots(void)
 	int err;
 	void *base;
 
+#ifndef CONFIG_VERIFIED_KVM
 	base = kern_hyp_va(kvm_ksym_ref(__kvm_hyp_vector));
+#else
+	base = kern_hyp_va(kvm_ksym_ref(__kvm_nvhe___kvm_hyp_vector));
+#endif
 	kvm_init_vector_slot(base, HYP_VECTOR_DIRECT);
 
+#ifndef CONFIG_VERIFIED_KVM
 	base = kern_hyp_va(kvm_ksym_ref(__bp_harden_hyp_vecs));
+#else
+	base = kern_hyp_va(kvm_ksym_ref(__kvm_nvhe___bp_harden_hyp_vecs));
+#endif
 	kvm_init_vector_slot(base, HYP_VECTOR_SPECTRE_DIRECT);
 
 	if (!cpus_have_const_cap(ARM64_SPECTRE_V3A))
 		return 0;
 
 	if (!has_vhe()) {
+#ifndef CONFIG_VERIFIED_KVM
 		err = create_hyp_exec_mappings(__pa_symbol(__bp_harden_hyp_vecs),
+#else
+		err = create_hyp_exec_mappings(__pa_symbol(__kvm_nvhe___bp_harden_hyp_vecs),
+#endif
 					       __BP_HARDEN_HYP_VECS_SZ, &base);
 		if (err)
 			return err;
@@ -1985,39 +1954,31 @@ static int init_hyp_mode(void)
 	}
 
 #ifdef CONFIG_VERIFIED_KVM
-	err = create_hyp_mappings((void *)kvm_ksym_ref(stage2_pgs_start),
-			(void *)kvm_ksym_ref(stage2_pgs_end),
-			PAGE_HYP);
-	if (err) {
-		kvm_err("Cannot map pages for stage 2 tables\n");
-		goto out_err;
+        err = create_hyp_mappings((void *)kvm_ksym_ref_nvhe(stage2_pgs_start),
+                        (void *)kvm_ksym_ref_nvhe(stage2_pgs_end),
+                        PAGE_HYP);
+        if (err) {
+                kvm_err("Cannot map pages for stage 2 tables\n");
+                goto out_err;
 	}
 
-	err = create_hyp_mappings((void *)kvm_ksym_ref(el2_data_start),
-			(void *)kvm_ksym_ref(el2_data_end),
-			PAGE_HYP);
-	if (err) {
-		kvm_err("Cannot map stage 2 data pages\n");
-		goto out_err;
-	}
+        err = create_hyp_mappings((void *)kvm_ksym_ref_nvhe(el2_data_start),
+                        (void *)kvm_ksym_ref_nvhe(el2_data_end),
+                        PAGE_HYP);
+        if (err) {
+                kvm_err("Cannot map stage 2 data pages\n");
+                goto out_err;
+        }
 
-	err = create_hyp_mappings((void *)kvm_ksym_ref(stage2_tmp_pgs_start),
-			(void *)kvm_ksym_ref(stage2_tmp_pgs_end),
-			PAGE_HYP);
-	if (err) {
-		kvm_err("Cannot map stage 2 tmp pages\n");
-		goto out_err;
-	}
+        err = create_hyp_mappings((void *)kvm_ksym_ref_nvhe(shared_data_start),
+                        (void *)kvm_ksym_ref_nvhe(shared_data_end),
+                        PAGE_HYP);
+        if (err) {
+                kvm_err("Cannot map shared data pages\n");
+                goto out_err;
+        }
 
-	err = create_hyp_mappings((void *)kvm_ksym_ref(shared_data_start),
-			(void *)kvm_ksym_ref(shared_data_end),
-			PAGE_HYP);
-	if (err) {
-		kvm_err("Cannot map shared data pages\n");
-		goto out_err;
-	}
-
-	kvm_info("stage2: finish setting up EL2 runtime memory\n");
+        kvm_info("stage2: finish setting up EL2 runtime memory\n");
 #endif
 
 	/*

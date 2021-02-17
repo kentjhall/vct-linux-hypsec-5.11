@@ -55,6 +55,9 @@
 #include <asm/processor.h>
 #include <asm/ioctl.h>
 #include <linux/uaccess.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#endif
 
 #include "coalesced_mmio.h"
 #include "async_pf.h"
@@ -3154,7 +3157,7 @@ static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, u32 id)
 #ifndef CONFIG_VERIFIED_KVM
 	vcpu = kmem_cache_zalloc(kvm_vcpu_cache, GFP_KERNEL);
 #else
-	vcpu = hypsec_alloc_vcpu(kvm->arch.vmid, id);
+	vcpu = hypsec_alloc_vcpu(kvm->arch.mmu.vmid.vmid, id);
 #endif
 	if (!vcpu) {
 		r = -ENOMEM;

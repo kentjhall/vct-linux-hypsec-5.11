@@ -37,6 +37,13 @@
 #define S2_PGD_PAGES_NUM 1UL
 #define MEMBLOCK_NOMAP 1UL
 */
+/*      
+ * We currently only support a 40bit IPA.
+ */             
+#define KVM_PHYS_SHIFT  (40)
+#define KVM_PHYS_SIZE   (1UL << KVM_PHYS_SHIFT)
+#define KVM_PHYS_MASK   (KVM_PHYS_SIZE - 1UL)
+
 #define MAX_MMIO_ADDR 0x40000000
 #define S2_RDWR PTE_S2_RDWR 
 #define PMD_PAGE_MASK PMD_MASK 
@@ -104,13 +111,12 @@
 
 #define PT_POOL_SIZE (STAGE2_PAGES_SIZE)
 #define phys_page(addr) ((addr) & PHYS_MASK & PAGE_MASK)
-#define pgd_idx(addr)	stage2_pgd_index(addr)
+#define stage2_pgd_idx(addr)	(((addr) >> 30) & (1024 - 1))
+#define pgd_idx(addr)	stage2_pgd_idx(addr)
 #define pud_idx(addr)	pud_index(addr)
 #define pmd_idx(addr)	pmd_index(addr)
 #define pte_idx(addr)	pte_index(addr)
 #define v_pmd_table(pmd)	(pmd & PMD_TYPE_MASK)
 #define writable(pte) (((pte) >> 2UL) & 1UL)
 
-#define SMMU_HOST_OFFSET 1000000000UL
-#define PMD_PAGE_NUM	512
 #endif //HYPSEC_CONSTANTS_H

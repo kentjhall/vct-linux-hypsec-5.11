@@ -121,7 +121,6 @@ struct kvm_arch {
 #ifdef CONFIG_VERIFIED_KVM
 	bool resume_inc_exe;
 #endif
-};
 
 	/*
 	 * If we encounter a data abort without valid instruction syndrome
@@ -141,6 +140,8 @@ struct kvm_arch {
 	u8 pfr0_csv2;
 	u8 pfr0_csv3;
 };
+
+#define KVM_NR_MEM_OBJS     40
 
 struct kvm_vcpu_fault_info {
 	u32 esr_el2;		/* Hyp Syndrom Register */
@@ -223,6 +224,8 @@ enum vcpu_sysreg {
 	NR_SYS_REGS	/* Nothing after this line! */
 };
 
+#define NR_COPRO_REGS   (NR_SYS_REGS * 2)
+
 struct kvm_cpu_context {
 	struct user_pt_regs regs;	/* sp = sp_el0 */
 
@@ -278,37 +281,31 @@ struct vcpu_reset_state {
 };
 
 #ifdef CONFIG_VERIFIED_KVM
-#define	DIRTY_PC_FLAG			1UL << 32
-#define	PENDING_DABT_INJECT		1UL << 33
-#define	PENDING_IABT_INJECT		1UL << 34
-#define	PENDING_UNDEF_INJECT		1UL << 35
-#define PENDING_FSC_FAULT		1UL << 1
-#define PENDING_EXCEPT_INJECT_FLAG	(PENDING_DABT_INJECT | \
-					 PENDING_IABT_INJECT | \
-					 PENDING_UNDEF_INJECT)
-//#define KVM_REGS_SIZE	(sizeof(struct kvm_regs) - sizeof(struct user_fpsimd_state)) / sizeof(u64)
-#define KVM_REGS_SIZE	7 + sizeof(struct user_pt_regs) / sizeof(u64) 
+#define DIRTY_PC_FLAG                   1UL << 32
+#define PENDING_DABT_INJECT             1UL << 33
+#define PENDING_IABT_INJECT             1UL << 34
+#define PENDING_UNDEF_INJECT            1UL << 35
+#define PENDING_FSC_FAULT               1UL << 1
+#define PENDING_EXCEPT_INJECT_FLAG      (PENDING_DABT_INJECT | \
+                                         PENDING_IABT_INJECT | \
+                                         PENDING_UNDEF_INJECT)
+#define KVM_REGS_SIZE   7 + sizeof(struct user_pt_regs) / sizeof(u64)
 
 struct shadow_vcpu_context {
-	struct kvm_regs gp_regs;
-	/*union {
-		u64 sys_regs[NR_SYS_REGS];
-		u32 copro[NR_COPRO_REGS];
-	};*/
-	//u64 regs[KVM_REGS_SIZE];
-	u64 far_el2;
-	u64 hpfar;
-	u64 hcr_el2;
-	u64 ec;
-	u64 dirty;	
-	u64 flags;
-	union {
-		u64 sys_regs[NR_SYS_REGS];
-		u32 copro[NR_COPRO_REGS];
-	};
-	struct user_fpsimd_state fp_regs;
-	u32 esr;
-	u32 vmid;
+        u64 regs[KVM_REGS_SIZE];
+        u64 far_el2;
+        u64 hpfar;
+        u64 hcr_el2;
+        u64 ec;
+        u64 dirty;
+        u64 flags;
+        union {
+                u64 sys_regs[NR_SYS_REGS];
+                u32 copro[NR_COPRO_REGS];
+        };
+        struct user_fpsimd_state fp_regs;
+        u32 esr;
+        u32 vmid;
 };
 #endif
 
@@ -754,14 +751,6 @@ static inline void kvm_init_host_cpu_context(struct kvm_cpu_context *cpu_ctxt)
 	/* The host's MPIDR is immutable, so let's set it up at boot time */
 	ctxt_sys_reg(cpu_ctxt, MPIDR_EL1) = read_cpuid_mpidr();
 }
-
-#ifdef CONFIG_VERIFIED_KVM
-static inline u64 get_host_tpidr_el2(void)
-{
-	return (u64)this_cpu_ptr(&kvm_host_cpu_state)
-		- (u64)kvm_ksym_ref(kvm_host_cpu_state);
-}
-#endif
 
 static inline bool kvm_arch_requires_vhe(void)
 {

@@ -11,6 +11,41 @@ obj-y := timer-sr.o sysreg-sr.o debug-sr.o switch.o tlb.o hyp-init.o host.o \
 obj-y += ../vgic-v3-sr.o ../aarch32.o ../vgic-v2-cpuif-proxy.o ../entry.o \
 	 ../fpsimd.o ../hyp-entry.o ../exception.o
 
+obj-y += hypsec_proved/el2.o
+obj-y += hypsec_proved/s2-setup.o
+obj-y += hypsec_proved/AbstractMachine.o
+obj-y += hypsec_proved/MemRegion.o
+obj-y += hypsec_proved/PageIndex.o
+obj-y += hypsec_proved/PageManager.o
+obj-y += hypsec_proved/PTAlloc.o
+obj-y += hypsec_proved/PTWalk.o
+obj-y += hypsec_proved/NPTWalk.o
+obj-y += hypsec_proved/NPTOps.o
+obj-y += hypsec_proved/MemManagerAux.o
+obj-y += hypsec_proved/MemManager.o
+obj-y += hypsec_proved/MemoryOps.o
+obj-y += hypsec_proved/VMPower.o
+obj-y += hypsec_proved/BootCore.o
+obj-y += hypsec_proved/BootOps.o
+obj-y += hypsec_proved/BootAux.o
+obj-y += hypsec_proved/Helper.o
+obj-y += hypsec_proved/VCPUOpsAux.o
+obj-y += hypsec_proved/VCPUOps.o
+#obj-y += hypsec_proved/mmap.o
+#obj-y += hypsec_proved/sysreg-sr.o
+obj-y += hypsec_proved/sysreg-sr-opt.o
+#obj-y += hypsec_proved/hacl-20/
+obj-y += hypsec_proved/MmioOps.o
+obj-y += hypsec_proved/MmioOpsAux.o
+obj-y += hypsec_proved/MmioCore.o
+obj-y += hypsec_proved/MmioCoreAux.o
+obj-y += hypsec_proved/MmioRaw.o
+obj-y += hypsec_proved/MemHandler.o
+obj-y += hypsec_proved/SmmuPTAlloc.o
+obj-y += hypsec_proved/SmmuPTOps.o
+obj-y += hypsec_proved/SmmuPTWalk.o
+obj-y += hypsec_proved/SmmuSPTWalk.o
+
 ##
 ## Build rules for compiling nVHE hyp code
 ## Output of this folder is `kvm_nvhe.o`, a partially linked object

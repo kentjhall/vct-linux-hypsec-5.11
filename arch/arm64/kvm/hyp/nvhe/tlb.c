@@ -51,7 +51,7 @@ static void __tlb_switch_to_host(struct tlb_inv_context *cxt)
 	write_sysreg(0, vttbr_el2);
 #else
         struct el2_data *el2_data;
-        el2_data = kern_hyp_va(kvm_ksym_ref(el2_data_start));
+        el2_data = kern_hyp_va((void *)&el2_data_start);
         write_sysreg(el2_data->host_vttbr, vttbr_el2);
 #endif
 
@@ -138,7 +138,7 @@ void __kvm_tlb_flush_local_vmid(struct kvm_s2_mmu *mmu)
 	struct tlb_inv_context cxt;
 
 #ifdef CONFIG_VERIFIED_KVM
-	mmu->kvm = hypsec_vmid_to_kvm(mmu->vmid);
+	mmu->kvm = hypsec_vmid_to_kvm(mmu->vmid.vmid);
 #endif
 
 	/* Switch to requested VMID */
@@ -152,7 +152,7 @@ void __kvm_tlb_flush_local_vmid(struct kvm_s2_mmu *mmu)
 }
 
 #ifdef CONFIG_VERIFIED_KVM
-void __hyp_text hypsec_tlb_flush_local_vmid(void)
+void hypsec_tlb_flush_local_vmid(void)
 {
 	__tlbi(vmalle1);
 	dsb(nsh);
@@ -182,7 +182,7 @@ void __kvm_flush_vm_context(void)
 
 /* Call here with shadow vttbr loaded */
 #ifdef CONFIG_VERIFIED_KVM
-void __hyp_text __kvm_tlb_flush_vmid_ipa_shadow(phys_addr_t ipa)
+void __kvm_tlb_flush_vmid_ipa_shadow(phys_addr_t ipa)
 {
 	dsb(ishst);
 	isb();
@@ -207,7 +207,7 @@ void __hyp_text __kvm_tlb_flush_vmid_ipa_shadow(phys_addr_t ipa)
 	isb();
 }
 
-void __hyp_text kvm_tlb_flush_vmid_ipa_host(phys_addr_t ipa)
+void kvm_tlb_flush_vmid_ipa_host(phys_addr_t ipa)
 {
 	u64 vttbr;
 
@@ -239,7 +239,7 @@ void __hyp_text kvm_tlb_flush_vmid_ipa_host(phys_addr_t ipa)
 }
 
 /* Flush stage2 entries corresponded to the currend VMID */
-void __hyp_text __kvm_tlb_flush_vmid_el2(void)
+void __kvm_tlb_flush_vmid_el2(void)
 {
 	isb();
 	asm volatile("tlbi vmalls12e1is" : : );

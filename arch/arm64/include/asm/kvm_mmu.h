@@ -200,6 +200,17 @@ phys_addr_t kvm_mmu_get_httbr(void);
 phys_addr_t kvm_get_idmap_vector(void);
 int kvm_mmu_init(void);
 
+#define kvm_mk_pmd(ptep)                                        \
+        __pmd(__phys_to_pmd_val(__pa(ptep)) | PMD_TYPE_TABLE)
+#define kvm_mk_pud(pmdp)                                        \
+        __pud(__phys_to_pud_val(__pa(pmdp)) | PMD_TYPE_TABLE)
+#define kvm_mk_pgd(pudp)                                        \
+        __pgd(__phys_to_pgd_val(__pa(pudp)) | PUD_TYPE_TABLE)
+
+#define kvm_pfn_pte(pfn, prot)  pfn_pte(pfn, prot)
+#define kvm_pfn_pmd(pfn, prot)  pfn_pmd(pfn, prot)
+#define kvm_pfn_pud(pfn, prot)  (__pud(0))
+
 struct kvm;
 
 #define kvm_flush_dcache_to_poc(a,l)	__flush_dcache_area((a), (l))
@@ -243,6 +254,36 @@ static inline void __invalidate_icache_guest_page(kvm_pfn_t pfn,
 
 void kvm_set_way_flush(struct kvm_vcpu *vcpu);
 void kvm_toggle_cache(struct kvm_vcpu *vcpu, bool was_enabled);
+
+static inline void __kvm_flush_dcache_pte(pte_t pte)
+{
+#ifndef CONFIG_VERIFIED_KVM
+        if (!cpus_have_const_cap(ARM64_HAS_STAGE2_FWB)) {
+                struct page *page = pte_page(pte);
+                kvm_flush_dcache_to_poc(page_address(page), PAGE_SIZE);
+        }
+#endif
+}
+
+static inline void __kvm_flush_dcache_pmd(pmd_t pmd)
+{
+#ifndef CONFIG_VERIFIED_KVM
+        if (!cpus_have_const_cap(ARM64_HAS_STAGE2_FWB)) {
+                struct page *page = pmd_page(pmd);
+                kvm_flush_dcache_to_poc(page_address(page), PMD_SIZE);
+        }
+#endif
+}
+
+static inline void __kvm_flush_dcache_pud(pud_t pud)
+{
+#ifndef CONFIG_VERIFIED_KVM
+        if (!cpus_have_const_cap(ARM64_HAS_STAGE2_FWB)) {
+                struct page *page = pud_page(pud);
+                kvm_flush_dcache_to_poc(page_address(page), PUD_SIZE);
+        }
+#endif
+}
 
 static inline unsigned int kvm_get_vmid_bits(void)
 {

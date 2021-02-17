@@ -27,10 +27,10 @@
 #define LOWER_EL_AArch32_VECTOR		0x600
 
 enum exception_type {
-	except_type_sync	= 0,
-	except_type_irq		= 0x80,
-	except_type_fiq		= 0x100,
-	except_type_serror	= 0x180,
+        except_type_sync        = 0,
+        except_type_irq         = 0x80,
+        except_type_fiq         = 0x100,
+        except_type_serror      = 0x180,
 };
 
 bool kvm_condition_valid32(const struct kvm_vcpu *vcpu);

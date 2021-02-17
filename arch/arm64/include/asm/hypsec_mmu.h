@@ -12,6 +12,7 @@
 #define EL2_REMAP_START                 0x100000000
 #define EL2_REMAP_END			EL2_PAGE_OFFSET
 
+#define PTE_S2_GUEST            	(_AT(pteval_t, 1) << 57)
 #define PAGE_GUEST			__pgprot(PTE_S2_GUEST)
 
 #define __el2_va(x)	(void *)(((unsigned long)(x) & \
@@ -74,10 +75,6 @@ int el2_create_hyp_mapping(unsigned long start, unsigned long end,
 extern void el2_flush_dcache_to_poc(void *addr, size_t size);
 extern void el2_flush_icache_range(unsigned long start, unsigned long end);
 
-void grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
-void revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
-void set_balloon_pfn(struct shadow_vcpu_context *shadow_ctxt);
-
 void* alloc_stage2_page_split(u32 vmid, unsigned int num);
 void* alloc_stage2_page(unsigned int num);
 
@@ -85,10 +82,6 @@ struct s2_trans walk_stage2_pgd(u32 vmid, phys_addr_t addr);
 
 int stage2_mem_regions_search(phys_addr_t addr, struct memblock_region *regions,
 	unsigned long cnt);
-
-//void post_handle_shadow_s2pt_fault(struct kvm_vcpu *vcpu,
-//				   struct shadow_vcpu_context *shadow_ctxt);
-
 extern void clear_shadow_stage2_range(u32 vmid, phys_addr_t start, u64 size);
 extern void __kvm_tlb_flush_vmid_el2(void);
 
@@ -118,7 +111,7 @@ static inline bool is_mmio_gpa(u64 addr)
 pmd_t *pmd_offset_el2(pud_t *pud, u64 addr);
 pte_t *pte_offset_el2(pmd_t *pmd, u64 addr);
 
-extern void el2_encrypt_buf(u32 vmid, u64 buf, u64 out_buf);
+extern void el2_encrypt_buf(u32 vmid, void *buf, uint32_t len);
 extern void el2_decrypt_buf(u32 vmid, void *buf, uint32_t len);
 
 extern void map_mem_el2(void);
@@ -128,6 +121,8 @@ extern void hypsec_tlb_flush_local_vmid(void);
 int map_el2_mem(unsigned long start, unsigned long end,
 			    unsigned long pfn, pgprot_t prot);
 void  __clear_vm_stage2_range(u32 vmid, phys_addr_t start, u64 size);
+void  __el2_encrypt_buf(u32 vmid, void *buf, uint32_t len);
+void  __el2_decrypt_buf(u32 vmid, void *buf, uint32_t len);
 
 u32 get_hpa_owner(phys_addr_t addr);
 #endif /* __ARM_STAGE2_MMU__ */
