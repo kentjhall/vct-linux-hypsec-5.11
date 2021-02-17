@@ -14,6 +14,11 @@
 #include <asm/alternative.h>
 #include <asm/asm-uaccess.h>
 
+#ifdef CONFIG_VERIFIED_KVM
+	.text
+	.pushsection	.hyp.text, "ax"
+#endif
+
 /*
  *	flush_icache_range(start,end)
  *
@@ -244,3 +249,6 @@ SYM_FUNC_START_PI(__dma_unmap_area)
 	b.ne	__dma_inv_area
 	ret
 SYM_FUNC_END_PI(__dma_unmap_area)
+#ifdef CONFIG_VERIFIED_KVM
+	.popsection
+#endif

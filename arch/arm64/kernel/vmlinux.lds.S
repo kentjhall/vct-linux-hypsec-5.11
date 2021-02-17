@@ -266,10 +266,30 @@ SECTIONS
 
 	BSS_SECTION(0, 0, 0)
 
+#ifndef CONFIG_VERIFIED_KVM
 	. = ALIGN(PAGE_SIZE);
+#else
+	. = ALIGN(SEGMENT_ALIGN);
+#endif
 	init_pg_dir = .;
 	. += INIT_DIR_SIZE;
 	init_pg_end = .;
+
+#ifdef CONFIG_VERIFIED_KVM
+	. = ALIGN(SEGMENT_ALIGN);
+	stage2_pgs_start = .;
+	. += STAGE2_PAGES_SIZE;
+	stage2_pgs_end = .;
+
+	. = ALIGN(PAGE_SIZE);
+	el2_data_start = .;
+	. += CORE_DATA_SIZE;
+	el2_data_end = .;
+
+	shared_data_start = .;
+	. += PAGE_SIZE * (PAGE_SIZE * 4);
+	shared_data_end = .;
+#endif
 
 	. = ALIGN(SEGMENT_ALIGN);
 	__pecoff_data_size = ABSOLUTE(. - __initdata_begin);

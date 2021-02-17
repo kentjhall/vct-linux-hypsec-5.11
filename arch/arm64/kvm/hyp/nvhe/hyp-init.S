@@ -96,7 +96,11 @@ alternative_if ARM64_KVM_PROTECTED_MODE
 alternative_else_nop_endif
 
 	ldr	x1, [x0, #NVHE_INIT_TPIDR_EL2]
+#ifndef CONFIG_VERIFIED_KVM
 	msr	tpidr_el2, x1
+#else
+        msr     hstr_el2, xzr
+#endif
 
 	ldr	x1, [x0, #NVHE_INIT_STACK_HYP_VA]
 	mov	sp, x1

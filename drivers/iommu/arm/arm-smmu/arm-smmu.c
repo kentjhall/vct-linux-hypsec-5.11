@@ -40,6 +40,10 @@
 
 #include <linux/amba/bus.h>
 #include <linux/fsl/mc.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#include <asm/kvm_mmu.h>
+#endif
 
 #include "arm-smmu.h"
 
@@ -408,6 +412,9 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 	struct arm_smmu_domain *smmu_domain = to_smmu_domain(domain);
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
 	int idx = smmu_domain->cfg.cbndx;
+#ifdef CONFIG_VERIFIED_KVM
+	unsigned long addr;
+#endif
 
 	fsr = arm_smmu_cb_read(smmu, idx, ARM_SMMU_CB_FSR);
 	if (!(fsr & ARM_SMMU_FSR_FAULT))
@@ -416,6 +423,11 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 	fsynr = arm_smmu_cb_read(smmu, idx, ARM_SMMU_CB_FSYNR0);
 	iova = arm_smmu_cb_readq(smmu, idx, ARM_SMMU_CB_FAR);
 	cbfrsynra = arm_smmu_gr1_read(smmu, ARM_SMMU_GR1_CBFRSYNRA(idx));
+
+#ifdef CONFIG_VERIFIED_KVM
+	addr = el2_arm_lpae_iova_to_phys(iova, cfg->cbndx, smmu->index);
+	printk("Fault IOVA %lx PA %lx\n", iova, addr);
+#endif
 
 	dev_err_ratelimited(smmu->dev,
 	"Unhandled context fault: fsr=0x%x, iova=0x%08lx, fsynr=0x%x, cbfrsynra=0x%x, cb=%d\n",
@@ -458,14 +470,26 @@ static irqreturn_t arm_smmu_global_fault(int irq, void *dev)
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_VERIFIED_KVM
+#define ARM_SMMU_CB_VMID(smmu, cfg) ((u16)(smmu)->cavium_id_base + (cfg)->cbndx + 1)
+#endif
 static void arm_smmu_init_context_bank(struct arm_smmu_domain *smmu_domain,
 				       struct io_pgtable_cfg *pgtbl_cfg)
 {
 	struct arm_smmu_cfg *cfg = &smmu_domain->cfg;
 	struct arm_smmu_cb *cb = &smmu_domain->smmu->cbs[cfg->cbndx];
+#ifdef CONFIG_VERIFIED_KVM
+	struct arm_smmu_device *smmu = smmu_domain->smmu;
+	u32 smmu_num;
+#endif
 	bool stage1 = cfg->cbar != CBAR_TYPE_S2_TRANS;
 
 	cb->cfg = cfg;
+#ifdef CONFIG_VERIFIED_KVM
+	smmu_num = smmu->index;
+	el2_smmu_alloc_pgd(cfg->cbndx, cfg->vmid, smmu_num);
+	printk("SMMU SHIT %s smmu index %d cbndx %d\n", __func__, smmu->index, cfg->cbndx);
+#endif
 
 	/* TCR */
 	if (stage1) {
@@ -747,9 +771,13 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 		cfg->irptndx = cfg->cbndx;
 	}
 
-	if (smmu_domain->stage == ARM_SMMU_DOMAIN_S2)
+	if (smmu_domain->stage == ARM_SMMU_DOMAIN_S2) {
+#ifndef CONFIG_VERIFIED_KVM
 		cfg->vmid = cfg->cbndx + 1;
-	else
+#else
+		cfg->vmid = domain->vmid;
+#endif
+	} else
 		cfg->asid = cfg->cbndx;
 
 	pgtbl_cfg = (struct io_pgtable_cfg) {
@@ -2102,6 +2130,44 @@ err_reset_platform_ops: __maybe_unused;
 	return err;
 }
 
+#ifdef CONFIG_VERIFIED_KVM
+static void s2_smmu_probe(struct arm_smmu_device *smmu,
+			  u64 base, u64 size)
+{
+	struct el2_data *el2_data;
+	struct el2_arm_smmu_device el2_smmu;
+	u64 smmu_start, smmu_end;
+
+	el2_data = (void *)kvm_ksym_ref(el2_data_start);
+	if (el2_data->el2_smmu_num > SMMU_NUM)
+		return;
+
+	el2_smmu.phys_base = base;
+	el2_smmu.size = size;
+
+	smmu_start = base;
+	smmu_end = base + size;
+
+	el2_smmu.pgshift = smmu->pgshift;
+	el2_smmu.features = smmu->features;
+	el2_smmu.options = smmu->options;
+
+	el2_smmu.num_context_banks = smmu->num_context_banks;
+	el2_smmu.num_s2_context_banks = smmu->num_s2_context_banks;
+
+	el2_smmu.va_size = smmu->va_size;
+	el2_smmu.ipa_size = smmu->ipa_size;
+	el2_smmu.pa_size = smmu->pa_size;
+
+	el2_smmu.num_global_irqs = smmu->num_global_irqs;
+	smmu->index = el2_data->el2_smmu_num;
+	el2_smmu.index = smmu->index;
+
+	el2_data->smmus[el2_data->el2_smmu_num] = el2_smmu;
+	el2_data->el2_smmu_num++;
+}
+#endif
+
 static int arm_smmu_device_probe(struct platform_device *pdev)
 {
 	struct resource *res;
@@ -2110,6 +2176,9 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	int num_irqs, i, err;
 	irqreturn_t (*global_fault)(int irq, void *dev);
+#ifdef CONFIG_VERIFIED_KVM
+	u64 phys_smmu_base, smmu_size;
+#endif
 
 	smmu = devm_kzalloc(dev, sizeof(*smmu), GFP_KERNEL);
 	if (!smmu) {
@@ -2140,6 +2209,10 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 	smmu = arm_smmu_impl_init(smmu);
 	if (IS_ERR(smmu))
 		return PTR_ERR(smmu);
+#ifdef CONFIG_VERIFIED_KVM
+	phys_smmu_base = res->start;
+	smmu_size = resource_size(res);
+#endif
 
 	num_irqs = 0;
 	while ((res = platform_get_resource(pdev, IORESOURCE_IRQ, num_irqs))) {
@@ -2233,7 +2306,10 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, smmu);
 	arm_smmu_device_reset(smmu);
 	arm_smmu_test_smr_masks(smmu);
-
+#ifdef CONFIG_VERIFIED_KVM
+	smmu->phys_base = phys_smmu_base;
+	s2_smmu_probe(smmu, phys_smmu_base, smmu_size);
+#endif
 	/*
 	 * We want to avoid touching dev->power.lock in fastpaths unless
 	 * it's really going to do something useful - pm_runtime_enabled()
@@ -2345,7 +2421,30 @@ static struct platform_driver arm_smmu_driver = {
 	.remove	= arm_smmu_device_remove,
 	.shutdown = arm_smmu_device_shutdown,
 };
+#ifdef CONFIG_VERIFIED_KVM
 module_platform_driver(arm_smmu_driver);
+#else
+static int __init arm_smmu_init(void)
+{
+	static bool registered;
+	int ret = 0;
+
+	if (!registered) {
+		ret = platform_driver_register(&arm_smmu_driver);
+		registered = !ret;
+	}
+	return ret;
+}
+
+static void __exit arm_smmu_exit(void)
+{
+	return platform_driver_unregister(&arm_smmu_driver);
+}
+
+/* The following hack is to probe SMMU before hostvisor installation. */
+subsys_initcall(arm_smmu_init);
+module_exit(arm_smmu_exit);
+#endif
 
 MODULE_DESCRIPTION("IOMMU API for ARM architected SMMU implementations");
 MODULE_AUTHOR("Will Deacon <will@kernel.org>");

@@ -184,6 +184,19 @@ struct kvm_vcpu_events {
 	__u32 reserved[12];
 };
 
+#ifdef CONFIG_VERIFIED_KVM
+struct kvm_boot_info {
+	__u32 datasize;
+	__u8 *data;
+	__u64 addr;
+};
+
+struct kvm_user_encrypt {
+	__u64 uva;
+	__u64 out_uva;
+};
+#endif
+
 /* If you need to interpret the index values, here is the key: */
 #define KVM_REG_ARM_COPROC_MASK		0x000000000FFF0000
 #define KVM_REG_ARM_COPROC_SHIFT	16

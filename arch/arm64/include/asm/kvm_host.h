@@ -36,6 +36,9 @@
 #include <kvm/arm_vgic.h>
 #include <kvm/arm_arch_timer.h>
 #include <kvm/arm_pmu.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_mmu.h>
+#endif
 
 #define KVM_MAX_VCPUS VGIC_V3_MAX_CPUS
 
@@ -115,6 +118,10 @@ struct kvm_arch {
 
 	/* Mandated version of PSCI */
 	u32 psci_version;
+#ifdef CONFIG_VERIFIED_KVM
+	bool resume_inc_exe;
+#endif
+};
 
 	/*
 	 * If we encounter a data abort without valid instruction syndrome
@@ -270,7 +277,47 @@ struct vcpu_reset_state {
 	bool		reset;
 };
 
+#ifdef CONFIG_VERIFIED_KVM
+#define	DIRTY_PC_FLAG			1UL << 32
+#define	PENDING_DABT_INJECT		1UL << 33
+#define	PENDING_IABT_INJECT		1UL << 34
+#define	PENDING_UNDEF_INJECT		1UL << 35
+#define PENDING_FSC_FAULT		1UL << 1
+#define PENDING_EXCEPT_INJECT_FLAG	(PENDING_DABT_INJECT | \
+					 PENDING_IABT_INJECT | \
+					 PENDING_UNDEF_INJECT)
+//#define KVM_REGS_SIZE	(sizeof(struct kvm_regs) - sizeof(struct user_fpsimd_state)) / sizeof(u64)
+#define KVM_REGS_SIZE	7 + sizeof(struct user_pt_regs) / sizeof(u64) 
+
+struct shadow_vcpu_context {
+	struct kvm_regs gp_regs;
+	/*union {
+		u64 sys_regs[NR_SYS_REGS];
+		u32 copro[NR_COPRO_REGS];
+	};*/
+	//u64 regs[KVM_REGS_SIZE];
+	u64 far_el2;
+	u64 hpfar;
+	u64 hcr_el2;
+	u64 ec;
+	u64 dirty;	
+	u64 flags;
+	union {
+		u64 sys_regs[NR_SYS_REGS];
+		u32 copro[NR_COPRO_REGS];
+	};
+	struct user_fpsimd_state fp_regs;
+	u32 esr;
+	u32 vmid;
+};
+#endif
+
 struct kvm_vcpu_arch {
+#ifdef CONFIG_VERIFIED_KVM
+	u32 vmid;
+	bool was_preempted;
+	struct s2_trans walk_result;
+#endif
 	struct kvm_cpu_context ctxt;
 	void *sve_state;
 	unsigned int sve_max_vl;
@@ -438,6 +485,9 @@ struct kvm_vcpu_arch {
 #endif
 
 #define vcpu_gp_regs(v)		(&(v)->arch.ctxt.regs)
+#if 0
+#define vcpu_shadow_gp_regs(v)	(&(v)->gp_regs)
+#endif
 
 /*
  * Only use __vcpu_sys_reg/ctxt_sys_reg if you know you want the
@@ -631,6 +681,18 @@ void kvm_arm_resume_guest(struct kvm *kvm);
 									\
 		ret;							\
 	})
+#ifdef CONFIG_VERIFIED_KVM
+#define kvm_call_core(n, ...)						\
+	({								\
+		struct arm_smccc_res res;				\
+									\
+		arm_smccc_1_1_hvc(n,					\
+				  ##__VA_ARGS__, &res);			\
+		WARN_ON(res.a0 != SMCCC_RET_SUCCESS);			\
+									\
+		res.a1;							\
+	})
+#endif
 
 void force_vm_exit(const cpumask_t *mask);
 void kvm_mmu_wp_memory_region(struct kvm *kvm, int slot);
@@ -693,6 +755,14 @@ static inline void kvm_init_host_cpu_context(struct kvm_cpu_context *cpu_ctxt)
 	ctxt_sys_reg(cpu_ctxt, MPIDR_EL1) = read_cpuid_mpidr();
 }
 
+#ifdef CONFIG_VERIFIED_KVM
+static inline u64 get_host_tpidr_el2(void)
+{
+	return (u64)this_cpu_ptr(&kvm_host_cpu_state)
+		- (u64)kvm_ksym_ref(kvm_host_cpu_state);
+}
+#endif
+
 static inline bool kvm_arch_requires_vhe(void)
 {
 	/*
@@ -723,6 +793,16 @@ int kvm_arm_vcpu_arch_get_attr(struct kvm_vcpu *vcpu,
 			       struct kvm_device_attr *attr);
 int kvm_arm_vcpu_arch_has_attr(struct kvm_vcpu *vcpu,
 			       struct kvm_device_attr *attr);
+
+static inline void __cpu_init_stage2(void)
+{
+#ifndef CONFIG_VERIFIED_KVM
+	u32 parange = kvm_call_hyp(__init_stage2_translation);
+
+	WARN_ONCE(parange < 40,
+		  "PARange is %d bits, unsupported configuration!", parange);
+#endif
+}
 
 /* Guest/host FPSIMD coordination helpers */
 int kvm_arch_vcpu_run_map_fp(struct kvm_vcpu *vcpu);

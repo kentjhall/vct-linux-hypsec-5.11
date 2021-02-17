@@ -158,6 +158,7 @@ static inline void __sysreg_restore_el2_return_state(struct kvm_cpu_context *ctx
 
 static inline void __sysreg32_save_state(struct kvm_vcpu *vcpu)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	if (!vcpu_el1_is_32bit(vcpu))
 		return;
 
@@ -171,10 +172,12 @@ static inline void __sysreg32_save_state(struct kvm_vcpu *vcpu)
 
 	if (has_vhe() || vcpu->arch.flags & KVM_ARM64_DEBUG_DIRTY)
 		__vcpu_sys_reg(vcpu, DBGVCR32_EL2) = read_sysreg(dbgvcr32_el2);
+#endif
 }
 
 static inline void __sysreg32_restore_state(struct kvm_vcpu *vcpu)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	if (!vcpu_el1_is_32bit(vcpu))
 		return;
 
@@ -188,6 +191,7 @@ static inline void __sysreg32_restore_state(struct kvm_vcpu *vcpu)
 
 	if (has_vhe() || vcpu->arch.flags & KVM_ARM64_DEBUG_DIRTY)
 		write_sysreg(__vcpu_sys_reg(vcpu, DBGVCR32_EL2), dbgvcr32_el2);
+#endif
 }
 
 #endif /* __ARM64_KVM_HYP_SYSREG_SR_H__ */

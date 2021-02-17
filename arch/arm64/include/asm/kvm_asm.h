@@ -190,7 +190,12 @@ extern void __kvm_tlb_flush_local_vmid(struct kvm_s2_mmu *mmu);
 
 extern void __kvm_timer_set_cntvoff(u64 cntvoff);
 
+#ifndef CONFIG_VERIFIED_KVM
 extern int __kvm_vcpu_run(struct kvm_vcpu *vcpu);
+#else
+struct shadow_vcpu_context;
+extern int __kvm_vcpu_run(u32 vmid, int vcpu_id);
+#endif
 
 extern u64 __vgic_v3_get_ich_vtr_el2(void);
 extern u64 __vgic_v3_read_vmcr(void);
@@ -263,6 +268,9 @@ extern u32 __kvm_get_mdcr_el2(void);
 .macro get_vcpu_ptr vcpu, ctxt
 	get_host_ctxt \ctxt, \vcpu
 	ldr	\vcpu, [\ctxt, #HOST_CONTEXT_VCPU]
+#ifndef CONFIG_VERIFIED_KVM
+	kern_hyp_va	\vcpu
+#endif
 .endm
 
 .macro get_loaded_vcpu vcpu, ctxt

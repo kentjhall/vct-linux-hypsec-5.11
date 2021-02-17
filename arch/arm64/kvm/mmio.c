@@ -111,6 +111,25 @@ int kvm_handle_mmio_return(struct kvm_vcpu *vcpu)
 		vcpu_set_reg(vcpu, kvm_vcpu_dabt_get_rd(vcpu), data);
 	}
 
+	return 0;
+}
+
+static int decode_hsr(struct kvm_vcpu *vcpu, bool *is_write, int *len)
+{
+	unsigned long rt;
+	int access_size;
+	bool sign_extend;
+
+	if (kvm_vcpu_dabt_iss1tw(vcpu)) {
+		/* page table accesses IO mem: tell guest to fix its TTBR */
+#ifndef CONFIG_VERIFIED_KVM
+		kvm_inject_dabt(vcpu, kvm_vcpu_get_hfar(vcpu));
+		return 1;
+#else
+		BUG();
+#endif
+	}
+
 	/*
 	 * The MMIO instruction is emulated and should not be re-executed
 	 * in the guest.

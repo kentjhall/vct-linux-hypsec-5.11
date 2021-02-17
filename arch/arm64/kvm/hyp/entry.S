@@ -49,14 +49,22 @@ alternative_else_nop_endif
 1:
 	set_loaded_vcpu x0, x1, x2
 
+#ifndef CONFIG_VERIFIED_KVM
 	add	x29, x0, #VCPU_CONTEXT
+#else
+	// Store the host_ctxt for use at exit time
+	str	x1, [sp, #-16]!
+	mov	x18, x0
+#endif
 
+#ifndef CONFIG_VERIFIED_KVM
 	// Macro ptrauth_switch_to_guest format:
 	// 	ptrauth_switch_to_guest(guest cxt, tmp1, tmp2, tmp3)
 	// The below macro to restore guest keys is not implemented in C code
 	// as it may cause Pointer Authentication key signing mismatch errors
 	// when this feature is enabled for kernel code.
 	ptrauth_switch_to_guest x29, x0, x1, x2
+#endif
 
 	// Restore the guest's sp_el0
 	restore_sp_el0 x29, x0
@@ -101,11 +109,13 @@ SYM_INNER_LABEL(__guest_exit_panic, SYM_L_GLOBAL)
 
 SYM_INNER_LABEL(__guest_exit, SYM_L_GLOBAL)
 	// x0: return code
-	// x1: vcpu
+	// x1: shadow vcpu context
 	// x2-x29,lr: vcpu regs
 	// vcpu x0-x1 on the stack
 
+#ifndef CONFIG_VERIFIED_KVM
 	add	x1, x1, #VCPU_CONTEXT
+#endif
 
 	ALTERNATIVE(nop, SET_PSTATE_PAN(1), ARM64_HAS_PAN, CONFIG_ARM64_PAN)
 
@@ -131,14 +141,21 @@ SYM_INNER_LABEL(__guest_exit, SYM_L_GLOBAL)
 	// Store the guest's sp_el0
 	save_sp_el0	x1, x2
 
+#ifndef CONFIG_VERIFIED_KVM
 	adr_this_cpu x2, kvm_hyp_ctxt, x3
+#else
+	// Restore the host_ctxt from the stack
+	ldr	x2, [sp], #16
+#endif
 
+#ifndef CONFIG_VERIFIED_KVM
 	// Macro ptrauth_switch_to_hyp format:
 	// 	ptrauth_switch_to_hyp(guest cxt, host cxt, tmp1, tmp2, tmp3)
 	// The below macro to save/restore keys is not implemented in C code
 	// as it may cause Pointer Authentication key signing mismatch errors
 	// when this feature is enabled for kernel code.
 	ptrauth_switch_to_hyp x1, x2, x3, x4, x5
+#endif
 
 	// Restore hyp's sp_el0
 	restore_sp_el0 x2, x3
