@@ -368,7 +368,7 @@ static int hyp_map_walker(u64 addr, u64 end, u32 level, kvm_pte_t *ptep,
 #ifndef CONFIG_VERIFIED_KVM
 	childp = (kvm_pte_t *)get_zeroed_page(GFP_KERNEL);
 #else
-	phys_to_virt(host_alloc_pte(1));
+	childp = phys_to_virt(host_alloc_pte(1));
 #endif
 	if (!childp)
 		return -ENOMEM;
