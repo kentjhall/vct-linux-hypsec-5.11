@@ -51,6 +51,8 @@ extern int map_vcpu_page_to_hyp(u32 vmid, int vcpu_id, void *from, void *to);
 __asm__(".arch_extension	virt");
 #endif
 
+#define HERE kvm_info("HERE: %s:%d\n", __FILE__, __LINE__)
+
 static enum kvm_mode kvm_mode = KVM_MODE_DEFAULT;
 DEFINE_STATIC_KEY_FALSE(kvm_protected_mode_initialized);
 static unsigned long hyp_default_vectors;
@@ -1858,7 +1860,6 @@ static void teardown_hyp_mode(void)
 	}
 }
 
-#define HERE kvm_info("HERE: %s:%d\n", __FILE__, __LINE__)
 /**
  * Inits Hyp-mode on all online CPUs
  */
@@ -2127,6 +2128,7 @@ int kvm_arch_init(void *opaque)
 		return err;
 
 	if (!in_hyp_mode) {
+		HERE;
 		err = init_hyp_mode();
 		if (err)
 			goto out_err;
@@ -2138,10 +2140,12 @@ int kvm_arch_init(void *opaque)
 		goto out_err;
 	}
 
+	HERE;
 	err = init_subsystems();
 	if (err)
 		goto out_hyp;
 
+	HERE;
 	if (is_protected_kvm_enabled()) {
 		static_branch_enable(&kvm_protected_mode_initialized);
 		kvm_info("Protected nVHE mode initialized successfully\n");
