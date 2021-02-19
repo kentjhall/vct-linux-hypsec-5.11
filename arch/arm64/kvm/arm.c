@@ -81,7 +81,9 @@ int kvm_arch_vcpu_should_kick(struct kvm_vcpu *vcpu)
 #ifdef CONFIG_VERIFIED_KVM
 static void install_el2_runtime(void *discard)
 {
+	HERE;
 	kvm_call_core(HVC_ENABLE_S2_TRANS);
+	HERE;
 }
 #endif
 
