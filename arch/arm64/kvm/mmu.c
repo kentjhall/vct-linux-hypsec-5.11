@@ -1323,6 +1323,7 @@ static int kvm_map_idmap_text(void)
 	return err;
 }
 
+#define HERE kvm_info("here: %d\n", __LINE__)
 int kvm_mmu_init(void)
 {
 	int err;
@@ -1340,6 +1341,7 @@ int kvm_mmu_init(void)
 	 */
 	BUG_ON((hyp_idmap_start ^ (hyp_idmap_end - 1)) & PAGE_MASK);
 
+	HERE;
 	hyp_va_bits = 64 - ((idmap_t0sz & TCR_T0SZ_MASK) >> TCR_T0SZ_OFFSET);
 	kvm_debug("Using %u-bit virtual addresses at EL2\n", hyp_va_bits);
 	kvm_debug("IDMAP page: %lx\n", hyp_idmap_start);
@@ -1347,6 +1349,7 @@ int kvm_mmu_init(void)
 		  kern_hyp_va(PAGE_OFFSET),
 		  kern_hyp_va((unsigned long)high_memory - 1));
 
+	HERE;
 	if (hyp_idmap_start >= kern_hyp_va(PAGE_OFFSET) &&
 	    hyp_idmap_start <  kern_hyp_va((unsigned long)high_memory - 1) &&
 	    hyp_idmap_start != (unsigned long)__hyp_idmap_text_start) {
@@ -1359,6 +1362,7 @@ int kvm_mmu_init(void)
 		goto out;
 	}
 
+	HERE;
 	hyp_pgtable = kzalloc(sizeof(*hyp_pgtable), GFP_KERNEL);
 	if (!hyp_pgtable) {
 		kvm_err("Hyp mode page-table not allocated\n");
@@ -1366,23 +1370,29 @@ int kvm_mmu_init(void)
 		goto out;
 	}
 
+	HERE;
 	err = kvm_pgtable_hyp_init(hyp_pgtable, hyp_va_bits);
 	if (err)
 		goto out_free_pgtable;
 
+	HERE;
 	err = kvm_map_idmap_text();
 	if (err)
 		goto out_destroy_pgtable;
 
+	HERE;
 	io_map_base = hyp_idmap_start;
 	return 0;
 
 out_destroy_pgtable:
+	HERE;
 	kvm_pgtable_hyp_destroy(hyp_pgtable);
 out_free_pgtable:
+	HERE;
 	kfree(hyp_pgtable);
 	hyp_pgtable = NULL;
 out:
+	HERE;
 	return err;
 }
 
