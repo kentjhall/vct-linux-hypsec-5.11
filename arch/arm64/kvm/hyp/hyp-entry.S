@@ -15,9 +15,6 @@
 #include <asm/mmu.h>
 #include <asm/spectre.h>
 
-        .text
-        .pushsection    .hyp.text, "ax"
-
 .macro save_caller_saved_regs_vect
 	/* x0 and x1 were saved in the vector entry */
 	stp	x2, x3,   [sp, #-16]!
@@ -125,12 +122,23 @@ el1_sync:				// Guest trapped into EL2
         b.ne    el1_trap
 
 5:
+        /* if tpidr_el2 = 0, we know if traps from host kernel! */
+        mrs     x1, tpidr_el2
+        cbnz    x1, el1_trap
+
+        ldp     x0, x1,   [sp], #16
+        handle_dabt
 4:
+        mrs     x1, tpidr_el2
+        cbnz    x1, el1_hvc_guest       // called HVC
+
         cmp     x0, #HVC_GET_VECTORS
         b.ne    2f
         mrs     x0, vbar_el2
         eret
 2:
+
+el1_hvc_guest:
 #endif
         /*
          * Fastest possible path for ARM_SMCCC_ARCH_WORKAROUND_1.
