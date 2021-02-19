@@ -1858,6 +1858,7 @@ static void teardown_hyp_mode(void)
 	}
 }
 
+#define HERE kvm_info("HERE: %s:%d\n", __FILE__, __LINE__)
 /**
  * Inits Hyp-mode on all online CPUs
  */
@@ -2150,13 +2151,18 @@ int kvm_arch_init(void *opaque)
 		kvm_info("Hyp mode initialized successfully\n");
 	}
 
+	HERE;
 	return 0;
 
 out_hyp:
+	HERE;
 	hyp_cpu_pm_exit();
-	if (!in_hyp_mode)
+	if (!in_hyp_mode) {
+		HERE;
 		teardown_hyp_mode();
+	}
 out_err:
+	HERE;
 	return err;
 }
 

@@ -1323,7 +1323,7 @@ static int kvm_map_idmap_text(void)
 	return err;
 }
 
-#define HERE kvm_info("here: %d\n", __LINE__)
+#define HERE kvm_info("HERE: %s:%d\n", __FILE__, __LINE__)
 int kvm_mmu_init(void)
 {
 	int err;
