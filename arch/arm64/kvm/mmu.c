@@ -19,9 +19,6 @@
 #include <asm/kvm_asm.h>
 #include <asm/kvm_emulate.h>
 #include <asm/virt.h>
-#ifdef CONFIG_VERIFIED_KVM
-#include <asm/hypsec_host.h>
-#endif
 
 #include "trace.h"
 
@@ -33,7 +30,6 @@ static unsigned long hyp_idmap_end;
 static phys_addr_t hyp_idmap_vector;
 
 static unsigned long io_map_base;
-
 
 /*
  * Release kvm_mmu_lock periodically if the memory region is large. Otherwise,
@@ -83,9 +79,7 @@ static bool memslot_is_logging(struct kvm_memory_slot *memslot)
  */
 void kvm_flush_remote_tlbs(struct kvm *kvm)
 {
-#ifndef CONFIG_VERIFIED_KVM
 	kvm_call_hyp(__kvm_tlb_flush_vmid, &kvm->arch.mmu);
-#endif
 }
 
 static bool kvm_is_device_pfn(unsigned long pfn)
@@ -144,10 +138,6 @@ static void __unmap_stage2_range(struct kvm_s2_mmu *mmu, phys_addr_t start, u64 
 static void unmap_stage2_range(struct kvm_s2_mmu *mmu, phys_addr_t start, u64 size)
 {
 	__unmap_stage2_range(mmu, start, size, true);
-
-#ifdef CONFIG_VERIFIED_KVM
-        clear_vm_stage2_range(mmu->vmid.vmid, start, size);
-#endif
 }
 
 static void stage2_flush_memslot(struct kvm *kvm,
@@ -196,38 +186,6 @@ void free_hyp_pgds(void)
 	mutex_unlock(&kvm_hyp_pgd_mutex);
 }
 
-#ifdef CONFIG_VERIFIED_KVM
-/* Map physical memory to EL2's address space */
-void map_mem_el2(void)
-{
-        struct memblock_region *reg;
-        int err = 0;
-        void *from, *to;
-
-        for_each_mem_region(reg) {
-                phys_addr_t start = reg->base;
-                phys_addr_t end = start + reg->size;
-
-                if (start >= end)
-                        break;
-                if (memblock_is_nomap(reg))
-                        continue;
-
-                kvm_info("mapping mem start %llx end %llx to EL2\n", start, end);
-                from = (void *)start;
-                to = (void *)end;
-                err = create_hyp_mappings(from, to, PAGE_HYP);
-                if (err) {
-                        kvm_err("Cannot map rodata section\n");
-                        goto out_err;
-                }
-        }
-
-out_err:
-        return;
-}
-#endif
-
 static int __create_hyp_mappings(unsigned long start, unsigned long size,
 				 unsigned long phys, enum kvm_pgtable_prot prot)
 {
@@ -242,10 +200,6 @@ static int __create_hyp_mappings(unsigned long start, unsigned long size,
 
 static phys_addr_t kvm_kaddr_to_phys(void *kaddr)
 {
-#ifdef CONFIG_VERIFIED_KVM
-        if ((u64)kaddr < PAGE_OFFSET)
-                kaddr = __va(kaddr);
-#endif
 	if (!is_vmalloc_addr(kaddr)) {
 		BUG_ON(!virt_addr_valid(kaddr));
 		return __pa(kaddr);
@@ -269,18 +223,8 @@ int create_hyp_mappings(void *from, void *to, enum kvm_pgtable_prot prot)
 {
 	phys_addr_t phys_addr;
 	unsigned long virt_addr;
-#ifndef CONFIG_VERIFIED_KVM
 	unsigned long start = kern_hyp_va((unsigned long)from);
 	unsigned long end = kern_hyp_va((unsigned long)to);
-#else
-	unsigned long start = ((unsigned long)from >= PAGE_OFFSET) ?
-				kern_hyp_va((unsigned long)from) :
-				(unsigned long)from | EL2_PAGE_OFFSET;
-        unsigned long end = ((unsigned long)to >= PAGE_OFFSET) ?
-                                kern_hyp_va((unsigned long)to) :
-                                (unsigned long)to | EL2_PAGE_OFFSET;
-	unsigned long size = PAGE_SIZE;
-#endif
 
 	if (is_kernel_in_hyp_mode())
 		return 0;
@@ -288,26 +232,11 @@ int create_hyp_mappings(void *from, void *to, enum kvm_pgtable_prot prot)
 	start = start & PAGE_MASK;
 	end = PAGE_ALIGN(end);
 
-#ifdef CONFIG_VERIFIED_KVM
-        if (!(start % PMD_SIZE) && !((end - start) % PMD_SIZE)) {
-                size = PMD_SIZE;
-                printk("SeKVM: MAP SECTION: %s start %lx end %lx\n", __func__, start, end);
-        }
-#endif
-
-#ifdef CONFIG_VERIFIED_KVM
-        for (virt_addr = start; virt_addr < end; virt_addr += size) {
-#else
 	for (virt_addr = start; virt_addr < end; virt_addr += PAGE_SIZE) {
-#endif
 		int err;
 
 		phys_addr = kvm_kaddr_to_phys(from + virt_addr - start);
-#ifdef CONFIG_VERIFIED_KVM
-		err = __create_hyp_mappings(virt_addr, size, phys_addr,
-#else
 		err = __create_hyp_mappings(virt_addr, PAGE_SIZE, phys_addr,
-#endif
 					    prot);
 		if (err)
 			return err;
@@ -433,6 +362,36 @@ int create_hypsec_io_mappings(phys_addr_t phys_addr, size_t size,
 
         *haddr = phys_addr;
         return 0;
+}
+
+/* Map physical memory to EL2's address space */
+void map_mem_el2(void)
+{
+        struct memblock_region *reg;
+        int err = 0;
+        void *from, *to;
+
+        for_each_mem_region(reg) {
+                phys_addr_t start = reg->base;
+                phys_addr_t end = start + reg->size;
+
+                if (start >= end)
+                        break;
+                if (memblock_is_nomap(reg))
+                        continue;
+
+                kvm_info("mapping mem start %llx end %llx to EL2\n", start, end);
+                from = (void *)start;
+                to = (void *)end;
+                err = create_hyp_mappings(from, to, PAGE_HYP);
+                if (err) {
+                        kvm_err("Cannot map rodata section\n");
+                        goto out_err;
+                }
+        }
+
+out_err:
+        return;
 }
 #endif
 
@@ -584,7 +543,6 @@ void kvm_free_stage2_pgd(struct kvm_s2_mmu *mmu)
 int kvm_phys_addr_ioremap(struct kvm *kvm, phys_addr_t guest_ipa,
 			  phys_addr_t pa, unsigned long size, bool writable)
 {
-#ifndef CONFIG_VERIFIED_KVM
 	phys_addr_t addr;
 	int ret = 0;
 	struct kvm_mmu_memory_cache cache = { 0, __GFP_ZERO, NULL, };
@@ -614,10 +572,6 @@ int kvm_phys_addr_ioremap(struct kvm *kvm, phys_addr_t guest_ipa,
 
 	kvm_mmu_free_memory_cache(&cache);
 	return ret;
-#else
-        el2_kvm_phys_addr_ioremap(kvm->arch.mmu.vmid.vmid, guest_ipa, pa, size);
-        return 0;
-#endif
 }
 
 /**
@@ -660,9 +614,7 @@ void kvm_mmu_wp_memory_region(struct kvm *kvm, int slot)
 	spin_lock(&kvm->mmu_lock);
 	stage2_wp_range(&kvm->arch.mmu, start, end);
 	spin_unlock(&kvm->mmu_lock);
-#ifndef CONFIG_VERIFIED_KVM
 	kvm_flush_remote_tlbs(kvm);
-#endif
 }
 
 /**
@@ -715,20 +667,6 @@ static void kvm_send_hwpoison_signal(unsigned long address, short lsb)
 {
 	send_sig_mceerr(BUS_MCEERR_AR, (void __user *)address, lsb, current);
 }
-
-#ifdef CONFIG_VERIFIED_KVM
-static void set_s2_trans_result(struct kvm_vcpu *vcpu, kvm_pfn_t pfn,
-                                phys_addr_t output, bool writable, int level)
-{
-        struct s2_trans *walk_result = &vcpu->arch.walk_result;
-        walk_result->pfn = pfn;
-        walk_result->output = output;
-        walk_result->writable = writable;
-        walk_result->readable = true;
-        walk_result->level = level;
-        walk_result->desc = 0;
-}
-#endif
 
 static bool fault_supports_stage2_huge_mapping(struct kvm_memory_slot *memslot,
 					       unsigned long hva,
@@ -1010,19 +948,11 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 	 * kvm_pgtable_stage2_map() should be called to change block size.
 	 */
 	if (fault_status == FSC_PERM && vma_pagesize == fault_granule) {
-#ifndef CONFIG_VERIFIED_KVM
 		ret = kvm_pgtable_stage2_relax_perms(pgt, fault_ipa, prot);
-#else
-		set_s2_trans_result(vcpu, pfn, pfn << PAGE_SHIFT, writable, 2);
-#endif
 	} else {
-#ifndef CONFIG_VERIFIED_KVM
 		ret = kvm_pgtable_stage2_map(pgt, fault_ipa, vma_pagesize,
 					     __pfn_to_phys(pfn), prot,
 					     memcache);
-#else
-		set_s2_trans_result(vcpu, pfn, pfn << PAGE_SHIFT, writable, 3);
-#endif
 	}
 
 out_unlock:
@@ -1078,11 +1008,7 @@ int kvm_handle_guest_abort(struct kvm_vcpu *vcpu)
 	is_iabt = kvm_vcpu_trap_is_iabt(vcpu);
 
 	/* Synchronous External Abort? */
-#ifndef CONFIG_VERIFIED_KVM
-	if (kvm_vcpu_abt_issea(vcpu)) {
-#else
 	if (kvm_vcpu_abt_issea(vcpu, 0)) {
-#endif
 		/*
 		 * For RAS the host kernel may handle this abort.
 		 * There is no need to pass the error into the guest.
@@ -1323,7 +1249,6 @@ static int kvm_map_idmap_text(void)
 	return err;
 }
 
-#define HERE kvm_info("HERE: %s:%d\n", __FILE__, __LINE__)
 int kvm_mmu_init(void)
 {
 	int err;
@@ -1341,7 +1266,6 @@ int kvm_mmu_init(void)
 	 */
 	BUG_ON((hyp_idmap_start ^ (hyp_idmap_end - 1)) & PAGE_MASK);
 
-	HERE;
 	hyp_va_bits = 64 - ((idmap_t0sz & TCR_T0SZ_MASK) >> TCR_T0SZ_OFFSET);
 	kvm_debug("Using %u-bit virtual addresses at EL2\n", hyp_va_bits);
 	kvm_debug("IDMAP page: %lx\n", hyp_idmap_start);
@@ -1349,7 +1273,6 @@ int kvm_mmu_init(void)
 		  kern_hyp_va(PAGE_OFFSET),
 		  kern_hyp_va((unsigned long)high_memory - 1));
 
-	HERE;
 	if (hyp_idmap_start >= kern_hyp_va(PAGE_OFFSET) &&
 	    hyp_idmap_start <  kern_hyp_va((unsigned long)high_memory - 1) &&
 	    hyp_idmap_start != (unsigned long)__hyp_idmap_text_start) {
@@ -1362,7 +1285,6 @@ int kvm_mmu_init(void)
 		goto out;
 	}
 
-	HERE;
 	hyp_pgtable = kzalloc(sizeof(*hyp_pgtable), GFP_KERNEL);
 	if (!hyp_pgtable) {
 		kvm_err("Hyp mode page-table not allocated\n");
@@ -1370,29 +1292,23 @@ int kvm_mmu_init(void)
 		goto out;
 	}
 
-	HERE;
 	err = kvm_pgtable_hyp_init(hyp_pgtable, hyp_va_bits);
 	if (err)
 		goto out_free_pgtable;
 
-	HERE;
 	err = kvm_map_idmap_text();
 	if (err)
 		goto out_destroy_pgtable;
 
-	HERE;
 	io_map_base = hyp_idmap_start;
 	return 0;
 
 out_destroy_pgtable:
-	HERE;
 	kvm_pgtable_hyp_destroy(hyp_pgtable);
 out_free_pgtable:
-	HERE;
 	kfree(hyp_pgtable);
 	hyp_pgtable = NULL;
 out:
-	HERE;
 	return err;
 }
 

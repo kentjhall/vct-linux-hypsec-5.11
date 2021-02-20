@@ -358,4 +358,6 @@ static void inline set_pt_vttbr(u32 vmid, u64 vttbr) {
 	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	el2_data->vm_info[vmid].vttbr = vttbr;
 };
+
+void handle_host_hvc(struct s2_host_regs *hr);
 #endif /* __ARM_STAGE2_H__ */

@@ -8,6 +8,9 @@ ccflags-y += -I $(srctree)/$(src)
 KVM=../../../virt/kvm
 
 obj-$(CONFIG_KVM) += kvm.o
+ifeq ($(CONFIG_VERIFIED_KVM), y)
+obj-$(CONFIG_KVM) += hyp.o
+endif
 obj-$(CONFIG_KVM) += hyp/
 
 kvm-y := $(KVM)/kvm_main.o $(KVM)/coalesced_mmio.o $(KVM)/eventfd.o \
