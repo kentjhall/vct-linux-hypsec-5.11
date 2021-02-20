@@ -111,6 +111,12 @@ int kvm_handle_mmio_return(struct kvm_vcpu *vcpu)
 		vcpu_set_reg(vcpu, kvm_vcpu_dabt_get_rd(vcpu), data);
 	}
 
+	/*
+	 * The MMIO instruction is emulated and should not be re-executed
+	 * in the guest.
+	 */
+	kvm_incr_pc(vcpu);
+
 	return 0;
 }
 
