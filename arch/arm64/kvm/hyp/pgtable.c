@@ -9,6 +9,9 @@
 
 #include <linux/bitfield.h>
 #include <asm/kvm_pgtable.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#endif
 
 #define KVM_PGTABLE_MAX_LEVELS		4U
 
@@ -362,7 +365,11 @@ static int hyp_map_walker(u64 addr, u64 end, u32 level, kvm_pte_t *ptep,
 	if (WARN_ON(level == KVM_PGTABLE_MAX_LEVELS - 1))
 		return -EINVAL;
 
+#ifndef CONFIG_VERIFIED_KVM
 	childp = (kvm_pte_t *)get_zeroed_page(GFP_KERNEL);
+#else
+	childp = phys_to_virt(host_alloc_pte(1));
+#endif
 	if (!childp)
 		return -ENOMEM;
 
@@ -397,7 +404,11 @@ int kvm_pgtable_hyp_init(struct kvm_pgtable *pgt, u32 va_bits)
 {
 	u64 levels = ARM64_HW_PGTABLE_LEVELS(va_bits);
 
+#ifndef CONFIG_VERIFIED_KVM
 	pgt->pgd = (kvm_pte_t *)get_zeroed_page(GFP_KERNEL);
+#else
+	pgt->pgd = phys_to_virt(host_alloc_pgd(1));
+#endif
 	if (!pgt->pgd)
 		return -ENOMEM;
 
@@ -484,7 +495,9 @@ static bool stage2_map_walker_try_leaf(u64 addr, u64 end, u32 level,
 
 	/* There's an existing valid leaf entry, so perform break-before-make */
 	kvm_set_invalid_pte(ptep);
+#ifndef CONFIG_VERIFIED_KVM
 	kvm_call_hyp(__kvm_tlb_flush_vmid_ipa, data->mmu, addr, level);
+#endif
 	kvm_set_valid_leaf_pte(ptep, phys, data->attr, level);
 out:
 	data->phys += granule;
@@ -508,7 +521,9 @@ static int stage2_map_walk_table_pre(u64 addr, u64 end, u32 level,
 	 * entries below us which would otherwise need invalidating
 	 * individually.
 	 */
+#ifndef CONFIG_VERIFIED_KVM
 	kvm_call_hyp(__kvm_tlb_flush_vmid, data->mmu);
+#endif
 	data->anchor = ptep;
 	return 0;
 }
@@ -546,7 +561,9 @@ static int stage2_map_walk_leaf(u64 addr, u64 end, u32 level, kvm_pte_t *ptep,
 	 */
 	if (kvm_pte_valid(pte)) {
 		kvm_set_invalid_pte(ptep);
+#ifndef CONFIG_VERIFIED_KVM
 		kvm_call_hyp(__kvm_tlb_flush_vmid_ipa, data->mmu, addr, level);
+#endif
 		put_page(page);
 	}
 
@@ -658,7 +675,9 @@ static int stage2_unmap_walker(u64 addr, u64 end, u32 level, kvm_pte_t *ptep,
 			       enum kvm_pgtable_walk_flags flag,
 			       void * const arg)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	struct kvm_s2_mmu *mmu = arg;
+#endif
 	kvm_pte_t pte = *ptep, *childp = NULL;
 	bool need_flush = false;
 
@@ -680,7 +699,9 @@ static int stage2_unmap_walker(u64 addr, u64 end, u32 level, kvm_pte_t *ptep,
 	 * back lazily.
 	 */
 	kvm_set_invalid_pte(ptep);
+#ifndef CONFIG_VERIFIED_KVM
 	kvm_call_hyp(__kvm_tlb_flush_vmid_ipa, mmu, addr, level);
+#endif
 	put_page(virt_to_page(ptep));
 
 	if (need_flush) {
@@ -821,8 +842,10 @@ int kvm_pgtable_stage2_relax_perms(struct kvm_pgtable *pgt, u64 addr,
 		clr |= KVM_PTE_LEAF_ATTR_HI_S2_XN;
 
 	ret = stage2_update_leaf_attrs(pgt, addr, 1, set, clr, NULL, &level);
+#ifndef CONFIG_VERIFIED_KVM
 	if (!ret)
 		kvm_call_hyp(__kvm_tlb_flush_vmid_ipa, pgt->mmu, addr, level);
+#endif
 	return ret;
 }
 
