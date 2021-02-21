@@ -2421,30 +2421,7 @@ static struct platform_driver arm_smmu_driver = {
 	.remove	= arm_smmu_device_remove,
 	.shutdown = arm_smmu_device_shutdown,
 };
-#ifdef CONFIG_VERIFIED_KVM
 module_platform_driver(arm_smmu_driver);
-#else
-static int __init arm_smmu_init(void)
-{
-	static bool registered;
-	int ret = 0;
-
-	if (!registered) {
-		ret = platform_driver_register(&arm_smmu_driver);
-		registered = !ret;
-	}
-	return ret;
-}
-
-static void __exit arm_smmu_exit(void)
-{
-	return platform_driver_unregister(&arm_smmu_driver);
-}
-
-/* The following hack is to probe SMMU before hostvisor installation. */
-subsys_initcall(arm_smmu_init);
-module_exit(arm_smmu_exit);
-#endif
 
 MODULE_DESCRIPTION("IOMMU API for ARM architected SMMU implementations");
 MODULE_AUTHOR("Will Deacon <will@kernel.org>");
