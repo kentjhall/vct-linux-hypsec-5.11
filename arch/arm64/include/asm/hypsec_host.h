@@ -255,6 +255,14 @@ static void inline set_per_cpu(int vmid, int vcpu_id)
 	el2_data->per_cpu_data[pcpuid].vcpu_id = vcpu_id;
 };
 
+static void inline set_per_cpu_nvhe(int vmid, int vcpu_id)
+{
+        struct el2_data *el2_data = kern_hyp_va((void *)&el2_data_start);
+        int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
+        el2_data->per_cpu_data[pcpuid].vmid = vmid;
+        el2_data->per_cpu_data[pcpuid].vcpu_id = vcpu_id;
+};
+
 //int get_cur_vmid(void);
 //int get_cur_vcpu_id(void);
 static int inline get_cur_vmid(void)
@@ -360,4 +368,5 @@ static void inline set_pt_vttbr(u32 vmid, u64 vttbr) {
 };
 
 void handle_host_hvc(struct s2_host_regs *hr);
+void handle_host_stage2_fault(u64 esr, u64 hpfar, struct s2_host_regs *hr);
 #endif /* __ARM_STAGE2_H__ */

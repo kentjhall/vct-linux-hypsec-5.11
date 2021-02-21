@@ -7,20 +7,24 @@
 
 u64 walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc)
 {
-    u64 vttbr_pa = phys_page(vttbr);
-    u64 ret = 0UL;
-    if (vttbr_pa != 0UL) {
-	u64 pgd_idx = pgd_index(addr);
-        u64 pgd = pt_load(vmid, vttbr_pa + pgd_idx * 8UL);
-        u64 pgd_pa = phys_page(pgd);
-        if (pgd_pa == 0UL && alloc == 1U)
-        {
+    u64 vttbr_pa, ret, pgd_idx, pgd, pgd_pa;
+
+    ret = 0UL;
+    vttbr_pa = phys_page(vttbr);
+
+    if (vmid == COREVISOR)
+	    pgd_idx = pgd_index(addr);
+    else
+	    pgd_idx = pgd_idx(addr);
+
+    pgd = pt_load(vmid, vttbr_pa | (pgd_idx * 8UL));
+    if (pgd == 0UL && alloc == 1U) {
 	    pgd_pa = alloc_s2pt_pgd(vmid);
-            pgd = pgd_pa | PUD_TYPE_TABLE;
-            pt_store(vmid, vttbr_pa + pgd_idx * 8UL, pgd);
-        }
-	ret = pgd;
+	    pgd = pgd_pa | PUD_TYPE_TABLE;
+	    pt_store(vmid, vttbr_pa | (pgd_idx * 8UL), pgd);
     }
+
+    ret = pgd;
     return ret;
 }
 

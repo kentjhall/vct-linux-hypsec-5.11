@@ -29,7 +29,10 @@ u32 get_npt_level(u32 vmid, u64 addr)
 
 	vttbr = get_pt_vttbr(vmid);
 	pgd = walk_pgd(vmid, vttbr, addr, 0U);
-	pud = walk_pud(vmid, pgd, addr, 0U);
+	if (vmid == COREVISOR)
+		pud = walk_pud(vmid, pgd, addr, 0U);
+	else
+		pud = pgd;
 	pmd = walk_pmd(vmid, pud, addr, 0U);
 
     	if (v_pmd_table(pmd) == PMD_TYPE_TABLE) {
@@ -55,7 +58,10 @@ u64 walk_npt(u32 vmid, u64 addr)
 
 	vttbr = get_pt_vttbr(vmid);
 	pgd = walk_pgd(vmid, vttbr, addr, 0U);
-	pud = walk_pud(vmid, pgd, addr, 0U);
+	if (vmid == COREVISOR)
+		pud = walk_pud(vmid, pgd, addr, 0U);
+	else
+		pud = pgd;
 	pmd = walk_pmd(vmid, pud, addr, 0U);
 
 	if (v_pmd_table(pmd) == PMD_TYPE_TABLE) {
@@ -75,6 +81,10 @@ void set_npt(u32 vmid, u64 addr, u32 level, u64 pte)
 
 	vttbr = get_pt_vttbr(vmid);	
 	pgd = walk_pgd(vmid, vttbr, addr, 1U);
+	if (vmid == COREVISOR)
+		pud = walk_pud(vmid, pgd, addr, 1U);
+	else
+		pud = pgd;
 	pud = walk_pud(vmid, pgd, addr, 1U);
 
 	if (level == 2U)

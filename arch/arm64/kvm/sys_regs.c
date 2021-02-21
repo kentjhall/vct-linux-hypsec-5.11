@@ -32,11 +32,6 @@
 
 #include "trace.h"
 
-#ifdef CONFIG_VERIFIED_KVM
-#include <asm/kvm_hyp.h>
-#include <asm/hypsec_host.h>
-#endif
-
 /*
  * All of this file is extremely similar to the ARM coproc.c, but the
  * types are different. My gut feeling is that it should be pretty

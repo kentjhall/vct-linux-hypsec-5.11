@@ -47,13 +47,8 @@ SYM_CODE_END(__hyp_stub_vectors)
 
 SYM_CODE_START_LOCAL(el1_sync)
 	cmp	x0, #HVC_SET_VECTORS
-	b.ne	1f
-	msr	vbar_el2, x1
-	b	9f
-
-1:	cmp	x0, #HVC_GET_VECTORS
 	b.ne	2f
-	mrs	x0, vbar_el2
+	msr	vbar_el2, x1
 	b	9f
 
 2:	cmp	x0, #HVC_SOFT_RESTART
@@ -112,11 +107,11 @@ SYM_CODE_END(\label)
  */
 
 SYM_FUNC_START(__hyp_get_vectors)
-	str	lr, [sp, #-16]!
-	mov	x0, #HVC_GET_VECTORS
-	hvc	#0
-	ldr	lr, [sp], #16
-	ret
+        str     lr, [sp, #-16]!
+        mov     x0, #HVC_GET_VECTORS
+        hvc     #0
+        ldr     lr, [sp], #16
+        ret
 SYM_FUNC_END(__hyp_get_vectors)
 
 SYM_FUNC_START(__hyp_set_vectors)

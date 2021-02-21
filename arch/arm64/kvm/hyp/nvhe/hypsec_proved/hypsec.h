@@ -120,7 +120,7 @@ static void inline pt_store(u32 vmid, u64 addr, u64 value) {
 };
 
 /* for split PT pool */
-#define PGD_BASE PAGE_SIZE
+#define PGD_BASE (PAGE_SIZE * 2)
 #define PUD_BASE (PGD_BASE + (PAGE_SIZE * 16))
 #define PMD_BASE SZ_2M
 static u64 inline get_pgd_next(u32 vmid) {
@@ -927,12 +927,4 @@ void clear_smmu_pt(u32 cbndx, u32 index);
 u64 v_walk_smmu_pt(u32 cbndx, u32 index, u64 addr);
 void v_set_smmu_pt(u32 cbndx, u32 index, u64 addr, u64 pte);
 u64 unmap_smmu_pt(u32 cbndx, u32 index, u64 addr);
-
-static void inline set_per_cpu_el2(int vmid, int vcpu_id)
-{
-        struct el2_data *el2_data = kern_hyp_va((void *)&el2_data_start);
-        int pcpuid = read_cpuid_mpidr() & MPIDR_HWID_BITMASK;
-        el2_data->per_cpu_data[pcpuid].vmid = vmid;
-        el2_data->per_cpu_data[pcpuid].vcpu_id = vcpu_id;
-};
 #endif //HYPSEC_HYPSEC_H

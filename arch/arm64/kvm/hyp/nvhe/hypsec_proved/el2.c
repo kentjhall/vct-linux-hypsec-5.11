@@ -35,13 +35,16 @@ static void self_test(void)
 */
 
 extern int __hypsec_register_vm(struct kvm *kvm);
-void handle_host_stage2_fault(unsigned long host_lr,
-					struct s2_host_regs *host_regs)
+void handle_host_stage2_fault(u64 esr, u64 hpfar, struct s2_host_regs *host_regs)
 {
-	phys_addr_t addr = (read_sysreg(hpfar_el2) & HPFAR_MASK) << 8;
+	phys_addr_t addr = (hpfar & HPFAR_MASK) << 8;
 	set_per_cpu_host_regs((u64)host_regs);
-	if (emulate_mmio(addr, read_sysreg(esr_el2)) == INVALID64)
+	if (emulate_mmio(addr, esr) == INVALID64) {
+		print_string("HANDLING FAULT: ");
+		printhex_ul(addr);
+		print_string("\n");
 		map_page_host(addr);
+	}
 }
 
 /*
@@ -65,37 +68,42 @@ static void protect_el2_mem(void)
 }
 
 extern u32 __init_stage2_translation(void);
+#define HERE print_string("HERE: ");print_string(__FILE__);print_string(":");print_string(__stringify(__LINE__))
 //TODO: Did we prove the following?
 static void hvc_enable_s2_trans(void)
 {
 	struct el2_data *el2_data;
 
+	HERE;
 	acquire_lock_core();
+	HERE;
 	el2_data = kern_hyp_va((void *)&(el2_data_start));
 
 	if (!el2_data->installed) {
+		HERE;
 		protect_el2_mem();
 		el2_data->installed = true;
 	}
 
+	HERE;
 	__init_stage2_translation();
 
+	HERE;
 	write_sysreg(el2_data->host_vttbr, vttbr_el2);
+	HERE;
 	write_sysreg(HCR_HYPSEC_HOST_NVHE_FLAGS, hcr_el2);
+	HERE;
 	__kvm_flush_vm_context();
 
+	HERE;
 	release_lock_core();
+	HERE;
 	//self_test();
 }
 
-#define HERE print_string("HERE: ");print_string(__FILE__);print_string(":");print_string(__stringify(__LINE__))
 void handle_host_hvc(struct s2_host_regs *hr)
 {
 	u64 ret = 0, callno = hr->regs[0];
-	u32 vmid, vcpu_id;
-	struct kvm_vcpu *vcpu;
-	u32 cntvoff_low, cntvoff_high;
-	u64 cntvoff;
 	HERE;
 
 	set_per_cpu_host_regs((u64)hr);
@@ -107,25 +115,12 @@ void handle_host_hvc(struct s2_host_regs *hr)
 		break;
 	case HVC_VCPU_RUN:
 		HERE;
-		/* check if vm is verified and vcpu is already active. */
-                vmid = (u32)hr->regs[1];
-                vcpu_id = (int) hr->regs[2];
-                if (!hypsec_set_vcpu_active(vmid, vcpu_id)) {
-                        ret = 0;
-                }
-                else {
-                        set_per_cpu_el2(vmid, vcpu_id);
-                        vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
-                        ret = (u64)__kvm_vcpu_run(vcpu);
-                }
+		ret = (u64)__kvm_vcpu_run((u32)hr->regs[1], (int) hr->regs[2]);
 		set_host_regs(0, ret);
 		break;
 	case HVC_TIMER_SET_CNTVOFF:
 		HERE;
-		cntvoff_low = (u32)hr->regs[1];
-		cntvoff_high = (u32)hr->regs[2];
-		cntvoff = (u64)cntvoff_high << 32 | cntvoff_low;
-		__kvm_timer_set_cntvoff(cntvoff);
+		__kvm_timer_set_cntvoff((u64)hr->regs[1] << 32 | hr->regs[2]);
 		break;
 	// The following can only be called when VM terminates.
 	case HVC_CLEAR_VM_S2_RANGE:

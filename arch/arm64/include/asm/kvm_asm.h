@@ -194,7 +194,7 @@ extern void __kvm_timer_set_cntvoff(u64 cntvoff);
 struct shadow_vcpu_context;
 #endif
 
-extern int __kvm_vcpu_run(struct kvm_vcpu *vcpu);
+extern int __kvm_vcpu_run(u32 vmid, u32 vcpu_id);
 
 extern u64 __vgic_v3_get_ich_vtr_el2(void);
 extern u64 __vgic_v3_read_vmcr(void);

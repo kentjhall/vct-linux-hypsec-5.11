@@ -1511,29 +1511,29 @@ static int kvm_init_vector_slots(void)
 	int err;
 	void *base;
 
-#ifndef CONFIG_VERIFIED_KVM
+/* #ifndef CONFIG_VERIFIED_KVM */
 	base = kern_hyp_va(kvm_ksym_ref(__kvm_hyp_vector));
-#else
-	base = kern_hyp_va(kvm_ksym_ref(__kvm_nvhe___kvm_hyp_vector));
-#endif
+/* #else */
+/* 	base = kern_hyp_va(kvm_ksym_ref(__kvm_nvhe___kvm_hyp_vector)); */
+/* #endif */
 	kvm_init_vector_slot(base, HYP_VECTOR_DIRECT);
 
-#ifndef CONFIG_VERIFIED_KVM
+/* #ifndef CONFIG_VERIFIED_KVM */
 	base = kern_hyp_va(kvm_ksym_ref(__bp_harden_hyp_vecs));
-#else
-	base = kern_hyp_va(kvm_ksym_ref(__kvm_nvhe___bp_harden_hyp_vecs));
-#endif
+/* #else */
+/* 	base = kern_hyp_va(kvm_ksym_ref(__kvm_nvhe___bp_harden_hyp_vecs)); */
+/* #endif */
 	kvm_init_vector_slot(base, HYP_VECTOR_SPECTRE_DIRECT);
 
 	if (!cpus_have_const_cap(ARM64_SPECTRE_V3A))
 		return 0;
 
 	if (!has_vhe()) {
-#ifndef CONFIG_VERIFIED_KVM
+/* #ifndef CONFIG_VERIFIED_KVM */
 		err = create_hyp_exec_mappings(__pa_symbol(__bp_harden_hyp_vecs),
-#else
-		err = create_hyp_exec_mappings(__pa_symbol(__kvm_nvhe___bp_harden_hyp_vecs),
-#endif
+/* #else */
+/* 		err = create_hyp_exec_mappings(__pa_symbol(__kvm_nvhe___bp_harden_hyp_vecs), */
+/* #endif */
 					       __BP_HARDEN_HYP_VECS_SZ, &base);
 		if (err)
 			return err;
@@ -1553,7 +1553,7 @@ static void cpu_init_hyp_mode(void)
 	/* Switch from the HYP stub to our own HYP init vector */
 	__hyp_set_vectors(kvm_get_idmap_vector());
 
-#ifndef CONFIG_VERIFIED_KVM
+/* #ifndef CONFIG_VERIFIED_KVM */
 	/*
 	 * Calculate the raw per-cpu offset without a translation from the
 	 * kernel's mapping to the linear mapping, and store it in tpidr_el2
@@ -1562,9 +1562,9 @@ static void cpu_init_hyp_mode(void)
 	 */
 	params->tpidr_el2 = (unsigned long)kasan_reset_tag(this_cpu_ptr_nvhe_sym(__per_cpu_start)) -
 			    (unsigned long)kvm_ksym_ref(CHOOSE_NVHE_SYM(__per_cpu_start));
-#else
-	params->tpidr_el2 = 0;
-#endif
+/* #else */
+/* 	params->tpidr_el2 = 0; */
+/* #endif */
 
 	params->mair_el2 = read_sysreg(mair_el1);
 
@@ -1612,7 +1612,9 @@ static void cpu_init_hyp_mode(void)
 	 */
 	if (this_cpu_has_cap(ARM64_SSBS) &&
 	    arm64_get_spectre_v4_state() == SPECTRE_VULNERABLE) {
+	HERE;
 		kvm_call_hyp_nvhe(__kvm_enable_ssbs);
+	HERE;
 	}
 }
 
