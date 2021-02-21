@@ -272,6 +272,7 @@ int __kvm_vcpu_run(u32 vmid, u32 vcpu_id)
 	u64 exit_code;
 	struct kvm_cpu_context *host_ctxt;
 	struct kvm_cpu_context *shadow_ctxt;
+	struct kvm_cpu_context core_ctxt;
 	struct el2_data *el2_data;
 	struct kvm_vcpu *vcpu;
 	struct shadow_vcpu_context *prot_ctxt;
@@ -317,7 +318,7 @@ int __kvm_vcpu_run(u32 vmid, u32 vcpu_id)
 
 	do {
 		/* Jump in the fire! */
-		exit_code = __guest_enter(vcpu);
+		exit_code = __guest_enter(shadow_ctxt, &core_ctxt);
 
 		/* And we're baaack! */
 	} while (_fixup_guest_exit(vcpu, &exit_code, vmid, vcpu_id));
