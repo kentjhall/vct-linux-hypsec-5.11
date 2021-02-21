@@ -678,8 +678,8 @@ void kvm_arm_resume_guest(struct kvm *kvm);
 									\
 		ret;							\
 	})
+
 #ifdef CONFIG_VERIFIED_KVM
-u64 __kvm_call_hyp(void *hypfn, ...);
 #define kvm_call_core(n, ...)						\
 	({								\
 		struct arm_smccc_res res;				\
