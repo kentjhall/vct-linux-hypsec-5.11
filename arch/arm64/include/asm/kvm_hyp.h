@@ -91,11 +91,11 @@ void activate_traps_vhe_load(struct kvm_vcpu *vcpu);
 void deactivate_traps_vhe_put(void);
 #endif
 
-#ifndef CONFIG_VERIFIED_KVM
+/* #ifndef CONFIG_VERIFIED_KVM */
 u64 __guest_enter(struct kvm_vcpu *vcpu);
-#else
-u64 __guest_enter(struct kvm_cpu_context *vcpu_ctxt, struct kvm_cpu_context *host_ctxt);
-#endif
+/* #else */
+/* u64 __guest_enter(struct kvm_cpu_context *vcpu_ctxt, struct kvm_cpu_context *host_ctxt); */
+/* #endif */
 
 bool kvm_host_psci_handler(struct kvm_cpu_context *host_ctxt);
 

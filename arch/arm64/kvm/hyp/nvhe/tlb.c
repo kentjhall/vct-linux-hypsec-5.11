@@ -9,6 +9,8 @@
 #include <asm/tlbflush.h>
 #include <asm/hypsec_host.h>
 
+#ifndef CONFIG_VERIFIED_KVM
+
 struct tlb_inv_context {
 	u64		tcr;
 };
@@ -138,13 +140,15 @@ void __kvm_tlb_flush_local_vmid(struct kvm_s2_mmu *mmu)
 	__tlb_switch_to_host(&cxt);
 }
 
-#ifdef CONFIG_VERIFIED_KVM
+#else
+
 void hypsec_tlb_flush_local_vmid(void)
 {
         __tlbi(vmalle1);
         dsb(nsh);
         isb();
 }
+
 #endif
 
 void __kvm_flush_vm_context(void)

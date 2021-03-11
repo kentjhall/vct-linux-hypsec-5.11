@@ -1,20 +1,26 @@
+
 /*
- * This file is a simplified version of switch.c for verfication.
- * We currently do not support 32-bit VM, debugging support, RAS extn,
- * PMU, VHE, and SVE.
+ * Copyright (C) 2015 - ARM Ltd
+ * Author: Marc Zyngier <marc.zyngier@arm.com>
  */
 
+#include <hyp/adjust_pc.h>
+#include <hyp/switch.h>
+#include <hyp/sysreg-sr.h>
+
 #include <linux/arm-smccc.h>
+#include <linux/kvm_host.h>
 #include <linux/types.h>
 #include <linux/jump_label.h>
 #include <uapi/linux/psci.h>
 
 #include <kvm/arm_psci.h>
 
+#include <asm/barrier.h>
 #include <asm/cpufeature.h>
+#include <asm/kprobes.h>
 #include <asm/kvm_asm.h>
 #include <asm/kvm_emulate.h>
-#include <asm/kvm_host.h>
 #include <asm/kvm_hyp.h>
 #include <asm/kvm_mmu.h>
 #include <asm/fpsimd.h>
@@ -24,50 +30,37 @@
 #include <asm/hypsec_host.h>
 #include <asm/hypsec_constant.h>
 
-#include <hyp/switch.h>
-#include <hyp/sysreg-sr.h>
-
 #include "switch-simple.h"
 
 /* Non-VHE specific context */
 DEFINE_PER_CPU(struct kvm_host_data, kvm_host_data);
 DEFINE_PER_CPU(struct kvm_cpu_context, kvm_hyp_ctxt);
 DEFINE_PER_CPU(unsigned long, kvm_hyp_vector);
+DEFINE_PER_CPU(struct kvm_cpu_context *, shadow_ctxt_ptr);
 
 static void ___activate_traps_common(struct kvm_vcpu *vcpu)
 {
-        /*
-         * Make sure we trap PMU access from EL0 to EL2. Also sanitize
-         * PMSELR_EL0 to make sure it never contains the cycle
-         * counter, which could make a PMXEVCNTR_EL0 access UNDEF at
-         * EL1 instead of being trapped to EL2.
-         */
-        set_pmselr_el0(0);
-        set_pmuserenr_el0(ARMV8_PMU_USERENR_MASK);
+	/*
+	 * Make sure we trap PMU access from EL0 to EL2. Also sanitize
+	 * PMSELR_EL0 to make sure it never contains the cycle
+	 * counter, which could make a PMXEVCNTR_EL0 access UNDEF at
+	 * EL1 instead of being trapped to EL2.
+	 */
+	set_pmselr_el0(0);
+	set_pmuserenr_el0(ARMV8_PMU_USERENR_MASK);
 
-        set_mdcr_el2(0);
+	set_mdcr_el2(0);
 }
 
 static void ___deactivate_traps_common(void)
 {
-        set_pmuserenr_el0(0);
-}
-
-static void __activate_traps_nvhe(struct kvm_vcpu *vcpu)
-{
-	u64 val;
-
-	___activate_traps_common(vcpu);
-
-	val = CPTR_EL2_DEFAULT;
-	val |= CPTR_EL2_TTA | CPTR_EL2_TZ;
-
-	set_cptr_el2(val);
+	set_pmuserenr_el0(0);
 }
 
 static void __activate_traps(struct kvm_vcpu *vcpu)
 {
 	u64 hcr = HCR_HYPSEC_VM_FLAGS;
+	u64 val;
 
 	if (vcpu->arch.hcr_el2 & HCR_VI)
 		hcr |= HCR_VI;
@@ -76,14 +69,20 @@ static void __activate_traps(struct kvm_vcpu *vcpu)
 		hcr |= HCR_VF;
 
 	set_hcr_el2(hcr);
+	
+	___activate_traps_common(vcpu);
 
-	/* We don't support RAS_EXTN for now in HypSec */
+	val = CPTR_EL2_DEFAULT;
+	val |= CPTR_EL2_TTA | CPTR_EL2_TZ;
 
-	__activate_traps_nvhe(vcpu);
+	set_cptr_el2(val);
+	write_sysreg(__this_cpu_read(kvm_hyp_vector), vbar_el2);
 }
 
-static void __deactivate_traps_nvhe(void)
+static void __deactivate_traps(struct kvm_vcpu *vcpu)
 {
+	extern char __kvm_hyp_host_vector[];
+
 	___deactivate_traps_common();
 	/*
 	 * Don't trap host access to debug related registers
@@ -92,29 +91,17 @@ static void __deactivate_traps_nvhe(void)
 	set_mdcr_el2(0);
 
 	set_cptr_el2(CPTR_EL2_DEFAULT);
+	write_sysreg(__kvm_hyp_host_vector, vbar_el2);
 }
 
-static void __deactivate_traps(struct kvm_vcpu *vcpu)
-{
-	__deactivate_traps_nvhe();
-}
-
-void activate_traps_vhe_load(struct kvm_vcpu *vcpu)
-{
-}
-
-void deactivate_traps_vhe_put(void)
-{
-}
-
-static void __activate_vm(u64 vmid)
+static void ___load_guest_stage2(u64 vmid)
 {
 	//u64 shadow_vttbr = get_shadow_vttbr((u32)vmid);
 	u64 shadow_vttbr = get_pt_vttbr((u32)vmid);
-	set_vttbr_el2(shadow_vttbr);
+	set_vttbr_el2(shadow_vttbr);	
 }
 
-static void __deactivate_vm(struct kvm_vcpu *vcpu)
+static void __load_host_stage2(void)
 {
 }
 
@@ -126,16 +113,6 @@ static void __hyp_vgic_save_state(struct kvm_vcpu *vcpu)
 /* Restore VGICv3 state on non_VEH systems */
 static void __hyp_vgic_restore_state(struct kvm_vcpu *vcpu)
 {
-}
-
-static bool __check_arm_834220(void)
-{
-	/*
-	 * We return true here since AMD Seattle uses Cortex-A57 CPUs.
-	 * This needs to be updated if the hardware has different type
-	 * of CPUs.
-	 */
-	return true;
 }
 
 static bool ___translate_far_to_hpfar(u64 far, u64 *hpfar)
@@ -167,8 +144,8 @@ static bool ___translate_far_to_hpfar(u64 far, u64 *hpfar)
 	return true;
 }
 
-static bool ___populate_fault_info(struct kvm_vcpu *vcpu, u64 esr,
-					     struct shadow_vcpu_context *shadow_ctxt)
+static inline bool ___populate_fault_info(struct kvm_vcpu *vcpu, u64 esr,
+		                         struct shadow_vcpu_context *shadow_ctxt)
 {
 	u64 hpfar, far = get_far_el2();
 
@@ -184,7 +161,8 @@ static bool ___populate_fault_info(struct kvm_vcpu *vcpu, u64 esr,
 	 * resolve the IPA using the AT instruction.
 	 */
 	if (!(esr & ESR_ELx_S1PTW) &&
-	    (__check_arm_834220() || (esr & ESR_ELx_FSC_TYPE) == FSC_PERM)) {
+	    (cpus_have_final_cap(ARM64_WORKAROUND_834220) ||
+	     (esr & ESR_ELx_FSC_TYPE) == FSC_PERM)) {
 		if (!___translate_far_to_hpfar(far, &hpfar))
 			return false;
 	} else {
@@ -214,10 +192,10 @@ static bool ___populate_fault_info(struct kvm_vcpu *vcpu, u64 esr,
 /*
  * Return true when we were able to fixup the guest exit and should return to
  * the guest, false when we should restore the host state and return to the
- * main run loop. We try to handle VM exit early here.
+ * main run loop.
  */
-static bool _fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code,
-					u32 vmid, u32 vcpuid)
+static inline bool _fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code,
+						u32 vmid, u32 vcpuid)
 {
 	u32 esr_el2 = 0;
 	u8 ec;
@@ -228,6 +206,21 @@ static bool _fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code,
 		esr_el2 = get_esr_el2();
 		vcpu->arch.fault.esr_el2 = esr_el2;
 		shadow_ctxt->esr = esr_el2;
+	}
+
+	if (ARM_SERROR_PENDING(*exit_code)) {
+		u8 esr_ec = kvm_vcpu_trap_get_class(vcpu);
+
+		/*
+		 * HVC already have an adjusted PC, which we need to
+		 * correct in order to return to after having injected
+		 * the SError.
+		 *
+		 * SMC, on the other hand, is *trapped*, meaning its
+		 * preferred return address is the SMC itself.
+		 */
+		if (esr_ec == ESR_ELx_EC_HVC32 || esr_ec == ESR_ELx_EC_HVC64)
+			write_sysreg_el2(read_sysreg_el2(SYS_ELR) - 4, SYS_ELR);
 	}
 
 	/*
@@ -242,62 +235,60 @@ static bool _fixup_guest_exit(struct kvm_vcpu *vcpu, u64 *exit_code,
 	ec = ESR_ELx_EC(esr_el2);
 	if (ec == ESR_ELx_EC_HVC64) {
 		if (handle_pvops(vmid, vcpuid) > 0)
-			return true;
+			goto guest;
 		else
-			return false;
+			goto exit;
 	} else if (ec == ESR_ELx_EC_DABT_LOW || ec == ESR_ELx_EC_IABT_LOW) {
 		if (!___populate_fault_info(vcpu, esr_el2, shadow_ctxt))
-			return true;
+			goto guest;
 	} else if (ec == ESR_ELx_EC_SYS64) {
 		u64 elr = read_sysreg(elr_el2);
 		write_sysreg(elr + 4, elr_el2);
-		return true;
+		goto guest;
 	}
 
 exit:
 	/* Return to the host kernel and handle the exit */
 	return false;
+
+guest:
+	/* Re-enter the guest */
+	return true;
 }
 
 static void __host_el2_restore_state(struct el2_data *el2_data)
 {
 	set_vttbr_el2(el2_data->host_vttbr);
 	set_hcr_el2(HCR_HYPSEC_HOST_NVHE_FLAGS);
-	set_tpidr_el2(0);
 }
 
 /* Switch to the guest for legacy non-VHE systems */
-int __kvm_vcpu_run(u32 vmid, u32 vcpu_id)
+int __kvm_vcpu_run(u32 vmid, int vcpu_id)
 {
 	u64 exit_code;
 	struct kvm_cpu_context *host_ctxt;
-	struct kvm_cpu_context *shadow_ctxt;
-	struct kvm_cpu_context core_ctxt;
 	struct el2_data *el2_data;
 	struct kvm_vcpu *vcpu;
 	struct shadow_vcpu_context *prot_ctxt;
 
 	/* check if vm is verified and vcpu is already active. */
-	if (!hypsec_set_vcpu_active(vmid, vcpu_id))
-		return 0;
+	hypsec_set_vcpu_active(vmid, vcpu_id);
 	set_per_cpu_nvhe(vmid, vcpu_id);
 
 	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
 	prot_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
 
 	el2_data = kern_hyp_va((void *)&el2_data_start);
-	host_ctxt = kern_hyp_va(&vcpu->arch.ctxt);
+	host_ctxt = &this_cpu_ptr(&kvm_host_data)->host_ctxt;
 	host_ctxt->__hyp_running_vcpu = vcpu;
-	shadow_ctxt = (struct kvm_cpu_context *)prot_ctxt;
+	__this_cpu_write(shadow_ctxt_ptr, (struct kvm_cpu_context *)prot_ctxt);
 
 	__sysreg_save_state_nvhe(host_ctxt);
 
-	set_tpidr_el2((u64)shadow_ctxt);
-	//__restore_shadow_kvm_regs(vcpu, prot_ctxt);
 	restore_shadow_kvm_regs();
 
 	__activate_traps(vcpu);
-	__activate_vm(vmid & 0xff);
+	___load_guest_stage2(vmid & 0xff);
 	if (vcpu->arch.was_preempted) {
 		hypsec_tlb_flush_local_vmid();
 		vcpu->arch.was_preempted = false;
@@ -309,24 +300,23 @@ int __kvm_vcpu_run(u32 vmid, u32 vcpu_id)
 	/*
 	 * We must restore the 32-bit state before the sysregs, thanks
 	 * to erratum #852523 (Cortex-A57) or #853709 (Cortex-A72).
+	 *
+	 * Also, and in order to be able to deal with erratum #1319537 (A57)
+	 * and #1319367 (A72), we must ensure that all VM-related sysreg are
+	 * restored before we enable S2 translation.
 	 */
 	__sysreg32_restore_state(vcpu);
-	__vm_sysreg_restore_state_nvhe_opt(prot_ctxt);
+	__vm_sysreg_restore_state_nvhe_opt(prot_ctxt);	
 
 	__fpsimd_save_state(&host_ctxt->fp_regs);
 	__fpsimd_restore_state(&prot_ctxt->fp_regs);
 
 	do {
 		/* Jump in the fire! */
-		exit_code = __guest_enter(shadow_ctxt, &core_ctxt);
+		exit_code = __guest_enter(vcpu);
 
 		/* And we're baaack! */
 	} while (_fixup_guest_exit(vcpu, &exit_code, vmid, vcpu_id));
-
-	//print_string("\rpc\n");
-	//printhex_ul(read_sysreg(elr_el2));
-	//print_string("\resr\n");
-	//printhex_ul(read_sysreg(esr_el2));
 
 	__vm_sysreg_save_state_nvhe_opt(prot_ctxt);
 	__sysreg32_save_state(vcpu);
@@ -334,7 +324,7 @@ int __kvm_vcpu_run(u32 vmid, u32 vcpu_id)
 	__hyp_vgic_save_state(vcpu);
 
 	__deactivate_traps(vcpu);
-	__deactivate_vm(vcpu);
+	__load_host_stage2();
 	__host_el2_restore_state(el2_data);
 
 	__sysreg_restore_state_nvhe(host_ctxt);
@@ -342,23 +332,40 @@ int __kvm_vcpu_run(u32 vmid, u32 vcpu_id)
 	__fpsimd_save_state(&prot_ctxt->fp_regs);
 	__fpsimd_restore_state(&host_ctxt->fp_regs);
 
-	//__save_shadow_kvm_regs(vcpu, prot_ctxt, exit_code);
 	set_shadow_ctxt(vmid, vcpu_id, V_EC, exit_code);
 	save_shadow_kvm_regs();
 
 	set_per_cpu_nvhe(0, read_cpuid_mpidr() & MPIDR_HWID_BITMASK);
 	hypsec_set_vcpu_state(vmid, vcpu_id, READY);
 
+	host_ctxt->__hyp_running_vcpu = NULL;
 	return exit_code;
 }
 
 void __noreturn hyp_panic(void)
 {
-	/* For simplicity, we just hang in here. */
+	u64 spsr = read_sysreg_el2(SYS_SPSR);
+	u64 elr = read_sysreg_el2(SYS_ELR);
+	u64 par = read_sysreg_par();
+	bool restore_host = true;
+	struct kvm_cpu_context *host_ctxt;
+	struct kvm_vcpu *vcpu;
+
+	host_ctxt = &this_cpu_ptr(&kvm_host_data)->host_ctxt;
+	vcpu = host_ctxt->__hyp_running_vcpu;
+
+	if (vcpu) {
+		__timer_disable_traps(vcpu);
+		__deactivate_traps(vcpu);
+		__load_host_stage2();
+		__sysreg_restore_state_nvhe(host_ctxt);
+	}
+
+	__hyp_do_panic(restore_host, spsr, elr, par);
 	unreachable();
 }
 
 asmlinkage void kvm_unexpected_el2_exception(void)
 {
-        return __kvm_unexpected_el2_exception();
+	return __kvm_unexpected_el2_exception();
 }

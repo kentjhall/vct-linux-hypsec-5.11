@@ -30,6 +30,14 @@ typedef u64 phys_addr_t;
  * AbstractMachine
  */
 
+static u32 inline check(u32 val) {
+	return val;
+};
+
+static u64 inline check64(u64 val) {
+	return val;
+};
+
 void    v_panic(void);
 void    clear_phys_mem(u64 pfn);
 //u64     get_shared_kvm(u32 vmid);
@@ -57,13 +65,27 @@ static u64 inline get_sys_reg_desc_val(u32 index) {
     return el2_data->s2_sys_reg_descs[index].val;
 }
 
+static void inline fetch_from_doracle(u32 vmid, u64 pfn, u64 pgnum) {
+	return;
+}
+extern void reset_fp_regs(u32 vmid, int vcpu_id);
+
+static u64 inline get_vm_fault_addr(u32 vmid, u32 vcpuid) {
+	u64 hpfar;
+	hpfar = get_shadow_ctxt(vmid, vcpuid, V_HPFAR_EL2);
+	return ((hpfar & HPFAR_MASK) * 256UL);
+}
+
+static void inline mem_load_raw(u64 gfn, u32 reg) {
+}
+
+static void inline mem_store_raw(u64 gfn, u32 reg) {
+}
 /*
 void    acquire_lock_pt(u32 vmid);
 void    release_lock_pt(u32 vmid);
 u64	pool_start(u32 vmid);
 u64	pool_end(u32 vmid);
-u64     get_pt_next(u32 vmid);
-void    set_pt_next(u32 vmid, u64 next);
 u64     pt_load(u32 vmid, u64 addr);
 void    pt_store(u32 vmid, u64 addr, u64 value);
 u64     get_pt_vttbr(u32 vmid);
@@ -78,33 +100,6 @@ static void inline acquire_lock_pt(u32 vmid) {
 static void inline release_lock_pt(u32 vmid) {
     struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     stage2_spin_unlock(&el2_data->vm_info[vmid].shadow_pt_lock);
-};
-
-static u64 inline pool_start(u32 vmid) {
-        struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
-	return el2_data->vm_info[vmid].page_pool_start;
-}
-
-static u64 inline pool_end(u32 vmid) {
-    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
-	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
-	if (vmid == COREVISOR)
-		return pool_start + STAGE2_CORE_PAGES_SIZE;
-	else if (vmid == HOSTVISOR)
-		return pool_start + STAGE2_CORE_PAGES_SIZE + STAGE2_HOST_POOL_SIZE;
-	return pool_start + PT_POOL_PER_VM;
-}
-
-static u64 inline get_pt_next(u32 vmid) {
-    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
-	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
-	u64 used_pages = el2_data->vm_info[vmid].used_pages;
-	return pool_start + used_pages * PAGE_SIZE;
-};
-
-static void inline set_pt_next(u32 vmid, u64 next) {
-    	struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
-	el2_data->vm_info[vmid].used_pages += next;
 };
 
 // TODO: make the following work
@@ -125,50 +120,52 @@ static void inline pt_store(u32 vmid, u64 addr, u64 value) {
 #define PMD_BASE SZ_2M
 static u64 inline get_pgd_next(u32 vmid) {
 	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
-	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
-	u64 used_pages = el2_data->vm_info[vmid].pud_used_pages;
-	return pool_start + (used_pages * PAGE_SIZE) + PGD_BASE;
+	return el2_data->vm_info[vmid].pgd_pool;
 };
 
 static void inline set_pgd_next(u32 vmid, u64 next) {
 	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
-	el2_data->vm_info[vmid].pud_used_pages += next;
+	el2_data->vm_info[vmid].pgd_pool = next;
 };
 
 static u64 inline get_pud_next(u32 vmid) {
 	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
-	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
-	u64 used_pages = el2_data->vm_info[vmid].pmd_used_pages;
-	return pool_start + (used_pages * PAGE_SIZE) + PUD_BASE;
+	return el2_data->vm_info[vmid].pud_pool;
 };
 
 static void inline set_pud_next(u32 vmid, u64 next) {
 	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
-	el2_data->vm_info[vmid].pmd_used_pages += next;
+	el2_data->vm_info[vmid].pud_pool = next;
 };
 
 static u64 inline get_pmd_next(u32 vmid) {
 	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
-	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
-	u64 used_pages = el2_data->vm_info[vmid].pte_used_pages;
-	return pool_start + (used_pages * PAGE_SIZE) + PMD_BASE;
+	return el2_data->vm_info[vmid].pmd_pool;
 };
 
 static void inline set_pmd_next(u32 vmid, u64 next) {
 	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
-	el2_data->vm_info[vmid].pte_used_pages += next;
+	el2_data->vm_info[vmid].pmd_pool = next;
 };
 
+#define HOST_PUD_BASE (PGD_BASE + PAGE_SIZE * 128)
+#define HOST_PMD_BASE (SZ_2M * 2)
 static u64 inline pgd_pool_end(u32 vmid) {
 	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
 	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
-	return pool_start + PUD_BASE;
+	if (vmid == HOSTVISOR)
+		return pool_start + HOST_PUD_BASE;
+	else
+		return pool_start + PUD_BASE;
 }
 
 static u64 inline pud_pool_end(u32 vmid) {
 	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
 	u64 pool_start = el2_data->vm_info[vmid].page_pool_start;
-	return pool_start + PMD_BASE;
+	if (vmid == HOSTVISOR)
+		return pool_start + HOST_PMD_BASE;
+	else
+		return pool_start + PMD_BASE;
 }
 
 static u64 inline pmd_pool_end(u32 vmid) {
@@ -227,8 +224,8 @@ static void inline acquire_lock_s2page(void) {
 }
 
 static void inline release_lock_s2page(void) {
-    //struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
-    //stage2_spin_unlock(&el2_data->s2pages_lock);
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+    stage2_spin_unlock(&el2_data->s2pages_lock);
 }
 
 static u32 inline get_s2_page_vmid(u64 index) {
@@ -251,7 +248,7 @@ static void inline set_s2_page_count(u64 index, u32 count) {
     el2_data->s2_pages[index].count = count;
 }
 
-static u32 inline get_s2_page_gfn(u64 index) {
+static u64 inline get_s2_page_gfn(u64 index) {
     struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     return el2_data->s2_pages[index].gfn;
 }
@@ -305,6 +302,16 @@ static u32 inline get_vm_state(u32 vmid) {
 static void inline set_vm_state(u32 vmid, u32 state) {
     struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     el2_data->vm_info[vmid].state = state;
+}
+
+static u32 inline get_vcpu_first_run(u32 vmid, u32 vcpuid) {
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+    return el2_data->vm_info[vmid].int_vcpus[vcpuid].first_run;
+}
+
+static void inline set_vcpu_first_run(u32 vmid, u32 vcpuid, u32 state) {
+    struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
+    el2_data->vm_info[vmid].int_vcpus[vcpuid].first_run = state;
 }
 
 static u32 inline get_vcpu_state(u32 vmid, u32 vcpuid) {
@@ -572,7 +579,7 @@ void set_vm_load_signature(u32 vmid, u32 load_idx);
 #define SMMU_POOL_START 65536UL
 #define SMMU_PGD_START 131072UL
 #define SMMU_PMD_START 196608UL
-#define SMMU_POOL_END	STAGE2_VM_POOL_SIZE * 2
+#define SMMU_POOL_END  SMMU_PAGES_SIZE
 
 #define SMMU_PMD_BASE	(PAGE_SIZE * 256)
 static void inline acquire_lock_smmu(void) {
@@ -586,14 +593,12 @@ static void inline release_lock_smmu(void) {
 
 static u64 inline get_smmu_pgd_next(void) {
 	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
-	u64 pool_start = el2_data->smmu_page_pool_start;
-	u64 used_pages = el2_data->smmu_pgd_used_pages;
-	return pool_start + (used_pages * PAGE_SIZE);
+	return el2_data->smmu_pgd_pool;
 };
 
 static void inline set_smmu_pgd_next(u64 next) {
 	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
-	el2_data->smmu_pgd_used_pages += next;
+	el2_data->smmu_pgd_pool = next;
 };
 
 static u64 inline smmu_pgd_end(void)
@@ -605,14 +610,12 @@ static u64 inline smmu_pgd_end(void)
 
 static u64 inline get_smmu_pmd_next(void) {
 	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
-	u64 pool_start = el2_data->smmu_page_pool_start;
-	u64 used_pages = el2_data->smmu_pmd_used_pages;
-	return pool_start + (used_pages * PAGE_SIZE) + SMMU_PMD_BASE;
+	return el2_data->smmu_pmd_pool;
 };
 
 static void inline set_smmu_pmd_next(u64 next) {
 	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
-	el2_data->smmu_pmd_used_pages += next;
+	el2_data->smmu_pmd_pool = next;
 };
 
 static u64 inline smmu_pmd_end(void)
@@ -671,6 +674,12 @@ static u64 inline get_phys_mem_start_pfn(void)
 	return el2_data->phys_mem_start >> PAGE_SHIFT;
 }
 
+static u64 inline get_phys_mem_start(void)
+{
+	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
+	return el2_data->phys_mem_start;
+}
+
 static void inline acquire_lock_spt(void) {
     struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     stage2_spin_lock(&el2_data->spt_lock);
@@ -679,6 +688,14 @@ static void inline acquire_lock_spt(void) {
 static void inline release_lock_spt(void) {
     struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
     stage2_spin_unlock(&el2_data->spt_lock);
+};
+
+void encrypt_buf(u32 vmid, u64 in_buf, u64 out_buf, uint32_t len);
+void decrypt_buf(u32 vmid, u64 in_buf, u64 out_buf, uint32_t len);
+
+static u64 inline get_tmp_buf(void) {
+	u64 ret = (u64)kern_hyp_va((void*)&stage2_tmp_pgs_start);
+	return ret;
 };
 
 /*
@@ -697,9 +714,9 @@ u64 alloc_s2pt_pmd(u32 vmid);
 
 u64 walk_pgd(u32 vmid, u64 vttbr, u64 addr, u32 alloc);
 u64 walk_pud(u32 vmid, u64 pgd, u64 addr, u32 alloc);
-u64 walk_pmd(u32 vmid, u64 pgd, u64 addr, u32 alloc);
+u64 walk_pmd(u32 vmid, u64 pud, u64 addr, u32 alloc);
 u64 walk_pte(u32 vmid, u64 pmd, u64 addr);
-void v_set_pmd(u32 vmid, u64 pgd, u64 addr, u64 pmd);
+void v_set_pmd(u32 vmid, u64 pud, u64 addr, u64 pmd);
 void v_set_pte(u32 vmid, u64 pmd, u64 addr, u64 pte);
 u64 walk_smmu_pgd(u64 ttbr, u64 addr, u32 alloc);
 u64 walk_smmu_pmd(u64 pgd, u64 addr, u32 alloc);
@@ -710,24 +727,19 @@ void set_smmu_pte(u64 pmd, u64 addr, u64 pte);
  * NPTWalk
  */
 
-void init_npt(u32 vmid);
 u32 get_npt_level(u32 vmid, u64 addr);
 u64 walk_npt(u32 vmid, u64 addr);
 void set_npt(u32 vmid, u64 addr, u32 level, u64 pte);
-void init_smmu_pt(u32 cbndx, u32 num);
-u64 walk_smmu_pt(u32 cbndx, u32 num, u64 addr);
-void set_smmu_pt(u32 cbndx, u32 num, u64 addr, u64 pte);
 
 /*
  * NPTOps
  */
 
-void init_s2pt(u32 vmid);
-u64 get_vm_vttbr(u32 vmid);
 u32 get_level_s2pt(u32 vmid, u64 addr);
 u64 walk_s2pt(u32 vmid, u64 addr);
 void mmap_s2pt(u32 vmid, u64 addr, u32 level, u64 pte);
 void clear_pfn_host(u64 pfn);
+extern void kvm_tlb_flush_vmid_ipa_host(phys_addr_t ipa);
 
 /*
  * MemRegion
@@ -762,7 +774,7 @@ u32 get_vm_poweron(u32 vmid);
 /*
  * MemManagerAux
  */
-u32 check_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 pgnum, u64 apfn);
+u32 check_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 pgnum);
 void set_pfn_to_vm(u32 vmid, u64 gfn, u64 pfn, u64 pgnum);
 
 /*
@@ -784,11 +796,11 @@ void unmap_smmu_page(u32 cbndx, u32 index, u64 iova);
  * MemoryOps
  */
 
-void __clear_vm_stage2_range(u32 vmid, u64 start, u64 size);
+void clear_vm_stage2_range(u32 vmid, u64 start, u64 size);
 void prot_and_map_vm_s2pt(u32 vmid, u64 addr, u64 pte, u32 level);
 //void grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
 //void revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
-void __kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa);
+void map_vm_io(u32 vmid, u64 gpa, u64 pa);
 void clear_vm_range(u32 vmid, u64 pfn, u64 num);
 
 /*
@@ -810,10 +822,10 @@ void unmap_and_load_vm_image(u32 vmid, u64 target_addr, u64 remap_addr, u64 num)
 
 u32 vm_is_inc_exe(u32 vmid);
 void boot_from_inc_exe(u32 vmid);
-u64 v_search_load_info(u32 vmid, u64 addr);
+u64 search_load_info(u32 vmid, u64 addr);
 void set_vcpu_active(u32 vmid, u32 vcpuid);
 void set_vcpu_inactive(u32 vmid, u32 vcpuid);
-u32 register_vcpu(u32 vmid, u32 vcpuid);
+void register_vcpu(u32 vmid, u32 vcpuid);
 u32 register_kvm(void);
 u32 set_boot_info(u32 vmid, u64 load_addr, u64 size);
 void remap_vm_image(u32 vmid, u64 pfn, u32 load_idx);
@@ -840,7 +852,7 @@ void prep_hvc(u32 vmid, u32 vcpuid);
 void prep_abort(u32 vmid, u32 vcpuid);
 void v_hypsec_inject_undef(u32 vmid, u32 vcpuid);
 void v_update_exception_gp_regs(u32 vmid, u32 vcpuid);
-void v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid);
+void post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid, u64 addr);
 
 
 /*
@@ -849,12 +861,13 @@ void v_post_handle_shadow_s2pt_fault(u32 vmid, u32 vcpuid);
 
 void save_shadow_kvm_regs(void);
 void restore_shadow_kvm_regs(void);
-//void save_encrypted_vcpu(u32 vmid, u32 vcpuid);
+void __save_encrypted_vcpu(u32 vmid, u32 vcpu_id);
+void __load_encrypted_vcpu(u32 vmid, u32 vcpu_id);
 
 /*
  * MmioOps
  */
-u64 emulate_mmio(u64 addr, u32 hsr);
+u32 emulate_mmio(u64 addr, u32 hsr);
 void   __el2_free_smmu_pgd(u32 cbndx, u32 index);
 void   __el2_alloc_smmu_pgd(u32 cbndx, u32 vmid, u32 index);
 void  __el2_arm_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index);
@@ -868,22 +881,21 @@ u64 el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index);
  * MmioOpsAux
  */
 void handle_host_mmio(u64 index, u32 hsr);
-u64 is_smmu_range(u64 addr);
+u32 is_smmu_range(u64 addr);
 
 /*
  * MmioCore
  */
 void mmap_smmu(u32 vmid, u64 ttbr, u64 addr, u64 pte);
 u64 walk_smmu(u32 vmid, u64 ttbr, u64 addr);
-u32 check_smmu_pfn(u64 pfn, u32 vmid);
 void handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u32 index);
-void handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len, u32 index);
+void handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len);
 
 /*
  * MmioCoreAux
  */
-u32 handle_smmu_global_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smmu_index);
-u32 handle_smmu_cb_access(u32 hsr, u64 fault_ipa, u64 offset, u32 smmu_index);
+u32 handle_smmu_global_access(u32 hsr, u64 offset, u32 smmu_index);
+u32 handle_smmu_cb_access(u64 offset);
 void __handle_smmu_write(u32 hsr, u64 fault_ipa, u32 len, u64 val, u32 write_val);
 void __handle_smmu_read(u32 hsr, u64 fault_ipa, u32 len);
 
@@ -894,9 +906,9 @@ u64 smmu_get_cbndx(u64 offset);
 /*
  * MemHandler
  */
-u64 v_el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 index);
-void v_el2_arm_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index);
-void v_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
+void el2_clear_vm_stage2_range(u32 vmid, u64 start, u64 size);
+void el2_arm_lpae_map(u64 iova, u64 paddr, u64 prot, u32 cbndx, u32 index);
+void el2_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
 
 /*
  * MmioPTAlloc
@@ -924,7 +936,18 @@ void set_smmu_pte(u64 pmd, u64 addr, u64 pte);
  * MmioSPTWalk
  */
 void clear_smmu_pt(u32 cbndx, u32 index);
-u64 v_walk_smmu_pt(u32 cbndx, u32 index, u64 addr);
-void v_set_smmu_pt(u32 cbndx, u32 index, u64 addr, u64 pte);
 u64 unmap_smmu_pt(u32 cbndx, u32 index, u64 addr);
+u64 walk_smmu_pt(u32 cbndx, u32 num, u64 addr);
+void set_smmu_pt(u32 cbndx, u32 num, u64 addr, u64 pte);
+
+/*
+ * Management
+ */
+void __el2_encrypt_buf(u32 vmid, u64 buf, u64 out_buf);
+void __el2_decrypt_buf(u32 vmid, void *buf, u32 len);
+extern void decrypt_gp_regs(u32 vmid, u32 vcpu_id);
+extern void encrypt_gp_regs(u32 vmid, u32 vcpu_id);
+extern void decrypt_sys_regs(u32 vmid, u32 vcpu_id);
+extern void encrypt_sys_regs(u32 vmid, u32 vcpu_id);
+
 #endif //HYPSEC_HYPSEC_H

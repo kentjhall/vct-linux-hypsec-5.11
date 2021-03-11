@@ -1078,7 +1078,11 @@ static int __vfio_container_attach_groups(struct vfio_container *container,
 	int ret = -ENODEV;
 
 	list_for_each_entry(group, &container->group_list, container_next) {
+#ifndef CONFIG_VERIFIED_KVM
+		ret = driver->ops->attach_group(data, group->iommu_group);
+#else
 		ret = driver->ops->attach_group(data, group->iommu_group, vmid);
+#endif
 		if (ret)
 			goto unwind;
 	}
@@ -1396,7 +1400,11 @@ static int vfio_group_set_container(struct vfio_group *group, int container_fd)
 	driver = container->iommu_driver;
 	if (driver) {
 		ret = driver->ops->attach_group(container->iommu_data,
+#ifndef CONFIG_VERIFIED_KVM
+						group->iommu_group);
+#else
 						group->iommu_group, 0);
+#endif
 		if (ret)
 			goto unlock_out;
 	}

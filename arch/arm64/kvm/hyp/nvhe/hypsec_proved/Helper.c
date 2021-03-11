@@ -26,7 +26,7 @@ static inline void senduart(char word)
 	struct el2_data *el2_data;
 	u8 val;
 
-	el2_data = (void *)(void *)&(el2_data_start);
+	el2_data = kern_hyp_va((void *)&(el2_data_start));
 	base = el2_data->uart_8250_base;
 	//TODO: use macro instead
 	offset = 5;
@@ -55,7 +55,7 @@ static inline unsigned long waituart(void)
 	unsigned long ret, base, REG_FR;
 	struct el2_data *el2_data;
 
-	el2_data = (void *)(void *)&(el2_data_start);
+	el2_data = kern_hyp_va((void *)&(el2_data_start));
 	base = el2_data->pl011_base;
 	REG_FR = UART01x_FR;
 
@@ -76,7 +76,7 @@ static inline void senduart(char word)
 	unsigned long base;
 	struct el2_data *el2_data;
 
-	el2_data = (void *)(void *)&(el2_data_start);
+	el2_data = kern_hyp_va((void *)&(el2_data_start));
 	base = el2_data->pl011_base;
 
 	while (waituart() & UART01x_FR_TXFF)
@@ -99,7 +99,7 @@ void printhex_ul(unsigned long input)
 	int len = 60;
 	struct el2_data *el2_data;
 
-	el2_data = (void *)(void *)&(el2_data_start);
+	el2_data = kern_hyp_va((void *)&(el2_data_start));
 
 	stage2_spin_lock(&el2_data->console_lock);
 
@@ -134,7 +134,7 @@ void print_string(char *input)
 	char *word;
 	struct el2_data *el2_data;
 
-	el2_data = (void *)(void *)&(el2_data_start);
+	el2_data = kern_hyp_va((void *)&(el2_data_start));
 
 	stage2_spin_lock(&el2_data->console_lock);
 

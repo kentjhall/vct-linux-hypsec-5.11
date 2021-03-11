@@ -2603,6 +2603,7 @@ static int pl011_setup_port(struct device *dev, struct uart_amba_port *uap,
 	if (!el2_data->pl011_base)
 		el2_data->pl011_base = mmiobase->start;
 #endif
+
 	base = devm_ioremap_resource(dev, mmiobase);
 	if (IS_ERR(base))
 		return PTR_ERR(base);

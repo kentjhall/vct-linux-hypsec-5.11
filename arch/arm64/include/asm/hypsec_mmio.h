@@ -35,6 +35,7 @@ struct el2_arm_smmu_device {
 
 	u32				features;
 #define ARM_SMMU_OPT_SECURE_CFG_ACCESS (1 << 0)
+	u32				options;
 	u32				num_context_banks;
 	u32				num_s2_context_banks;
 

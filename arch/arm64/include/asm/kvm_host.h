@@ -289,10 +289,14 @@ struct vcpu_reset_state {
 #define PENDING_EXCEPT_INJECT_FLAG      (PENDING_DABT_INJECT | \
                                          PENDING_IABT_INJECT | \
                                          PENDING_UNDEF_INJECT)
-#define KVM_REGS_SIZE   7 + sizeof(struct user_pt_regs) / sizeof(u64)
 
 struct shadow_vcpu_context {
-        u64 regs[KVM_REGS_SIZE];
+	struct kvm_regs gp_regs;
+        /*union {
+                u64 sys_regs[NR_SYS_REGS];
+                u32 copro[NR_COPRO_REGS];
+        };*/
+        //u64 regs[KVM_REGS_SIZE];
         u64 far_el2;
         u64 hpfar;
         u64 hcr_el2;

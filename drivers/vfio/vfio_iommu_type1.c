@@ -2082,7 +2082,9 @@ static int vfio_iommu_type1_attach_group(void *iommu_data,
 			goto out_domain;
 	}
 
+#ifdef CONFIG_VERIFIED_KVM
 	domain->domain->vmid = vmid;
+#endif
 	ret = vfio_iommu_attach_group(domain, group);
 	if (ret)
 		goto out_domain;

@@ -817,7 +817,11 @@ int __kvm_arm_vcpu_set_events(struct kvm_vcpu *vcpu,
 	}
 
 	if (ext_dabt_pending)
+#ifndef CONFIG_VERIFIED_KVM
 		kvm_inject_dabt(vcpu, kvm_vcpu_get_hfar(vcpu));
+#else
+		BUG();
+#endif
 
 	return 0;
 }
@@ -826,6 +830,11 @@ int __attribute_const__ kvm_target_cpu(void)
 {
 	unsigned long implementor = read_cpuid_implementor();
 	unsigned long part_number = read_cpuid_part_number();
+
+#ifdef CONFIG_VERIFIED_KVM
+	implementor = ARM_CPU_IMP_ARM;
+	part_number = 0;
+#endif
 
 	switch (implementor) {
 	case ARM_CPU_IMP_ARM:

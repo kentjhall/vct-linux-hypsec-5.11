@@ -42,6 +42,13 @@
  */
 #define kvm_mmu_cache_min_pages(kvm)	(kvm_stage2_levels(kvm) - 1)
 
+#ifdef CONFIG_VERIFIED_KVM
+#define STAGE2_PGTABLE_LEVELS           ARM64_HW_PGTABLE_LEVELS(KVM_PHYS_SHIFT - 4)
+#define stage2_pgd_index(addr)                          (((addr) >> S2_PGDIR_SHIFT) & (PTRS_PER_S2_PGD - 1))
+#define S2_PGDIR_SHIFT                  ARM64_HW_PGTABLE_LEVEL_SHIFT(4 - STAGE2_PGTABLE_LEVELS)
+#define PTRS_PER_S2_PGD                 (1 << (KVM_PHYS_SHIFT - S2_PGDIR_SHIFT))
+#endif
+
 static inline phys_addr_t
 stage2_pgd_addr_end(struct kvm *kvm, phys_addr_t addr, phys_addr_t end)
 {

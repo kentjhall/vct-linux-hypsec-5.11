@@ -10,49 +10,53 @@ obj-y := timer-sr.o sysreg-sr.o debug-sr.o tlb.o hyp-init.o host.o \
 	 hyp-main.o hyp-smp.o psci-relay.o
 ifneq ($(CONFIG_VERIFIED_KVM), y)
 	obj-y += switch.o
-	obj-y += ../entry.o
 else
-	obj-y += pvops.o
 	obj-y += switch-simple.o
-	obj-y += ../entry-simple.o
-endif
-obj-y += ../vgic-v3-sr.o ../aarch32.o ../vgic-v2-cpuif-proxy.o \
-	 ../fpsimd.o ../hyp-entry.o ../exception.o
 
-obj-y += hypsec_proved/el2.o
-obj-y += hypsec_proved/s2-setup.o
-obj-y += hypsec_proved/AbstractMachine.o
-obj-y += hypsec_proved/MemRegion.o
-obj-y += hypsec_proved/PageIndex.o
-obj-y += hypsec_proved/PageManager.o
-obj-y += hypsec_proved/PTAlloc.o
-obj-y += hypsec_proved/PTWalk.o
-obj-y += hypsec_proved/NPTWalk.o
-obj-y += hypsec_proved/NPTOps.o
-obj-y += hypsec_proved/MemManagerAux.o
-obj-y += hypsec_proved/MemManager.o
-obj-y += hypsec_proved/MemoryOps.o
-obj-y += hypsec_proved/VMPower.o
-obj-y += hypsec_proved/BootCore.o
-obj-y += hypsec_proved/BootOps.o
-obj-y += hypsec_proved/BootAux.o
-obj-y += hypsec_proved/Helper.o
-obj-y += hypsec_proved/VCPUOpsAux.o
-obj-y += hypsec_proved/VCPUOps.o
-#obj-y += hypsec_proved/mmap.o
-#obj-y += hypsec_proved/sysreg-sr.o
-obj-y += hypsec_proved/sysreg-sr-opt.o
-#obj-y += hypsec_proved/hacl-20/
-obj-y += hypsec_proved/MmioOps.o
-obj-y += hypsec_proved/MmioOpsAux.o
-obj-y += hypsec_proved/MmioCore.o
-obj-y += hypsec_proved/MmioCoreAux.o
-obj-y += hypsec_proved/MmioRaw.o
-obj-y += hypsec_proved/MemHandler.o
-obj-y += hypsec_proved/SmmuPTAlloc.o
-obj-y += hypsec_proved/SmmuPTOps.o
-obj-y += hypsec_proved/SmmuPTWalk.o
-obj-y += hypsec_proved/SmmuSPTWalk.o
+	obj-y += hypsec_proved/AbstractMachine.o
+	obj-y += hypsec_proved/MemBlock.o
+	obj-y += hypsec_proved/PageIndex.o
+	obj-y += hypsec_proved/PageMgmt.o
+	obj-y += hypsec_proved/PTAlloc.o
+	obj-y += hypsec_proved/PTWalk.o
+	obj-y += hypsec_proved/NPTWalk.o
+	obj-y += hypsec_proved/NPTOps.o
+	obj-y += hypsec_proved/MemAux.o
+	obj-y += hypsec_proved/MemOps.o
+	obj-y += hypsec_proved/VMPower.o
+	obj-y += hypsec_proved/BootCore.o
+	obj-y += hypsec_proved/BootOps.o
+	obj-y += hypsec_proved/BootAux.o
+	obj-y += hypsec_proved/Helper.o
+	obj-y += hypsec_proved/VCPUOpsAux.o
+	obj-y += hypsec_proved/VCPUOps.o
+	obj-y += hypsec_proved/el2.o
+	obj-y += hypsec_proved/s2-setup.o
+	#obj-y += hypsec_proved/mmap.o
+	#obj-y += hypsec_proved/sysreg-sr.o
+	obj-y += hypsec_proved/sysreg-sr-opt.o
+	# obj-y += hypsec_proved/hacl-20/
+	obj-y += hypsec_proved/SmmuOps.o
+	obj-y += hypsec_proved/SmmuAux.o
+	obj-y += hypsec_proved/SmmuCore.o
+	obj-y += hypsec_proved/SmmuCoreAux.o
+	obj-y += hypsec_proved/SmmuRaw.o
+	obj-y += hypsec_proved/MemHandler.o
+	obj-y += hypsec_proved/MmioPTAlloc.o
+	obj-y += hypsec_proved/MmioPTWalk.o
+	obj-y += hypsec_proved/MmioSPTWalk.o
+	obj-y += hypsec_proved/MmioSPTOps.o
+	obj-y += hypsec_proved/TrapDispatcher.o
+	obj-y += hypsec_proved/FaultHandler.o
+	obj-y += hypsec_proved/hacl-20/Hacl_AES.o
+	obj-y += hypsec_proved/hacl-20/Hacl_Curve25519_51.o
+	obj-y += hypsec_proved/hacl-20/Hacl_Ed25519.o
+	obj-y += hypsec_proved/hacl-20/Hacl_Hash.o
+	obj-y += hypsec_proved/hacl-20/Hacl_Host.o
+	obj-y += ../../../mm/cache.o
+endif
+obj-y += ../vgic-v3-sr.o ../aarch32.o ../vgic-v2-cpuif-proxy.o ../entry.o \
+	 ../fpsimd.o ../hyp-entry.o ../exception.o
 
 ##
 ## Build rules for compiling nVHE hyp code

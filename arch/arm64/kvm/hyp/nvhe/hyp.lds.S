@@ -10,6 +10,9 @@
 #include <asm-generic/vmlinux.lds.h>
 #include <asm/cache.h>
 #include <asm/memory.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/kernel-pgtable.h>
+#endif
 
 SECTIONS {
 	HYP_SECTION(.text)

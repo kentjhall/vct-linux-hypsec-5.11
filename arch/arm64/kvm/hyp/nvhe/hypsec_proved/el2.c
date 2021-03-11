@@ -19,8 +19,7 @@
 
 #include "hypsec.h"
 
-/*
-static void self_test(void)
+/*static void self_test(void)
 {
 	int vmid, i = 0;
 
@@ -31,230 +30,45 @@ static void self_test(void)
 		printhex_ul((unsigned long)i);
 		register_vcpu(vmid, i++);
 	} while (i < 4);
-}
-*/
-
-extern int __hypsec_register_vm(struct kvm *kvm);
-void handle_host_stage2_fault(u64 esr, u64 hpfar, struct s2_host_regs *host_regs)
-{
-	phys_addr_t addr = (hpfar & HPFAR_MASK) << 8;
-	set_per_cpu_host_regs((u64)host_regs);
-	if (emulate_mmio(addr, esr) == INVALID64) {
-		print_string("HANDLING FAULT: ");
-		printhex_ul(addr);
-		print_string("\n");
-		map_page_host(addr);
-	}
-}
-
-/*
- * Since EL2 page tables were allocated in EL2, here we need to protect
- * them by setting the ownership of the pages to HYPSEC_VMID. This allows
- * the core to reject any following accesses from the host.
- */
-static void protect_el2_mem(void)
-{
-	unsigned long addr, end, index;
-	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
-
-	/* Protect stage2 data and page pool. */
-	addr = el2_data->core_start;
-	end =  el2_data->core_end;
-	do {
-		index = get_s2_page_index(addr);
-		set_s2_page_vmid(index, COREVISOR);
-		addr += PAGE_SIZE;
-	} while (addr < end);
-}
-
-extern u32 __init_stage2_translation(void);
-#define HERE print_string("HERE: ");print_string(__FILE__);print_string(":");print_string(__stringify(__LINE__))
-//TODO: Did we prove the following?
-static void hvc_enable_s2_trans(void)
-{
-	struct el2_data *el2_data;
-
-	HERE;
-	acquire_lock_core();
-	HERE;
-	el2_data = kern_hyp_va((void *)&(el2_data_start));
-
-	if (!el2_data->installed) {
-		HERE;
-		protect_el2_mem();
-		el2_data->installed = true;
-	}
-
-	HERE;
-	__init_stage2_translation();
-
-	HERE;
-	write_sysreg(el2_data->host_vttbr, vttbr_el2);
-	HERE;
-	write_sysreg(HCR_HYPSEC_HOST_NVHE_FLAGS, hcr_el2);
-	HERE;
-	__kvm_flush_vm_context();
-
-	HERE;
-	release_lock_core();
-	HERE;
-	//self_test();
-}
-
-void handle_host_hvc(struct s2_host_regs *hr)
-{
-	u64 ret = 0, callno = hr->regs[0];
-	HERE;
-
-	set_per_cpu_host_regs((u64)hr);
-	/* FIXME: we write return val to reg[31] as this will be restored to x0 */
-	switch (callno) {
-	case HVC_ENABLE_S2_TRANS:
-		HERE;
-	hvc_enable_s2_trans();
-		break;
-	case HVC_VCPU_RUN:
-		HERE;
-		ret = (u64)__kvm_vcpu_run((u32)hr->regs[1], (int) hr->regs[2]);
-		set_host_regs(0, ret);
-		break;
-	case HVC_TIMER_SET_CNTVOFF:
-		HERE;
-		__kvm_timer_set_cntvoff((u64)hr->regs[1] << 32 | hr->regs[2]);
-		break;
-	// The following can only be called when VM terminates.
-	case HVC_CLEAR_VM_S2_RANGE:
-		HERE;
-		__clear_vm_stage2_range((u32)hr->regs[1],
-					(phys_addr_t)hr->regs[2], (u64)hr->regs[3]);
-		break;
-	case HVC_SET_BOOT_INFO:
-		HERE;
-		ret = set_boot_info((u32)hr->regs[1], (unsigned long)hr->regs[2],
-			      (unsigned long)hr->regs[3]);
-		set_host_regs(0, ret);
-		break;
-	case HVC_REMAP_VM_IMAGE:
-		HERE;
-		remap_vm_image((u32)hr->regs[1], (unsigned long)hr->regs[2],
-				     (int)hr->regs[3]);
-		break;
-	case HVC_VERIFY_VM_IMAGES:
-		HERE;
-		//ret = (u64)__el2_verify_and_load_images((u32)hr->regs[1]);
-		//hr->regs[31] = (u64)ret;
-		verify_and_load_images((u32)hr->regs[1]);
-		set_host_regs(0, 1);
-		break;
-	case HVC_SMMU_FREE_PGD:
-		HERE;
-		//print_string("\rfree smmu pgd\n");
-		__el2_free_smmu_pgd(hr->regs[1], hr->regs[2]);
-		//print_string("\rafter free smmu pgd\n");
-		break;
-	case HVC_SMMU_ALLOC_PGD:
-		HERE;
-		//print_string("\ralloc smmu pgd\n");
-		__el2_alloc_smmu_pgd(hr->regs[1],  hr->regs[2], hr->regs[3]);
-		//print_string("\rafter alloc smmu pgd\n");
-		break;
-	case HVC_SMMU_LPAE_MAP:
-		HERE;
-		//print_string("\rsmmu mmap\n");
-		v_el2_arm_lpae_map(hr->regs[1], hr->regs[2], hr->regs[3], hr->regs[4],
-				   hr->regs[5]);
-		//print_string("\rafter smmu mmap\n");
-		break;
-	case HVC_SMMU_LPAE_IOVA_TO_PHYS:
-		HERE;
-		//print_string("\rsmmu iova to phys\n");
-		ret = (u64)__el2_arm_lpae_iova_to_phys(hr->regs[1], hr->regs[2], hr->regs[3]);
-		set_host_regs(0, ret);
-		//print_string("\rafter smmu iova to phys\n");
-		break;
-	case HVC_SMMU_CLEAR:
-		HERE;
-		//print_string("\rsmmu clear\n");
-		__el2_arm_lpae_clear(hr->regs[1], hr->regs[2], hr->regs[3]);
-		//print_string("\rafter smmu clear\n");
-		break;
-	/*case HVC_BOOT_FROM_SAVED_VM:
-		__el2_boot_from_inc_exe((u32)hr->regs[1]);
-		break;
-	case HVC_ENCRYPT_BUF:
-		__el2_encrypt_buf((u32)hr->regs[1], (void*)hr->regs[2], (uint32_t)hr->regs[3]);
-		break;
-	case HVC_DECRYPT_BUF:
-		__el2_decrypt_buf((u32)hr->regs[1], (void*)hr->regs[2], (uint32_t)hr->regs[3]);
-		break;
-	case HVC_SAVE_CRYPT_VCPU:
-		__save_encrypted_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
-		break;*/
-	case HVC_REGISTER_KVM:
-		HERE;
-		ret = (int)register_kvm();
-		set_host_regs(0, ret);
-		break;
-	case HVC_REGISTER_VCPU:
-		HERE;
-		ret = (int)register_vcpu((u32)hr->regs[1], (int)hr->regs[2]);
-		set_host_regs(0, ret);
-		break;
-	case HVC_PHYS_ADDR_IOREMAP:
-		HERE;
-		//FIXME: We need to call to the new map_io function...
-		//__kvm_phys_addr_ioremap((u32)hr->regs[1], hr->regs[2], hr->regs[3], hr->regs[4]);
-		v_kvm_phys_addr_ioremap((u32)hr->regs[1], hr->regs[2], hr->regs[3], hr->regs[4]);
-		break;
-	default:
-		HERE;
-		print_string("\rno support hvc:\n");
-		printhex_ul(callno);
-		break;
-		//hyp_panic();
-	};
-}
+}*/
 
 //added by shih-wei
-struct el2_vm_info* vmid_to_vm_info(u32 vmid)
+void hypsec_set_vcpu_active(u32 vmid, int vcpu_id)
 {
-	struct el2_data *el2_data;
+	u32 state, first_run, vcpu_state;
 
-	el2_data = kern_hyp_va((void *)&(el2_data_start));
-	if (vmid < EL2_MAX_VMID)
-		return &el2_data->vm_info[vmid];
-	else
-		hyp_panic();
-}
-
-struct int_vcpu* vcpu_id_to_int_vcpu(
-			struct el2_vm_info *vm_info, int vcpu_id)
-{
-	if (vcpu_id < 0 || vcpu_id >= HYPSEC_MAX_VCPUS)
-		return NULL;
-	else
-		return &vm_info->int_vcpus[vcpu_id];
-}
-int hypsec_set_vcpu_active(u32 vmid, int vcpu_id)
-{
-	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
-	struct int_vcpu *int_vcpu;
-	int ret = 1;
-
-	stage2_spin_lock(&vm_info->vm_lock);
-	if (vm_info->state != VERIFIED) {
-		ret = 0;
-		goto out;
+	acquire_lock_vm(vmid);
+	state = get_vm_state(vmid);
+	if (state != VERIFIED)
+	{
+		v_panic();
 	}
-
-	int_vcpu = vcpu_id_to_int_vcpu(vm_info, vcpu_id);
-	if (int_vcpu->state == READY)
-		int_vcpu->state = ACTIVE;
 	else
-		ret = 0;
-out:
-	stage2_spin_unlock(&vm_info->vm_lock);
-	return ret;
+	{
+		first_run = get_vcpu_first_run(vmid, vcpu_id);
+		if (first_run == 0U)
+		{
+			set_vcpu_first_run(vmid, vcpu_id, 1U);
+		}
+
+		vcpu_state = get_vcpu_state(vmid, vcpu_id);
+		if (vcpu_state == READY)
+		{
+			set_vcpu_state(vmid, vcpu_id, ACTIVE);
+		}
+		else
+		{
+			v_panic();
+		}
+	}
+	release_lock_vm(vmid);
+}
+
+void hypsec_set_vcpu_state(u32 vmid, int vcpu_id, int state)
+{
+	acquire_lock_vm(vmid);
+	set_vcpu_state(vmid, vcpu_id, state);
+	release_lock_vm(vmid);
 }
 
 struct kvm_vcpu* hypsec_vcpu_id_to_vcpu(u32 vmid, int vcpu_id)
@@ -305,39 +119,6 @@ struct shadow_vcpu_context* hypsec_vcpu_id_to_shadow_ctxt(
 	else
 		return shadow_ctxt;
 }
-
-void hypsec_set_vcpu_state(u32 vmid, int vcpu_id, int state)
-{
-	struct el2_vm_info *vm_info = vmid_to_vm_info(vmid);
-	struct int_vcpu *int_vcpu;
-
-	stage2_spin_lock(&vm_info->vm_lock);
-	int_vcpu = vcpu_id_to_int_vcpu(vm_info, vcpu_id);
-	int_vcpu->state = state;
-	stage2_spin_unlock(&vm_info->vm_lock);
-}
-
-void reset_fp_regs(u32 vmid, int vcpu_id)
-{
-	struct shadow_vcpu_context *shadow_ctxt = NULL;
-	struct kvm_vcpu *vcpu = vcpu;
-
-	shadow_ctxt = hypsec_vcpu_id_to_shadow_ctxt(vmid, vcpu_id);
-	vcpu = hypsec_vcpu_id_to_vcpu(vmid, vcpu_id);
-	el2_memcpy(&shadow_ctxt->fp_regs, &vcpu->arch.ctxt.fp_regs,
-					sizeof(struct user_fpsimd_state));
-}
-
-/*
-void map_vgic_to_vm(u32 vmid)
-{
-	struct el2_data *el2_data = kern_hyp_va((void *)&(el2_data_start));
-	unsigned long vgic_cpu_gpa = 0x08010000;
-	u64 pte = el2_data->vgic_cpu_base + (pgprot_val(PAGE_S2_DEVICE) | S2_RDWR);
-	mmap_s2pt(vmid, vgic_cpu_gpa, 3U, pte);
-	mmap_s2pt(vmid, vgic_cpu_gpa + PAGE_SIZE, 3U, pte + PAGE_SIZE);
-}
-*/
 
 #define CURRENT_EL_SP_EL0_VECTOR	0x0
 #define CURRENT_EL_SP_ELx_VECTOR	0x200

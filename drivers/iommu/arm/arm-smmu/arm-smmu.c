@@ -40,6 +40,7 @@
 
 #include <linux/amba/bus.h>
 #include <linux/fsl/mc.h>
+
 #ifdef CONFIG_VERIFIED_KVM
 #include <asm/hypsec_host.h>
 #include <asm/kvm_mmu.h>
@@ -425,7 +426,7 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 	cbfrsynra = arm_smmu_gr1_read(smmu, ARM_SMMU_GR1_CBFRSYNRA(idx));
 
 #ifdef CONFIG_VERIFIED_KVM
-	addr = el2_arm_lpae_iova_to_phys(iova, cfg->cbndx, smmu->index);
+	addr = el2_arm_lpae_iova_to_phys(iova, idx, smmu->index);
 	printk("Fault IOVA %lx PA %lx\n", iova, addr);
 #endif
 
@@ -478,11 +479,11 @@ static void arm_smmu_init_context_bank(struct arm_smmu_domain *smmu_domain,
 {
 	struct arm_smmu_cfg *cfg = &smmu_domain->cfg;
 	struct arm_smmu_cb *cb = &smmu_domain->smmu->cbs[cfg->cbndx];
+	bool stage1 = cfg->cbar != CBAR_TYPE_S2_TRANS;
 #ifdef CONFIG_VERIFIED_KVM
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
 	u32 smmu_num;
 #endif
-	bool stage1 = cfg->cbar != CBAR_TYPE_S2_TRANS;
 
 	cb->cfg = cfg;
 #ifdef CONFIG_VERIFIED_KVM
@@ -771,13 +772,13 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 		cfg->irptndx = cfg->cbndx;
 	}
 
-	if (smmu_domain->stage == ARM_SMMU_DOMAIN_S2) {
+	if (smmu_domain->stage == ARM_SMMU_DOMAIN_S2)
 #ifndef CONFIG_VERIFIED_KVM
 		cfg->vmid = cfg->cbndx + 1;
 #else
 		cfg->vmid = domain->vmid;
 #endif
-	} else
+	else
 		cfg->asid = cfg->cbndx;
 
 	pgtbl_cfg = (struct io_pgtable_cfg) {
@@ -2138,7 +2139,7 @@ static void s2_smmu_probe(struct arm_smmu_device *smmu,
 	struct el2_arm_smmu_device el2_smmu;
 	u64 smmu_start, smmu_end;
 
-	el2_data = (void *)kvm_ksym_ref(el2_data_start);
+	el2_data = (void *)kvm_ksym_ref_nvhe(el2_data_start);
 	if (el2_data->el2_smmu_num > SMMU_NUM)
 		return;
 
@@ -2150,7 +2151,6 @@ static void s2_smmu_probe(struct arm_smmu_device *smmu,
 
 	el2_smmu.pgshift = smmu->pgshift;
 	el2_smmu.features = smmu->features;
-	el2_smmu.options = smmu->options;
 
 	el2_smmu.num_context_banks = smmu->num_context_banks;
 	el2_smmu.num_s2_context_banks = smmu->num_s2_context_banks;
@@ -2205,14 +2205,14 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 	 * stash that temporarily until we know PAGESIZE to validate it with.
 	 */
 	smmu->numpage = resource_size(res);
-
-	smmu = arm_smmu_impl_init(smmu);
-	if (IS_ERR(smmu))
-		return PTR_ERR(smmu);
 #ifdef CONFIG_VERIFIED_KVM
 	phys_smmu_base = res->start;
 	smmu_size = resource_size(res);
 #endif
+
+	smmu = arm_smmu_impl_init(smmu);
+	if (IS_ERR(smmu))
+		return PTR_ERR(smmu);
 
 	num_irqs = 0;
 	while ((res = platform_get_resource(pdev, IORESOURCE_IRQ, num_irqs))) {
@@ -2310,6 +2310,7 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 	smmu->phys_base = phys_smmu_base;
 	s2_smmu_probe(smmu, phys_smmu_base, smmu_size);
 #endif
+
 	/*
 	 * We want to avoid touching dev->power.lock in fastpaths unless
 	 * it's really going to do something useful - pm_runtime_enabled()

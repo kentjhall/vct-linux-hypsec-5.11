@@ -180,6 +180,9 @@
 #define PUD_S2_XN               (_AT(pudval_t, 2) << 53)  /* XN[1:0] */
 
 #define PTE_S2_GUEST		(_AT(pteval_t, 1) << 57)
+
+#define PTE_HYP_XN              (_AT(pteval_t, 1) << 54)
+#define PTE_HYP                 PTE_USER
 #endif
 
 /*

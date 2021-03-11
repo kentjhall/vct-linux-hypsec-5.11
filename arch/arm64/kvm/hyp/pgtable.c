@@ -309,6 +309,9 @@ int kvm_pgtable_walk(struct kvm_pgtable *pgt, u64 addr, u64 size,
 struct hyp_map_data {
 	u64		phys;
 	kvm_pte_t	attr;
+#ifdef CONFIG_VERIFIED_KVM
+	bool		sec;
+#endif
 };
 
 static int hyp_map_set_prot_attr(enum kvm_pgtable_prot prot,
@@ -346,6 +349,11 @@ static bool hyp_map_walker_try_leaf(u64 addr, u64 end, u32 level,
 {
 	u64 granule = kvm_granule_size(level), phys = data->phys;
 
+#ifdef CONFIG_VERIFIED_KVM
+	if (data->sec == true && level > KVM_PGTABLE_MAX_LEVELS - 2)
+		return true;
+	if (data->sec == false || level != KVM_PGTABLE_MAX_LEVELS - 2)
+#endif
 	if (!kvm_block_mapping_supported(addr, end, phys, level))
 		return false;
 
@@ -368,7 +376,23 @@ static int hyp_map_walker(u64 addr, u64 end, u32 level, kvm_pte_t *ptep,
 #ifndef CONFIG_VERIFIED_KVM
 	childp = (kvm_pte_t *)get_zeroed_page(GFP_KERNEL);
 #else
-	childp = phys_to_virt(host_alloc_pte(1));
+	if (WARN_ON(level < KVM_PGTABLE_MAX_LEVELS - 4))
+		return -EINVAL;
+
+	switch (level) {
+		case KVM_PGTABLE_MAX_LEVELS - 2:
+			if (((struct hyp_map_data *)arg)->sec == true)
+				BUG();
+			childp = phys_to_virt(host_alloc_pte(1));
+			break;
+		case KVM_PGTABLE_MAX_LEVELS - 3:
+			childp = phys_to_virt(host_alloc_pmd(1));
+			break;
+		case KVM_PGTABLE_MAX_LEVELS - 4:
+			childp = phys_to_virt(host_alloc_pud(1));
+			break;
+
+	}
 #endif
 	if (!childp)
 		return -ENOMEM;
@@ -383,6 +407,9 @@ int kvm_pgtable_hyp_map(struct kvm_pgtable *pgt, u64 addr, u64 size, u64 phys,
 	int ret;
 	struct hyp_map_data map_data = {
 		.phys	= ALIGN_DOWN(phys, PAGE_SIZE),
+#ifdef CONFIG_VERIFIED_KVM
+		.sec	= size == PMD_SIZE,
+#endif
 	};
 	struct kvm_pgtable_walker walker = {
 		.cb	= hyp_map_walker,

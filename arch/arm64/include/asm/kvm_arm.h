@@ -83,11 +83,11 @@
 #define HCR_HOST_NVHE_PROTECTED_FLAGS (HCR_HOST_NVHE_FLAGS | HCR_TSC)
 #define HCR_HOST_VHE_FLAGS (HCR_RW | HCR_TGE | HCR_E2H)
 #ifdef CONFIG_VERIFIED_KVM
-#define HCR_HYPSEC_HOST_NVHE_FLAGS (HCR_HOST_NVHE_FLAGS)
+#define HCR_HYPSEC_HOST_NVHE_FLAGS (HCR_RW | HCR_AMO | HCR_VM)
 #define HCR_HYPSEC_VM_FLAGS (HCR_TSC | HCR_TSW | HCR_TWE | HCR_TWI | HCR_VM | \
-                             HCR_BSU_IS | HCR_FB | HCR_TAC | \
-                             HCR_AMO | HCR_SWIO | HCR_TIDCP | HCR_RW | HCR_TLOR | \
-                             HCR_FMO | HCR_IMO)
+			     HCR_BSU_IS | HCR_FB | HCR_TAC | \
+			     HCR_AMO | HCR_SWIO | HCR_TIDCP | HCR_RW | HCR_TLOR | \
+			     HCR_FMO | HCR_IMO)
 #endif
 
 /* TCR_EL2 Registers bits */

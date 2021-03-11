@@ -117,8 +117,21 @@ static inline bool host_dabt_is_write(u32 hsr)
 	return !!(hsr & ESR_ELx_WNR);
 }
 
+static inline u64 host_get_fault_ipa(phys_addr_t addr)
+{
+	//return (addr | (read_sysreg_el2(far) & ((1 << 12) - 1)));
+	return (addr | (read_sysreg_el2(SYS_FAR) & ARM_SMMU_OFFSET_MASK));
+}
+
 static inline int host_dabt_get_rd(u32 hsr)
 {
 	return (hsr & ESR_ELx_SRT_MASK) >> ESR_ELx_SRT_SHIFT;
 }
+
+static inline void host_skip_instr(void)
+{
+	u64 val = read_sysreg_el2(SYS_ELR);
+	write_sysreg_el2(val + 4, SYS_ELR);
+}
+
 #endif /* __ARM_VERIFIED_MMIO__ */

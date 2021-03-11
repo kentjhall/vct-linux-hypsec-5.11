@@ -132,7 +132,6 @@ static const hcall_t *host_hcall[] = {
 };
 #endif
 
-#define HERE print_string("HERE: ");print_string(__FILE__);print_string(":");print_string(__stringify(__LINE__))
 static void handle_host_hcall(struct kvm_cpu_context *host_ctxt)
 {
 #ifndef CONFIG_VERIFIED_KVM
@@ -147,7 +146,6 @@ static void handle_host_hcall(struct kvm_cpu_context *host_ctxt)
 #endif
 
 #ifndef CONFIG_VERIFIED_KVM
-	HERE;
 	id -= KVM_HOST_SMCCC_ID(0);
 
 	if (unlikely(id >= ARRAY_SIZE(host_hcall)))
@@ -164,10 +162,9 @@ static void handle_host_hcall(struct kvm_cpu_context *host_ctxt)
 	hfn = kimg_fn_hyp_va(kfn);
 	hfn(host_ctxt);
 #else
-	HERE;
 	handle_host_hvc(&hr);
+	cpu_reg(host_ctxt, 1) = hr.regs[0];
 #endif
-	HERE;
 	return;
 #ifndef CONFIG_VERIFIED_KVM
 inval:
@@ -184,7 +181,6 @@ static void handle_host_smc(struct kvm_cpu_context *host_ctxt)
 {
 	bool handled;
 
-	HERE;
 	handled = kvm_host_psci_handler(host_ctxt);
 	if (!handled)
 		default_host_smc_handler(host_ctxt);
@@ -195,8 +191,7 @@ static void handle_host_smc(struct kvm_cpu_context *host_ctxt)
 
 void handle_trap(struct kvm_cpu_context *host_ctxt)
 {
-	u64 esr = read_sysreg_el2(SYS_ESR),
-	    hpfar = read_sysreg(hpfar_el2);
+	u64 esr = read_sysreg_el2(SYS_ESR);
 #ifdef CONFIG_VERIFIED_KVM
 	struct s2_host_regs hr;
 	int i;
@@ -204,7 +199,6 @@ void handle_trap(struct kvm_cpu_context *host_ctxt)
 		hr.regs[i] = (unsigned long)cpu_reg(host_ctxt, i);
 #endif
 
-	HERE;
 	switch (ESR_ELx_EC(esr)) {
 	case ESR_ELx_EC_HVC64:
 		handle_host_hcall(host_ctxt);
@@ -212,12 +206,15 @@ void handle_trap(struct kvm_cpu_context *host_ctxt)
 	case ESR_ELx_EC_SMC64:
 		handle_host_smc(host_ctxt);
 		break;
-	default:
 #ifdef CONFIG_VERIFIED_KVM
-		handle_host_stage2_fault(esr, hpfar, &hr);
-#else
-		hyp_panic();
+	case ESR_ELx_EC_DABT_LOW:
+	case ESR_ELx_EC_IABT_LOW:
+		handle_host_stage2_fault(0, &hr);
+		for (i = 0; i < ARRAY_SIZE(host_ctxt->regs.regs); ++i)
+			cpu_reg(host_ctxt, i) = hr.regs[i];
+		break;
 #endif
+	default:
+		hyp_panic();
 	}
-	HERE;
 }

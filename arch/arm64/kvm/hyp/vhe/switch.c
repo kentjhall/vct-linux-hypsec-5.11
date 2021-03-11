@@ -33,6 +33,9 @@ const char __hyp_panic_string[] = "HYP panic:\nPS:%08llx PC:%016llx ESR:%08llx\n
 DEFINE_PER_CPU(struct kvm_host_data, kvm_host_data);
 DEFINE_PER_CPU(struct kvm_cpu_context, kvm_hyp_ctxt);
 DEFINE_PER_CPU(unsigned long, kvm_hyp_vector);
+#ifdef CONFIG_VERIFIED_KVM
+DEFINE_PER_CPU(struct kvm_cpu_context *, shadow_ctxt_ptr);
+#endif
 
 #ifndef CONFIG_VERIFIED_KVM
 static void __activate_traps(struct kvm_vcpu *vcpu)
@@ -199,7 +202,7 @@ int __kvm_vcpu_run(struct kvm_vcpu *vcpu)
 	return ret;
 }
 #else
-int __kvm_vcpu_run(u32 vmid, u32 vcpu_id)
+int __kvm_vcpu_run(u32 vmid, int vcpu_id)
 {
 	return 0;
 }

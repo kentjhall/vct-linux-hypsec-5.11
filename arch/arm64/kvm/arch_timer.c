@@ -541,9 +541,7 @@ static void set_cntvoff(u64 cntvoff)
 #ifndef CONFIG_VERIFIED_KVM
 	kvm_call_hyp(__kvm_timer_set_cntvoff, cntvoff);
 #else
-	u32 low = lower_32_bits(cntvoff);
-	u32 high = upper_32_bits(cntvoff);
-	kvm_call_core(HVC_TIMER_SET_CNTVOFF, low, high);
+	kvm_call_core(HVC_TIMER_SET_CNTVOFF, cntvoff);
 #endif
 }
 

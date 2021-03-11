@@ -106,13 +106,15 @@ SYM_CODE_END(\label)
  * initialisation entry point.
  */
 
+#ifdef CONFIG_VERIFIED_KVM
 SYM_FUNC_START(__hyp_get_vectors)
         str     lr, [sp, #-16]!
         mov     x0, #HVC_GET_VECTORS
-        hvc     #0
+        hvc #0
         ldr     lr, [sp], #16
         ret
 SYM_FUNC_END(__hyp_get_vectors)
+#endif
 
 SYM_FUNC_START(__hyp_set_vectors)
 	mov	x1, x0

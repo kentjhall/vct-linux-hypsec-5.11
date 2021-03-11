@@ -28,6 +28,9 @@
 #include <asm/kvm_emulate.h>
 #include <asm/kvm_mmu.h>
 #include <asm/virt.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#endif
 
 /* Maximum phys_shift supported for any VM on this host */
 static u32 kvm_ipa_limit;
@@ -342,6 +345,7 @@ int kvm_set_ipa_limit(void)
  */
 int kvm_arm_setup_stage2(struct kvm *kvm, unsigned long type)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	u64 vtcr = VTCR_EL2_FLAGS, mmfr0;
 	u32 parange, phys_shift;
 	u8 lvls;
@@ -387,5 +391,8 @@ int kvm_arm_setup_stage2(struct kvm *kvm, unsigned long type)
 		VTCR_EL2_VS_16BIT :
 		VTCR_EL2_VS_8BIT;
 	kvm->arch.vtcr = vtcr;
+#else
+	kvm->arch.vtcr = get_hypsec_vtcr_el2(NULL);
+#endif
 	return 0;
 }

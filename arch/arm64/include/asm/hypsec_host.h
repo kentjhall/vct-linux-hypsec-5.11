@@ -10,12 +10,18 @@
 #include <asm/kvm_mmu.h>
 #include <asm/hypsec_constant.h>
 
+DECLARE_KVM_NVHE_SYM(dtb_copy_start);
+DECLARE_KVM_NVHE_SYM(dtb_copy_end);
 DECLARE_KVM_NVHE_SYM(stage2_pgs_start);
 DECLARE_KVM_NVHE_SYM(stage2_pgs_end);
 DECLARE_KVM_NVHE_SYM(el2_data_start);
 DECLARE_KVM_NVHE_SYM(el2_data_end);
 DECLARE_KVM_NVHE_SYM(shared_data_start);
 DECLARE_KVM_NVHE_SYM(shared_data_end);
+DECLARE_KVM_NVHE_SYM(stage2_tmp_pgs_start);
+DECLARE_KVM_NVHE_SYM(stage2_tmp_pgs_end);
+DECLARE_KVM_NVHE_SYM(smmu_pgs_start);
+DECLARE_KVM_NVHE_SYM(smmu_pgs_end);
 
 /* Handler for ACTLR_EL1 is not defined */
 #define SHADOW_SYS_REGS_SIZE		(DISR_EL1)
@@ -63,6 +69,7 @@ struct int_vcpu {
 	int vcpu_pg_cnt;
 	enum hypsec_init_state state;
 	u32 ctxtid;
+	u32 first_run;
 };
 
 struct el2_vm_info {
@@ -78,16 +85,14 @@ struct el2_vm_info {
 	struct kvm *kvm;
 	struct int_vcpu int_vcpus[HYPSEC_MAX_VCPUS];
 	struct shadow_vcpu_context *shadow_ctxt[HYPSEC_MAX_VCPUS];
-	uint8_t key[16];
-	uint8_t iv[16];
 	uint8_t public_key[32];
 	bool powered_on;
 	/* For VM private pool */
 	u64 page_pool_start;
+	u64 pgd_pool;
+	u64 pud_pool;
+	u64 pmd_pool;
 	unsigned long used_pages;
-	unsigned long pmd_used_pages;
-	unsigned long pud_used_pages;
-	unsigned long pte_used_pages;
 };
 
 struct el2_data {
@@ -139,10 +144,11 @@ struct el2_data {
         uint32_t hacl_hash0[64U];
 
 	uint8_t key[16];
+	uint8_t iv[16];
 
 	unsigned long smmu_page_pool_start;
-	unsigned long smmu_pgd_used_pages;
-	unsigned long smmu_pmd_used_pages;
+	unsigned long smmu_pgd_pool;
+	unsigned long smmu_pmd_pool;
 
 	u64 phys_mem_start;
 	u64 phys_mem_size;
@@ -207,20 +213,16 @@ extern void el2_smmu_free_pgd(u32 cbndx, u32 num);
 extern void el2_arm_lpae_map(u64 iova, phys_addr_t paddr, u64 prot, u32 cbndx, u32 num);
 extern phys_addr_t el2_arm_lpae_iova_to_phys(u64 iova, u32 cbndx, u32 num);
 extern void el2_smmu_clear(u64 iova, u32 cbndx, u32 num);
-extern void el2_kvm_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
-
-void encrypt_buf(u32 vmid, void *buf, uint32_t len);
-void decrypt_buf(u32 vmid, void *buf, uint32_t len);
+extern void hypsec_phys_addr_ioremap(u32 vmid, u64 gpa, u64 pa, u64 size);
 
 extern void el2_boot_from_inc_exe(u32 vmid);
 extern bool el2_use_inc_exe(u32 vmid);
-extern unsigned long search_load_info(u32 vmid, struct el2_data *el2_data,
-				      unsigned long addr);
 
 extern int el2_alloc_vm_info(struct kvm *kvm);
 
-int handle_pvops(u32 vmid, u32 vcpuid);
+u32 handle_pvops(u32 vmid, u32 vcpuid);
 void save_encrypted_vcpu(struct kvm_vcpu *vcpu);
+void load_encrypted_vcpu(u32 vmid, u32 vcpu_id);
 
 //extern void set_pfn_owner(struct el2_data *el2_data, phys_addr_t addr,
 //				unsigned long pgnum, u32 vmid);
@@ -285,8 +287,28 @@ static u64 inline get_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index)
         struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	u64 val;
-	if (index < V_FAR_EL2)
-		val = el2_data->shadow_vcpu_ctxt[offset].regs[index]; 
+	if (index < 31)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.regs[index];
+	else if (index == V_SP)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.sp;
+	else if (index == V_PC)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.pc;
+	else if (index == V_PSTATE)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.pstate;
+	else if (index == V_SP_EL1)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.sp_el1;
+	else if (index == V_ELR_EL1)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.elr_el1;
+	else if (index == V_SPSR_EL1)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[0];
+	else if (index == V_SPSR_ABT)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[1];
+	else if (index == V_SPSR_UND)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[2];
+	else if (index == V_SPSR_IRQ)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[3];
+	else if (index == V_SPSR_FIQ)
+		val = el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[4];
 	else if (index == V_FAR_EL2)
 		val = el2_data->shadow_vcpu_ctxt[offset].far_el2;
 	else if (index == V_HPFAR_EL2)
@@ -315,8 +337,28 @@ static void inline set_shadow_ctxt(u32 vmid, u32 vcpuid, u32 index, u64 value) {
         struct el2_data *el2_data = kern_hyp_va((void*)&el2_data_start);
 	int offset = VCPU_IDX(vmid, vcpuid);
 	//el2_data->shadow_vcpu_ctxt[offset].regs[index] = value;
-	if (index < V_FAR_EL2)
-		el2_data->shadow_vcpu_ctxt[offset].regs[index] = value; 
+	if (index < 31)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.regs[index] = value;
+	else if (index == V_SP)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.sp = value;
+	else if (index == V_PC)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.pc = value;
+	else if (index == V_PSTATE)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.regs.pstate = value;
+	else if (index == V_SP_EL1)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.sp_el1 = value;
+	else if (index == V_ELR_EL1)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.elr_el1 = value;
+	else if (index == V_SPSR_EL1)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[0] = value;
+	else if (index == V_SPSR_ABT)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[1] = value;
+	else if (index == V_SPSR_UND)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[2] = value;
+	else if (index == V_SPSR_IRQ)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[3] = value;
+	else if (index == V_SPSR_FIQ)
+		el2_data->shadow_vcpu_ctxt[offset].gp_regs.spsr[4] = value;
 	else if (index == V_FAR_EL2)
 		el2_data->shadow_vcpu_ctxt[offset].far_el2 = value;
 	else if (index == V_HPFAR_EL2)
@@ -345,9 +387,6 @@ void __vm_sysreg_save_state_nvhe(u32 vmid, u32 vcpuid);
 void __vm_sysreg_restore_state_nvhe_opt(struct shadow_vcpu_context *ctxt);
 void __vm_sysreg_save_state_nvhe_opt(struct shadow_vcpu_context *ctxt);
 
-void v_grant_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
-void v_revoke_stage2_sg_gpa(u32 vmid, u64 addr, u64 size);
-
 void init_hacl_hash(struct el2_data *el2_data);
 uint64_t get_hacl_hash_sha2_constant_k384_512(int i);
 uint32_t get_hacl_hash_sha2_constant_k224_256(int i);
@@ -368,5 +407,76 @@ static void inline set_pt_vttbr(u32 vmid, u64 vttbr) {
 };
 
 void handle_host_hvc(struct s2_host_regs *hr);
-void handle_host_stage2_fault(u64 esr, u64 hpfar, struct s2_host_regs *hr);
+void handle_host_stage2_fault(unsigned long host_lr,
+			      struct s2_host_regs *host_regs);
+
+static u64 inline get_hypsec_vtcr_el2(u64 *par)
+{
+	u64 val = VTCR_EL2_FLAGS;
+	u64 parange;
+	u64 tmp;
+
+	/*
+	 * Read the PARange bits from ID_AA64MMFR0_EL1 and set the PS
+	 * bits in VTCR_EL2. Amusingly, the PARange is 4 bits, while
+	 * PS is only 3. Fortunately, bit 19 is RES0 in VTCR_EL2...
+	 */
+	parange = read_sysreg(id_aa64mmfr0_el1) & 7;
+	if (parange > ID_AA64MMFR0_PARANGE_MAX)
+		parange = ID_AA64MMFR0_PARANGE_MAX;
+	val |= parange << 16;
+
+	/* Compute the actual PARange... */
+	switch (parange) {
+	case 0:
+		parange = 32;
+		break;
+	case 1:
+		parange = 36;
+		break;
+	case 2:
+		parange = 40;
+		break;
+	case 3:
+		parange = 42;
+		break;
+	case 4:
+		parange = 44;
+		break;
+	case 5:
+	default:
+		parange = 48;
+		break;
+	}
+
+	/*
+	 * ... and clamp it to 40 bits, unless we have some braindead
+	 * HW that implements less than that. In all cases, we'll
+	 * return that value for the rest of the kernel to decide what
+	 * to do.
+	 */
+	val |= 64 - (parange > 40 ? 40 : parange);
+
+	/*
+	 * Check the availability of Hardware Access Flag / Dirty Bit
+	 * Management in ID_AA64MMFR1_EL1 and enable the feature in VTCR_EL2.
+	 */
+	tmp = (read_sysreg(id_aa64mmfr1_el1) >> ID_AA64MMFR1_HADBS_SHIFT) & 0xf;
+	if (tmp)
+		val |= VTCR_EL2_HA;
+
+	/*
+	 * Read the VMIDBits bits from ID_AA64MMFR1_EL1 and set the VS
+	 * bit in VTCR_EL2.
+	 */
+	tmp = (read_sysreg(id_aa64mmfr1_el1) >> ID_AA64MMFR1_VMIDBITS_SHIFT) & 0xf;
+	val |= (tmp == ID_AA64MMFR1_VMIDBITS_16) ?
+			VTCR_EL2_VS_16BIT :
+			VTCR_EL2_VS_8BIT;
+
+	if (par)
+		*par = parange;
+
+	return val;
+}
 #endif /* __ARM_STAGE2_H__ */

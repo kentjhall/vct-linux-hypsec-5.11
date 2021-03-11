@@ -83,16 +83,18 @@ static void set_vttbr_el2(u64 val)
 {
 	write_sysreg(val, vttbr_el2);
 }
+
 /*
 static u64 get_tpidr_el2(void)
 {
 	return read_sysreg(tpidr_el2);
 }
-*/
+
 static void set_tpidr_el2(u64 val)
 {
 	write_sysreg(val, tpidr_el2);
 }
+*/
 
 static u64 get_far_el2(void)
 {

@@ -277,15 +277,28 @@ SECTIONS
 
 #ifdef CONFIG_VERIFIED_KVM
 	. = ALIGN(SEGMENT_ALIGN);
+	__kvm_nvhe_dtb_copy_start = .;
+	. += SZ_2M * 4;
+	__kvm_nvhe_dtb_copy_end =.;
+
 	__kvm_nvhe_stage2_pgs_start = .;
 	. += STAGE2_PAGES_SIZE;
 	__kvm_nvhe_stage2_pgs_end = .;
+
+	__kvm_nvhe_smmu_pgs_start = .;
+	. += SMMU_PAGES_SIZE;
+	__kvm_nvhe_smmu_pgs_end = .;
+
+	__kvm_nvhe_stage2_tmp_pgs_start = .;
+	. += PAGE_SIZE;
+	__kvm_nvhe_stage2_tmp_pgs_end = .;
 
 	. = ALIGN(PAGE_SIZE);
 	__kvm_nvhe_el2_data_start = .;
 	. += CORE_DATA_SIZE;
 	__kvm_nvhe_el2_data_end = .;
 
+	. = ALIGN(PAGE_SIZE);
 	__kvm_nvhe_shared_data_start = .;
 	. += PAGE_SIZE * (PAGE_SIZE * 4);
 	__kvm_nvhe_shared_data_end = .;
