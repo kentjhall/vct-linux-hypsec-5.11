@@ -561,6 +561,9 @@ void kvm_free_stage2_pgd(struct kvm_s2_mmu *mmu)
 	spin_lock(&kvm->mmu_lock);
 	pgt = mmu->pgt;
 	if (pgt) {
+#ifdef CONFIG_VERIFIED_KVM
+		clear_vm_stage2_range(mmu->vmid.vmid, mach_phys_mem_start, mach_phys_mem_size);
+#endif
 		mmu->pgd_phys = 0;
 		mmu->pgt = NULL;
 		free_percpu(mmu->last_vcpu_ran);
