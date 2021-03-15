@@ -261,6 +261,9 @@ struct kvm_mmio_fragment {
 };
 
 struct kvm_vcpu {
+#ifdef CONFIG_STAGE2_KERNEL
+	struct kvm_vcpu_arch arch;
+#endif
 	struct kvm *kvm;
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 	struct preempt_notifier preempt_notifier;
@@ -319,7 +322,9 @@ struct kvm_vcpu {
 #endif
 	bool preempted;
 	bool ready;
+#ifndef CONFIG_STAGE2_KERNEL
 	struct kvm_vcpu_arch arch;
+#endif
 	struct kvm_dirty_ring dirty_ring;
 };
 
@@ -513,6 +518,10 @@ struct kvm {
 	pid_t userspace_pid;
 	unsigned int max_halt_poll_ns;
 	u32 dirty_ring_size;
+#ifdef CONFIG_VERIFIED_KVM
+	bool verified;
+	spinlock_t hypsec_lock;
+#endif
 };
 
 #define kvm_err(fmt, ...) \
@@ -1494,5 +1503,10 @@ static inline void kvm_handle_signal_exit(struct kvm_vcpu *vcpu)
 
 /* Max number of entries allowed for each kvm dirty ring */
 #define  KVM_DIRTY_RING_MAX_ENTRIES  65536
+
+#ifdef CONFIG_VERIFIED_KVM
+extern u64 mach_phys_mem_start;
+extern u64 mach_phys_mem_size;
+#endif
 
 #endif

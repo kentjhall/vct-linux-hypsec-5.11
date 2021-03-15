@@ -47,9 +47,21 @@ SYM_CODE_END(__hyp_stub_vectors)
 
 SYM_CODE_START_LOCAL(el1_sync)
 	cmp	x0, #HVC_SET_VECTORS
+#ifndef CONFIG_VERIFIED_KVM
 	b.ne	2f
+#else
+	b.ne	1f
+#endif
 	msr	vbar_el2, x1
 	b	9f
+
+#ifdef CONFIG_VERIFIED_KVM
+1:
+	cmp	x0, #HVC_GET_VECTORS
+	b.ne	2f
+	mrs	x0, vbar_el2
+	b	9f
+#endif
 
 2:	cmp	x0, #HVC_SOFT_RESTART
 	b.ne	3f
@@ -105,6 +117,16 @@ SYM_CODE_END(\label)
  * so you will need to set that to something sensible at the new hypervisor's
  * initialisation entry point.
  */
+
+#ifdef CONFIG_VERIFIED_KVM
+SYM_FUNC_START(__hyp_get_vectors)
+        str     lr, [sp, #-16]!
+        mov     x0, #HVC_GET_VECTORS
+        hvc #0
+        ldr     lr, [sp], #16
+        ret
+SYM_FUNC_END(__hyp_get_vectors)
+#endif
 
 SYM_FUNC_START(__hyp_set_vectors)
 	mov	x1, x0

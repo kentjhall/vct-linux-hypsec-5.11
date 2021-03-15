@@ -11,6 +11,9 @@
 #include <asm/kvm_host.h>
 #include <asm/kvm_hyp.h>
 #include <asm/kvm_mmu.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#endif
 
 #include <nvhe/trap_handler.h>
 
@@ -18,6 +21,7 @@ DEFINE_PER_CPU(struct kvm_nvhe_init_params, kvm_init_params);
 
 void __kvm_hyp_host_forward_smc(struct kvm_cpu_context *host_ctxt);
 
+#ifndef CONFIG_VERIFIED_KVM
 static void handle___kvm_vcpu_run(struct kvm_cpu_context *host_ctxt)
 {
 	DECLARE_REG(struct kvm_vcpu *, vcpu, host_ctxt, 1);
@@ -126,13 +130,22 @@ static const hcall_t *host_hcall[] = {
 	HANDLE_FUNC(__vgic_v3_save_aprs),
 	HANDLE_FUNC(__vgic_v3_restore_aprs),
 };
+#endif
 
 static void handle_host_hcall(struct kvm_cpu_context *host_ctxt)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	DECLARE_REG(unsigned long, id, host_ctxt, 0);
 	const hcall_t *kfn;
 	hcall_t hfn;
+#else
+	struct s2_host_regs hr;
+	int i;
+	for (i = 0; i < ARRAY_SIZE(host_ctxt->regs.regs); ++i)
+		hr.regs[i] = (unsigned long)cpu_reg(host_ctxt, i);
+#endif
 
+#ifndef CONFIG_VERIFIED_KVM
 	id -= KVM_HOST_SMCCC_ID(0);
 
 	if (unlikely(id >= ARRAY_SIZE(host_hcall)))
@@ -141,15 +154,22 @@ static void handle_host_hcall(struct kvm_cpu_context *host_ctxt)
 	kfn = host_hcall[id];
 	if (unlikely(!kfn))
 		goto inval;
+#endif
 
 	cpu_reg(host_ctxt, 0) = SMCCC_RET_SUCCESS;
 
+#ifndef CONFIG_VERIFIED_KVM
 	hfn = kimg_fn_hyp_va(kfn);
 	hfn(host_ctxt);
-
+#else
+	handle_host_hvc(&hr);
+	cpu_reg(host_ctxt, 1) = hr.regs[0];
+#endif
 	return;
+#ifndef CONFIG_VERIFIED_KVM
 inval:
 	cpu_reg(host_ctxt, 0) = SMCCC_RET_NOT_SUPPORTED;
+#endif
 }
 
 static void default_host_smc_handler(struct kvm_cpu_context *host_ctxt)
@@ -172,6 +192,12 @@ static void handle_host_smc(struct kvm_cpu_context *host_ctxt)
 void handle_trap(struct kvm_cpu_context *host_ctxt)
 {
 	u64 esr = read_sysreg_el2(SYS_ESR);
+#ifdef CONFIG_VERIFIED_KVM
+	struct s2_host_regs hr;
+	int i;
+	for (i = 0; i < ARRAY_SIZE(host_ctxt->regs.regs); ++i)
+		hr.regs[i] = (unsigned long)cpu_reg(host_ctxt, i);
+#endif
 
 	switch (ESR_ELx_EC(esr)) {
 	case ESR_ELx_EC_HVC64:
@@ -180,6 +206,14 @@ void handle_trap(struct kvm_cpu_context *host_ctxt)
 	case ESR_ELx_EC_SMC64:
 		handle_host_smc(host_ctxt);
 		break;
+#ifdef CONFIG_VERIFIED_KVM
+	case ESR_ELx_EC_DABT_LOW:
+	case ESR_ELx_EC_IABT_LOW:
+		handle_host_stage2_fault(0, &hr);
+		for (i = 0; i < ARRAY_SIZE(host_ctxt->regs.regs); ++i)
+			cpu_reg(host_ctxt, i) = hr.regs[i];
+		break;
+#endif
 	default:
 		hyp_panic();
 	}

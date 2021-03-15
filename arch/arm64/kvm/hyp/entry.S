@@ -49,6 +49,7 @@ alternative_else_nop_endif
 1:
 	set_loaded_vcpu x0, x1, x2
 
+#ifndef CONFIG_VERIFIED_KVM
 	add	x29, x0, #VCPU_CONTEXT
 
 	// Macro ptrauth_switch_to_guest format:
@@ -57,6 +58,9 @@ alternative_else_nop_endif
 	// as it may cause Pointer Authentication key signing mismatch errors
 	// when this feature is enabled for kernel code.
 	ptrauth_switch_to_guest x29, x0, x1, x2
+#else
+	ldr_this_cpu x29, shadow_ctxt_ptr, x2
+#endif
 
 	// Restore the guest's sp_el0
 	restore_sp_el0 x29, x0
@@ -105,7 +109,13 @@ SYM_INNER_LABEL(__guest_exit, SYM_L_GLOBAL)
 	// x2-x29,lr: vcpu regs
 	// vcpu x0-x1 on the stack
 
+#ifndef CONFIG_VERIFIED_KVM
 	add	x1, x1, #VCPU_CONTEXT
+#else
+	str     x2, [sp, #-16]!
+	ldr_this_cpu x1, shadow_ctxt_ptr, x2
+	ldr     x2, [sp], #16
+#endif
 
 	ALTERNATIVE(nop, SET_PSTATE_PAN(1), ARM64_HAS_PAN, CONFIG_ARM64_PAN)
 
@@ -133,12 +143,14 @@ SYM_INNER_LABEL(__guest_exit, SYM_L_GLOBAL)
 
 	adr_this_cpu x2, kvm_hyp_ctxt, x3
 
+#ifndef CONFIG_VERIFIED_KVM
 	// Macro ptrauth_switch_to_hyp format:
 	// 	ptrauth_switch_to_hyp(guest cxt, host cxt, tmp1, tmp2, tmp3)
 	// The below macro to save/restore keys is not implemented in C code
 	// as it may cause Pointer Authentication key signing mismatch errors
 	// when this feature is enabled for kernel code.
 	ptrauth_switch_to_hyp x1, x2, x3, x4, x5
+#endif
 
 	// Restore hyp's sp_el0
 	restore_sp_el0 x2, x3
@@ -146,7 +158,9 @@ SYM_INNER_LABEL(__guest_exit, SYM_L_GLOBAL)
 	// Now restore the hyp regs
 	restore_callee_saved_regs x2
 
+#ifndef CONFIG_VERIFIED_KVM
 	set_loaded_vcpu xzr, x1, x2
+#endif
 
 alternative_if ARM64_HAS_RAS_EXTN
 	// If we have the RAS extensions we can consume a pending error

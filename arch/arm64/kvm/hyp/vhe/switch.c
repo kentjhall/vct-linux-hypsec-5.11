@@ -33,7 +33,11 @@ const char __hyp_panic_string[] = "HYP panic:\nPS:%08llx PC:%016llx ESR:%08llx\n
 DEFINE_PER_CPU(struct kvm_host_data, kvm_host_data);
 DEFINE_PER_CPU(struct kvm_cpu_context, kvm_hyp_ctxt);
 DEFINE_PER_CPU(unsigned long, kvm_hyp_vector);
+#ifdef CONFIG_VERIFIED_KVM
+DEFINE_PER_CPU(struct kvm_cpu_context *, shadow_ctxt_ptr);
+#endif
 
+#ifndef CONFIG_VERIFIED_KVM
 static void __activate_traps(struct kvm_vcpu *vcpu)
 {
 	u64 val;
@@ -68,6 +72,7 @@ static void __activate_traps(struct kvm_vcpu *vcpu)
 	write_sysreg(__this_cpu_read(kvm_hyp_vector), vbar_el1);
 }
 NOKPROBE_SYMBOL(__activate_traps);
+#endif
 
 static void __deactivate_traps(struct kvm_vcpu *vcpu)
 {
@@ -107,6 +112,7 @@ void deactivate_traps_vhe_put(void)
 	__deactivate_traps_common();
 }
 
+#ifndef CONFIG_VERIFIED_KVM
 /* Switch to the guest for VHE systems running in EL2 */
 static int __kvm_vcpu_run_vhe(struct kvm_vcpu *vcpu)
 {
@@ -195,6 +201,12 @@ int __kvm_vcpu_run(struct kvm_vcpu *vcpu)
 
 	return ret;
 }
+#else
+int __kvm_vcpu_run(u32 vmid, int vcpu_id)
+{
+	return 0;
+}
+#endif
 
 static void __hyp_call_panic(u64 spsr, u64 elr, u64 par)
 {

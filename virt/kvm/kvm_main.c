@@ -55,6 +55,9 @@
 #include <asm/processor.h>
 #include <asm/ioctl.h>
 #include <linux/uaccess.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#endif
 
 #include "coalesced_mmio.h"
 #include "async_pf.h"
@@ -428,7 +431,9 @@ void kvm_vcpu_destroy(struct kvm_vcpu *vcpu)
 	put_pid(rcu_dereference_protected(vcpu->pid, 1));
 
 	free_page((unsigned long)vcpu->run);
+#ifndef CONFIG_VERIFIED_KVM
 	kmem_cache_free(kvm_vcpu_cache, vcpu);
+#endif
 }
 EXPORT_SYMBOL_GPL(kvm_vcpu_destroy);
 
@@ -3149,7 +3154,11 @@ static int kvm_vm_ioctl_create_vcpu(struct kvm *kvm, u32 id)
 	if (r)
 		goto vcpu_decrement;
 
+#ifndef CONFIG_VERIFIED_KVM
 	vcpu = kmem_cache_zalloc(kvm_vcpu_cache, GFP_KERNEL);
+#else
+	vcpu = hypsec_alloc_vcpu(kvm->arch.mmu.vmid.vmid, id);
+#endif
 	if (!vcpu) {
 		r = -ENOMEM;
 		goto vcpu_decrement;
@@ -3215,7 +3224,9 @@ arch_vcpu_destroy:
 vcpu_free_run_page:
 	free_page((unsigned long)vcpu->run);
 vcpu_free:
+#ifndef CONFIG_VERIFIED_KVM
 	kmem_cache_free(kvm_vcpu_cache, vcpu);
+#endif
 vcpu_decrement:
 	mutex_lock(&kvm->lock);
 	kvm->created_vcpus--;
@@ -4933,6 +4944,7 @@ int kvm_init(void *opaque, unsigned vcpu_size, unsigned vcpu_align,
 	/* A kmem cache lets us meet the alignment requirements of fx_save. */
 	if (!vcpu_align)
 		vcpu_align = __alignof__(struct kvm_vcpu);
+
 	kvm_vcpu_cache =
 		kmem_cache_create_usercopy("kvm_vcpu", vcpu_size, vcpu_align,
 					   SLAB_ACCOUNT,

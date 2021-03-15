@@ -816,6 +816,12 @@ config SOCIONEXT_SYNQUACER_PREITS
 
 endmenu
 
+config VERIFIED_KVM
+	bool "Build verified KVM"
+	select ARM64_4K_PAGES
+	select VIRTUALIZATION
+	help
+	  Build verified KVM.
 
 choice
 	prompt "Page size"

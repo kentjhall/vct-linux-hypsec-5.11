@@ -47,6 +47,11 @@ menuconfig KVM
 
 if KVM
 
+config KVM_ARM_PVOPS
+	bool "PVOPS for the guest kernel"
+	help
+	Adds PVOPS support for the super secure KVM ARM.
+
 source "virt/kvm/Kconfig"
 
 endif # KVM

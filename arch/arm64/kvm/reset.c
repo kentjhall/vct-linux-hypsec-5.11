@@ -28,6 +28,9 @@
 #include <asm/kvm_emulate.h>
 #include <asm/kvm_mmu.h>
 #include <asm/virt.h>
+#ifdef CONFIG_VERIFIED_KVM
+#include <asm/hypsec_host.h>
+#endif
 
 /* Maximum phys_shift supported for any VM on this host */
 static u32 kvm_ipa_limit;

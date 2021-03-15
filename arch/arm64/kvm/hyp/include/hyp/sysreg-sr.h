@@ -28,8 +28,14 @@ static inline void __sysreg_save_user_state(struct kvm_cpu_context *ctxt)
 
 static inline void __sysreg_save_el1_state(struct kvm_cpu_context *ctxt)
 {
+#ifdef CONFIG_VERIFIED_KVM
+	ctxt->sys_regs[MPIDR_EL1]	= read_sysreg(vmpidr_el2);
+#endif
 	ctxt_sys_reg(ctxt, CSSELR_EL1)	= read_sysreg(csselr_el1);
 	ctxt_sys_reg(ctxt, SCTLR_EL1)	= read_sysreg_el1(SYS_SCTLR);
+#ifdef CONFIG_VERIFIED_KVM
+	ctxt->sys_regs[ACTLR_EL1]	= read_sysreg(actlr_el1);
+#endif
 	ctxt_sys_reg(ctxt, CPACR_EL1)	= read_sysreg_el1(SYS_CPACR);
 	ctxt_sys_reg(ctxt, TTBR0_EL1)	= read_sysreg_el1(SYS_TTBR0);
 	ctxt_sys_reg(ctxt, TTBR1_EL1)	= read_sysreg_el1(SYS_TTBR1);
@@ -76,10 +82,13 @@ static inline void __sysreg_restore_el1_state(struct kvm_cpu_context *ctxt)
 	write_sysreg(ctxt_sys_reg(ctxt, MPIDR_EL1),	vmpidr_el2);
 	write_sysreg(ctxt_sys_reg(ctxt, CSSELR_EL1),	csselr_el1);
 
+#ifndef CONFIG_VERIFIED_KVM
 	if (has_vhe() ||
 	    !cpus_have_final_cap(ARM64_WORKAROUND_SPECULATIVE_AT)) {
+#endif
 		write_sysreg_el1(ctxt_sys_reg(ctxt, SCTLR_EL1),	SYS_SCTLR);
 		write_sysreg_el1(ctxt_sys_reg(ctxt, TCR_EL1),	SYS_TCR);
+#ifndef CONFIG_VERIFIED_KVM
 	} else	if (!ctxt->__hyp_running_vcpu) {
 		/*
 		 * Must only be done for guest registers, hence the context
@@ -91,7 +100,11 @@ static inline void __sysreg_restore_el1_state(struct kvm_cpu_context *ctxt)
 				 SYS_TCR);
 		isb();
 	}
+#endif
 
+#ifdef CONFIG_VERIFIED_KVM
+	write_sysreg(ctxt->sys_regs[ACTLR_EL1],	  	actlr_el1);
+#endif
 	write_sysreg_el1(ctxt_sys_reg(ctxt, CPACR_EL1),	SYS_CPACR);
 	write_sysreg_el1(ctxt_sys_reg(ctxt, TTBR0_EL1),	SYS_TTBR0);
 	write_sysreg_el1(ctxt_sys_reg(ctxt, TTBR1_EL1),	SYS_TTBR1);
@@ -107,6 +120,7 @@ static inline void __sysreg_restore_el1_state(struct kvm_cpu_context *ctxt)
 	write_sysreg(ctxt_sys_reg(ctxt, PAR_EL1),	par_el1);
 	write_sysreg(ctxt_sys_reg(ctxt, TPIDR_EL1),	tpidr_el1);
 
+#ifndef CONFIG_VERIFIED_KVM
 	if (!has_vhe() &&
 	    cpus_have_final_cap(ARM64_WORKAROUND_SPECULATIVE_AT) &&
 	    ctxt->__hyp_running_vcpu) {
@@ -124,6 +138,7 @@ static inline void __sysreg_restore_el1_state(struct kvm_cpu_context *ctxt)
 		isb();
 		write_sysreg_el1(ctxt_sys_reg(ctxt, TCR_EL1),	SYS_TCR);
 	}
+#endif
 
 	write_sysreg(ctxt_sys_reg(ctxt, SP_EL1),	sp_el1);
 	write_sysreg_el1(ctxt_sys_reg(ctxt, ELR_EL1),	SYS_ELR);
@@ -158,6 +173,7 @@ static inline void __sysreg_restore_el2_return_state(struct kvm_cpu_context *ctx
 
 static inline void __sysreg32_save_state(struct kvm_vcpu *vcpu)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	if (!vcpu_el1_is_32bit(vcpu))
 		return;
 
@@ -171,10 +187,12 @@ static inline void __sysreg32_save_state(struct kvm_vcpu *vcpu)
 
 	if (has_vhe() || vcpu->arch.flags & KVM_ARM64_DEBUG_DIRTY)
 		__vcpu_sys_reg(vcpu, DBGVCR32_EL2) = read_sysreg(dbgvcr32_el2);
+#endif
 }
 
 static inline void __sysreg32_restore_state(struct kvm_vcpu *vcpu)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	if (!vcpu_el1_is_32bit(vcpu))
 		return;
 
@@ -188,6 +206,7 @@ static inline void __sysreg32_restore_state(struct kvm_vcpu *vcpu)
 
 	if (has_vhe() || vcpu->arch.flags & KVM_ARM64_DEBUG_DIRTY)
 		write_sysreg(__vcpu_sys_reg(vcpu, DBGVCR32_EL2), dbgvcr32_el2);
+#endif
 }
 
 #endif /* __ARM64_KVM_HYP_SYSREG_SR_H__ */

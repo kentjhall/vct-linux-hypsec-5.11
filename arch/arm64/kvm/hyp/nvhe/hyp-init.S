@@ -76,6 +76,10 @@ __do_hyp_init:
 	bl	___kvm_hyp_init			// Clobbers x0..x2
 	mov	lr, x3
 
+#ifdef CONFIG_VERIFIED_KVM
+        msr     hstr_el2, xzr
+#endif
+
 	/* Hello, World! */
 	mov	x0, #SMCCC_RET_SUCCESS
 	eret
@@ -90,10 +94,12 @@ SYM_CODE_END(__kvm_hyp_init)
  * x0: struct kvm_nvhe_init_params PA
  */
 SYM_CODE_START_LOCAL(___kvm_hyp_init)
+#ifndef CONFIG_VERIFIED_KVM
 alternative_if ARM64_KVM_PROTECTED_MODE
 	mov_q	x1, HCR_HOST_NVHE_PROTECTED_FLAGS
 	msr	hcr_el2, x1
 alternative_else_nop_endif
+#endif
 
 	ldr	x1, [x0, #NVHE_INIT_TPIDR_EL2]
 	msr	tpidr_el2, x1
@@ -131,11 +137,13 @@ alternative_else_nop_endif
 	 */
 	mov_q	x0, (SCTLR_EL2_RES1 | (SCTLR_ELx_FLAGS & ~SCTLR_ELx_A))
 CPU_BE(	orr	x0, x0, #SCTLR_ELx_EE)
+#ifndef CONFIG_VERIFIED_KVM
 alternative_if ARM64_HAS_ADDRESS_AUTH
 	mov_q	x1, (SCTLR_ELx_ENIA | SCTLR_ELx_ENIB | \
 		     SCTLR_ELx_ENDA | SCTLR_ELx_ENDB)
 	orr	x0, x0, x1
 alternative_else_nop_endif
+#endif
 	msr	sctlr_el2, x0
 	isb
 
@@ -237,10 +245,12 @@ reset:
 	msr	sctlr_el2, x5
 	isb
 
+#ifndef CONFIG_VERIFIED_KVM
 alternative_if ARM64_KVM_PROTECTED_MODE
 	mov_q	x5, HCR_HOST_NVHE_FLAGS
 	msr	hcr_el2, x5
 alternative_else_nop_endif
+#endif
 
 	/* Install stub vectors */
 	adr_l	x5, __hyp_stub_vectors

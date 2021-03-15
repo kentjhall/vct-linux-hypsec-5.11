@@ -167,6 +167,9 @@ static __always_inline unsigned long __kimg_hyp_va(unsigned long v)
  * compatibility, the default IPA size is fixed to 40bits.
  */
 #define KVM_PHYS_SHIFT	(40)
+#ifdef CONFIG_VERIFIED_KVM
+#define KVM_PHYS_SIZE   (1UL << KVM_PHYS_SHIFT)
+#endif
 
 #define kvm_phys_shift(kvm)		VTCR_EL2_IPA(kvm->arch.vtcr)
 #define kvm_phys_size(kvm)		(_AC(1, ULL) << kvm_phys_shift(kvm))
@@ -181,6 +184,11 @@ int create_hyp_io_mappings(phys_addr_t phys_addr, size_t size,
 			   void __iomem **haddr);
 int create_hyp_exec_mappings(phys_addr_t phys_addr, size_t size,
 			     void **haddr);
+#ifdef CONFIG_VERIFIED_KVM
+int create_hypsec_io_mappings(phys_addr_t phys_addr, size_t size,
+			      unsigned long *haddr);
+int el2_create_hyp_mappings(void *from, void *to, pgprot_t prot);
+#endif
 void free_hyp_pgds(void);
 
 void stage2_unmap_vm(struct kvm *kvm);
@@ -195,6 +203,17 @@ phys_addr_t kvm_mmu_get_httbr(void);
 phys_addr_t kvm_get_idmap_vector(void);
 int kvm_mmu_init(void);
 
+#define kvm_mk_pmd(ptep)                                        \
+        __pmd(__phys_to_pmd_val(__pa(ptep)) | PMD_TYPE_TABLE)
+#define kvm_mk_pud(pmdp)                                        \
+        __pud(__phys_to_pud_val(__pa(pmdp)) | PMD_TYPE_TABLE)
+#define kvm_mk_pgd(pudp)                                        \
+        __pgd(__phys_to_pgd_val(__pa(pudp)) | PUD_TYPE_TABLE)
+
+#define kvm_pfn_pte(pfn, prot)  pfn_pte(pfn, prot)
+#define kvm_pfn_pmd(pfn, prot)  pfn_pmd(pfn, prot)
+#define kvm_pfn_pud(pfn, prot)  (__pud(0))
+
 struct kvm;
 
 #define kvm_flush_dcache_to_poc(a,l)	__flush_dcache_area((a), (l))
@@ -206,6 +225,7 @@ static inline bool vcpu_has_cache_enabled(struct kvm_vcpu *vcpu)
 
 static inline void __clean_dcache_guest_page(kvm_pfn_t pfn, unsigned long size)
 {
+#ifndef CONFIG_VERIFIED_KVM
 	void *va = page_address(pfn_to_page(pfn));
 
 	/*
@@ -218,6 +238,7 @@ static inline void __clean_dcache_guest_page(kvm_pfn_t pfn, unsigned long size)
 		return;
 
 	kvm_flush_dcache_to_poc(va, size);
+#endif
 }
 
 static inline void __invalidate_icache_guest_page(kvm_pfn_t pfn,
@@ -229,7 +250,6 @@ static inline void __invalidate_icache_guest_page(kvm_pfn_t pfn,
 	} else if (is_kernel_in_hyp_mode() || !icache_is_vpipt()) {
 		/* PIPT or VPIPT at EL2 (see comment in __kvm_tlb_flush_vmid_ipa) */
 		void *va = page_address(pfn_to_page(pfn));
-
 		invalidate_icache_range((unsigned long)va,
 					(unsigned long)va + size);
 	}
@@ -237,6 +257,36 @@ static inline void __invalidate_icache_guest_page(kvm_pfn_t pfn,
 
 void kvm_set_way_flush(struct kvm_vcpu *vcpu);
 void kvm_toggle_cache(struct kvm_vcpu *vcpu, bool was_enabled);
+
+static inline void __kvm_flush_dcache_pte(pte_t pte)
+{
+#ifndef CONFIG_VERIFIED_KVM
+        if (!cpus_have_const_cap(ARM64_HAS_STAGE2_FWB)) {
+                struct page *page = pte_page(pte);
+                kvm_flush_dcache_to_poc(page_address(page), PAGE_SIZE);
+        }
+#endif
+}
+
+static inline void __kvm_flush_dcache_pmd(pmd_t pmd)
+{
+#ifndef CONFIG_VERIFIED_KVM
+        if (!cpus_have_const_cap(ARM64_HAS_STAGE2_FWB)) {
+                struct page *page = pmd_page(pmd);
+                kvm_flush_dcache_to_poc(page_address(page), PMD_SIZE);
+        }
+#endif
+}
+
+static inline void __kvm_flush_dcache_pud(pud_t pud)
+{
+#ifndef CONFIG_VERIFIED_KVM
+        if (!cpus_have_const_cap(ARM64_HAS_STAGE2_FWB)) {
+                struct page *page = pud_page(pud);
+                kvm_flush_dcache_to_poc(page_address(page), PUD_SIZE);
+        }
+#endif
+}
 
 static inline unsigned int kvm_get_vmid_bits(void)
 {
