@@ -1995,7 +1995,11 @@ static void vfio_iommu_iova_insert_copy(struct vfio_iommu *iommu,
 }
 
 static int vfio_iommu_type1_attach_group(void *iommu_data,
+#ifndef CONFIG_VERIFIED_KVM
+					 struct iommu_group *iommu_group)
+#else
 					 struct iommu_group *iommu_group, int vmid)
+#endif
 {
 	struct vfio_iommu *iommu = iommu_data;
 	struct vfio_group *group;

@@ -195,7 +195,11 @@ static long vfio_noiommu_ioctl(void *iommu_data,
 }
 
 static int vfio_noiommu_attach_group(void *iommu_data,
+#ifndef CONFIG_VERIFIED_KVM
+				     struct iommu_group *iommu_group)
+#else
 				     struct iommu_group *iommu_group, int vmid)
+#endif
 {
 	return iommu_group_get_iommudata(iommu_group) == &noiommu ? 0 : -EINVAL;
 }
@@ -1072,7 +1076,11 @@ static long vfio_ioctl_check_extension(struct vfio_container *container,
 /* hold write lock on container->group_lock */
 static int __vfio_container_attach_groups(struct vfio_container *container,
 					  struct vfio_iommu_driver *driver,
+#ifndef CONFIG_VERIFIED_KVM
+					  void *data)
+#else
 					  void *data, int vmid)
+#endif
 {
 	struct vfio_group *group;
 	int ret = -ENODEV;

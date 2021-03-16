@@ -7,7 +7,9 @@
 #include <asm/kvm_hyp.h>
 #include <asm/kvm_mmu.h>
 #include <asm/tlbflush.h>
+#ifdef CONFIG_VERIFIED_KVM
 #include <asm/hypsec_host.h>
+#endif
 
 #ifndef CONFIG_VERIFIED_KVM
 
